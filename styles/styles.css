@@ -1,0 +1,27 @@
+/* styles/style.css */
+
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  header,
+  footer {
+    background-color: #f2f2f2;
+    padding: 10px;
+    text-align: center;
+  }
+  
+  main {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  
