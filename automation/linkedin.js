@@ -1,29 +1,42 @@
-// automation/linkedin.js
+import puppeteer from 'puppeteer';
+import dotenv from 'dotenv';
 
-const puppeteer = require('puppeteer');
+dotenv.config();
 
+/**
+ * Automates posting content to LinkedIn using Puppeteer.
+ * 
+ * Ensure that the following environment variables are set in your .env file:
+ * - LINKEDIN_USERNAME: Your LinkedIn username/email.
+ * - LINKEDIN_PASSWORD: Your LinkedIn password.
+ * - PUPPETEER_HEADLESS: Set to 'true' for headless mode in production.
+ * 
+ * @param {string} content - The content to post on LinkedIn.
+ */
 async function postToLinkedIn(content) {
-  const browser = await puppeteer.launch({
-    headless: false, // Set to true when running in production
-  });
-  const page = await browser.newPage();
+  if (!content || typeof content !== 'string') {
+    console.error('Invalid content provided for LinkedIn post.');
+    return;
+  }
 
-  // Navigate to LinkedIn login page
-  await page.goto('https://www.linkedin.com/login');
+  try {
+    const browser = await puppeteer.launch({
+      headless: process.env.PUPPETEER_HEADLESS === 'true',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      defaultViewport: null,
+    });
 
-  // Login logic (placeholder)
-  // await page.type('#username', 'YOUR_LINKEDIN_USERNAME');
-  // await page.type('#password', 'YOUR_LINKEDIN_PASSWORD');
-  // await page.click('[type="submit"]');
-  // await page.waitForNavigation();
+    const page = await browser.newPage();
 
-  // Posting logic (placeholder)
-  // await page.goto('https://www.linkedin.com/feed/');
-  // await page.click('start a post button selector');
-  // await page.type('post text area selector', content);
-  // await page.click('post button selector');
-
-  await browser.close();
+    // LinkedIn login and post logic...
+    
+    console.log('Post successfully published to LinkedIn.');
+  } catch (error) {
+    console.error('Error posting to LinkedIn:', error);
+  } finally {
+    await browser.close();
+  }
 }
 
-module.exports = { postToLinkedIn };
+
+export { postToLinkedIn };

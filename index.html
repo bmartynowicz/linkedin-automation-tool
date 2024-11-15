@@ -1,22 +1,154 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>LinkedIn Automation Tool</title>
-    <link rel="stylesheet" href="styles/style.css" />
-  </head>
-  <body>
-    <div id="app">
-      <header>
-        <h1>LinkedIn Automation Tool</h1>
-      </header>
-      <main>
-        <!-- Your application's UI components will go here -->
-      </main>
-      <footer>
-        <!-- Footer content -->
-      </footer>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Updated Content Security Policy to allow external scripts and styles -->
+  <meta http-equiv="Content-Security-Policy" 
+        content="default-src 'self'; 
+                 script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.quilljs.com;
+                 style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.quilljs.com;
+                 font-src 'self' https://cdnjs.cloudflare.com;
+                 img-src 'self' data:;
+                 connect-src 'self' http://localhost:3000;
+                 base-uri 'self';">
+
+  <title>LinkedIn Automation Tool</title>
+  
+  <!-- Include Quill's Snow Theme CSS -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  
+  <!-- Include Font Awesome for Icons -->
+  <link 
+  rel="stylesheet" 
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+  crossorigin="anonymous" 
+  referrerpolicy="no-referrer"
+/>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+  <!-- Header Section -->
+  <header>
+    <h1>LinkedIn Automation Tool</h1>
+    <div class="header-icons">
+      <button id="notifications" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+        <i class="fas fa-bell"></i>
+        <span id="notification-count" class="badge hidden">0</span>
+      </button>
+      <button id="settings" aria-label="Settings" aria-haspopup="dialog">
+        <i class="fas fa-gear"></i>
+      </button>
+      <button id="profile" aria-label="Profile" aria-haspopup="dialog">
+        <i class="fas fa-user"></i>
+      </button>
     </div>
-    <script src="renderer.js"></script>
-  </body>
+  </header>
+
+  <!-- Notifications Dropdown -->
+  <div id="notifications-dropdown" class="dropdown hidden" aria-label="Notifications">
+    <ul id="notifications-list">
+      <!-- Dynamic Notifications Will Be Injected Here -->
+    </ul>
+  </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="modal-content">
+        <span class="close-button" id="close-settings">&times;</span>
+        <h2 id="settings-title">Settings</h2>
+        <form id="settings-form">
+          <label for="theme-select">Theme:</label>
+          <select id="theme-select" name="theme">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+          <button type="submit">Save</button>
+        </form>
+      </div>
+    </div>
+
+<!-- Profile Modal -->
+<div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+  <div class="modal-content">
+    <span class="close-button" id="close-profile">&times;</span>
+    <h2 id="profile-title">Your Profile</h2>
+    <div class="profile-info">
+      <img id="profile-picture" src="assets/default-profile.png" alt="Profile Picture">
+      <p id="username">Username</p>
+    </div>
+    <button id="logout-button">Logout</button>
+  </div>
+</div>
+  
+  <!-- Sidebar Navigation -->
+  <nav id="sidebar" class="expanded">
+    <ul>
+      <li>
+        <a href="#dashboard" aria-label="Dashboard">
+          <i class="fas fa-tachometer-alt"></i>
+          <span class="menu-text">Dashboard</span>
+        </a>
+      </li>
+      <li>
+        <a href="#content-creation" aria-label="Content Creation">
+          <i class="fas fa-pencil-alt"></i>
+          <span class="menu-text">Content Creation</span>
+        </a>
+      </li>
+      <li>
+        <a href="#scheduler" aria-label="Scheduler">
+          <i class="fas fa-calendar-alt"></i>
+          <span class="menu-text">Scheduler</span>
+        </a>
+      </li>
+      <li>
+        <a href="#analytics" aria-label="Analytics">
+          <i class="fas fa-chart-line"></i>
+          <span class="menu-text">Analytics</span>
+        </a>
+      </li>
+      <li>
+        <a href="#settings" aria-label="Settings">
+          <i class="fas fa-cog"></i>
+          <span class="menu-text">Settings</span>
+        </a>
+      </li>
+    </ul>
+    <button id="toggle-menu" aria-label="Toggle Menu">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+  </nav>
+  
+  <!-- Main Content Area -->
+  <main>
+    <div id="editor-container">
+      <!-- Quill Editor -->
+      <div id="editor"></div>
+      
+      <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
+      <div id="suggestion-box" class="hidden" aria-live="polite">
+        <p id="suggestion-text"></p>
+        <div class="suggestion-buttons">
+          <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
+          <button id="reject-suggestion" class="suggestion-button reject">Reject</button>
+        </div>
+      </div>
+      
+      <!-- Distraction-Free Mode Toggle Button -->
+      <button id="toggle-distraction-free" class="toggle-button" aria-label="Toggle Distraction-Free Mode">
+        Focus Mode
+      </button>
+    </div>
+  </main>
+  
+  <!-- Include Quill's JS Library -->
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  
+  <!-- Renderer Script -->
+  <script src="renderer.js"></script>
+</body>
 </html>

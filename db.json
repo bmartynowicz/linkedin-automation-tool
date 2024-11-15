@@ -1,0 +1,14 @@
+{
+    "notifications": [
+      { "id": 1, "message": "Welcome to the LinkedIn Automation Tool!" },
+      { "id": 2, "message": "Your profile has been updated." }
+    ],
+    "users": [
+      {
+        "id": 1,
+        "username": "JohnDoe",
+        "profilePicture": "assets/default-profile.png"
+      }
+    ]
+  }
+  
