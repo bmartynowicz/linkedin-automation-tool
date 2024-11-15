@@ -478,3 +478,27 @@ header {
     bottom: 10px;
   }
 }
+
+#sidebar {
+  width: 250px;
+  transition: width 0.3s ease;
+}
+
+#sidebar.collapsed {
+  width: 60px;
+}
+
+.nav-item .text {
+  display: inline;
+}
+
+#sidebar.collapsed .nav-item .text {
+  display: none;
+}
+
+#toggle-menu {
+  position: absolute;
+  bottom: 10px;
+  left: calc(100% - 40px);
+}
+

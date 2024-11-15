@@ -63,18 +63,29 @@ const debounce = (func, delay) => {
   };
 
   // ======= Sidebar Toggle =======
-  const toggleMenuButton = document.getElementById('toggle-menu');
-  const sidebar = document.getElementById('sidebar');
+const toggleMenuButton = document.getElementById('toggle-menu');
+const sidebar = document.getElementById('sidebar');
 
-  if (toggleMenuButton && sidebar) {
-    toggleMenuButton.addEventListener('click', () => {
-      const collapsed = toggleElement(sidebar, 'collapsed');
-      toggleMenuButton.innerHTML = collapsed
-        ? '<i class="fas fa-chevron-right"></i>'
-        : '<i class="fas fa-chevron-left"></i>';
-      console.log(`Sidebar ${collapsed ? 'Collapsed' : 'Expanded'}.`);
-    });
-  }
+if (toggleMenuButton && sidebar) {
+  toggleMenuButton.addEventListener('click', () => {
+    // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
+    const collapsed = toggleElement(sidebar, 'collapsed');
+
+    // Update the toggle button's icon based on the new state
+    const icon = toggleMenuButton.querySelector('i');
+    if (collapsed) {
+      icon.classList.remove('fa-chevron-left');
+      icon.classList.add('fa-chevron-right');
+    } else {
+      icon.classList.remove('fa-chevron-right');
+      icon.classList.add('fa-chevron-left');
+    }
+
+    // Log the current state of the sidebar for debugging purposes
+    console.log(`Sidebar ${collapsed ? 'Collapsed' : 'Expanded'}.`);
+  });
+}
+
 
   // ======= Notifications =======
   const notificationsButton = document.getElementById('notifications');
