@@ -2,8 +2,8 @@
   "name": "linkedin-automation-tool",
   "version": "1.0.0",
   "description": "A desktop application to automate LinkedIn posts with AI-enhanced writing assistance.",
-  "main": "main.cjs",
-  "type": "module",
+  "main": "./app/main.cjs",
+  "type": "commonjs",
   "scripts": {
     "start": "electron .",
     "backend": "node backend/server.js",

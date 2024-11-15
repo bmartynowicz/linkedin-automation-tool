@@ -1,31 +1,18 @@
 // main.js
 
-import dotenv from 'dotenv';
-import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-let getAISuggestions;
+const dotenv = require('dotenv');
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const { fileURLToPath } = require('url');
+const db = require('../database/database');
+const { getAISuggestions } = require('../ai/ai');
 
 // Load environment variables
-dotenv.config();
+dotenv.config()
 
-// Derive __dirname equivalent
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+console.log('Index HTML Path:', path.join(__dirname, 'views', 'index.html'));
+console.log('Database Path:', path.resolve(__dirname, 'database', 'app.db'));
 
-// Load AI dependencies
-async function loadDependencies() {
-  try {
-    const aiModule = await import('./ai/ai.mjs');
-    getAISuggestions = aiModule.getAISuggestions;
-    console.log('AI Suggestions module loaded.');
-  } catch (error) {
-    console.error('Error loading AI Suggestions module:', error);
-  }
-}
-
-await loadDependencies();
 
 // Create the main application window
 function createWindow() {
@@ -44,7 +31,9 @@ function createWindow() {
     icon: path.join(__dirname, 'assets', 'icon.png'),
   });
 
-  mainWindow.loadFile('index.html').catch(err => console.error("Error loading index.html:", err));
+  mainWindow.loadFile(path.join(__dirname, 'views', 'index.html')).catch((err) => {
+    console.error('Error loading index.html:', err);
+  });
 
   // Open DevTools in development mode
   if (process.env.NODE_ENV === 'development') {
@@ -89,12 +78,11 @@ app.on('before-quit', () => {
 // Handle AI Suggestion requests from renderer process
 ipcMain.handle('get-ai-suggestions', async (event, prompt) => {
   try {
-    console.log('Main process received AI suggestion request for prompt:', prompt);
+    console.log('Processing AI suggestion for:', prompt);
     const suggestion = await getAISuggestions(prompt);
-    console.log('AI suggestion generated:', suggestion);
     return suggestion;
   } catch (error) {
-    console.error('Error handling AI suggestion request:', error);
+    console.error('Error fetching AI suggestions:', error);
     throw error;
   }
 });
@@ -117,4 +105,44 @@ ipcMain.on('post-status-update', (event, status) => {
   // event.sender.send('status-success', 'Status updated successfully!');
   // On error:
   // event.sender.send('status-error', 'Failed to update status.');
+});
+
+// Fetch user data
+ipcMain.handle('fetch-user-data', async () => {
+  try {
+    // Replace with your actual database query logic
+    const userData = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM users WHERE id = 1', (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+    return userData || { username: 'Guest', profilePicture: '../../assets/default-profile.png' };
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    throw error;
+  }
+});
+
+
+// Fetch notifications
+ipcMain.handle('fetch-notifications', async () => {
+  console.log('Fetching notifications from database...');
+  try {
+    const notifications = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM notifications', (err, rows) => {
+        if (err) {
+          console.error('Error fetching notifications:', err.message);
+          return reject(err);
+        }
+        resolve(rows);
+      });
+    });
+
+    console.log('Notifications fetched successfully:', notifications);
+    return notifications;
+  } catch (error) {
+    console.error('Error in fetch-notifications handler:', error);
+    throw error;
+  }
 });

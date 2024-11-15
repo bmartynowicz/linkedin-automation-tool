@@ -1,7 +1,5 @@
-// ai/ai.js
-
-import { OpenAI } from 'openai'; // Update import to the newer version syntax (ES Modules)
-import dotenv from 'dotenv';
+const { OpenAI } = require('openai'); // Use require for CommonJS
+const dotenv = require('dotenv');
 
 dotenv.config(); // Load environment variables
 
@@ -12,10 +10,7 @@ dotenv.config(); // Load environment variables
  * for LinkedIn posts, enhancing clarity, engagement, and professionalism.
  */
 
-/**
- * Create a new OpenAI client instance.
- * - `OPENAI_API_KEY`: Your OpenAI API key (required).
- */
+// Create a new OpenAI client instance
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // Ensure this is set in your .env file
 });
@@ -26,7 +21,7 @@ const openai = new OpenAI({
  * @param {string} prompt - The text input from the user.
  * @returns {Promise<string>} - The AI-generated suggestion or an empty string if an error occurs.
  */
-export async function getAISuggestions(prompt) {
+async function getAISuggestions(prompt) {
   // Validate the prompt
   if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
     console.error('Invalid prompt provided to getAISuggestions.');
@@ -67,3 +62,6 @@ export async function getAISuggestions(prompt) {
     return '';
   }
 }
+
+// Export the function for use in other files
+module.exports = { getAISuggestions };

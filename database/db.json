@@ -7,7 +7,7 @@
       {
         "id": 1,
         "username": "JohnDoe",
-        "profilePicture": "assets/default-profile.png"
+        "profilePicture": "../assets/default-profile.png"
       }
     ]
   }
