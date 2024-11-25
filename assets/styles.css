@@ -166,6 +166,7 @@ header h1 {
   background-color: #f0f0f0;
   z-index: 950; /* Below header, above content */
   padding: 10px;
+  transition: left 0.3s ease; /* Add transition for smooth movement */
 }
 
 #sidebar.collapsed + #toolbar {
@@ -183,14 +184,20 @@ header h1 {
   padding: 20px;
   height: calc(100vh - 120px); /* Viewport height minus header and toolbar */
   overflow-y: auto;
-  position: relative; /* For absolute positioning within */
+  position: relative;
   background-color: #ffffff;
-  z-index: 800; /* Below toolbar */
+  z-index: 800;
   transition: margin-left 0.3s ease;
 }
 
-#sidebar.collapsed + #toolbar + #editor-container {
-  margin-left: 60px; /* Adjust when sidebar is collapsed */
+/* Adjust when the sidebar is collapsed */
+body.sidebar-collapsed #editor-container {
+  margin-left: 60px;
+}
+
+/* Adjust the toolbar position as well */
+body.sidebar-collapsed #toolbar {
+  left: 60px;
 }
 
 #editor {
@@ -222,6 +229,31 @@ header h1 {
 
 .ql-toolbar {
   position: relative;
+}
+
+/* Style for the manual suggest button */
+#manual-suggest-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+#manual-suggest-button i {
+  font-size: 1rem;
+  color: #555;
+}
+
+#manual-suggest-button:hover i {
+  color: #000;
+}
+
+#manual-suggest-button.loading i {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ======= Suggestion Box Styles ======= */

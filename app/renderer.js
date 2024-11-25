@@ -82,6 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
       const collapsed = toggleElement(sidebar, 'collapsed');
 
+      // Toggle the 'sidebar-collapsed' class on the body
+      toggleElement(document.body, 'sidebar-collapsed');
+
       // Update the toggle button's icon based on the new state
       const icon = toggleMenuButton.querySelector('i');
       if (collapsed) {
@@ -224,6 +227,20 @@ if (typeof Quill !== 'undefined') {
 
   console.log('Quill editor initialized with emoji support.');
 
+  // Set spellcheck attribute to true on the editable area
+quill.on('editor-change', () => {
+  const editorElement = document.querySelector('.ql-editor');
+  if (editorElement) {
+    editorElement.setAttribute('spellcheck', 'true');
+  }
+});
+
+// Initial setting in case the editor-change event hasn't fired yet
+const editorElement = document.querySelector('.ql-editor');
+if (editorElement) {
+  editorElement.setAttribute('spellcheck', 'true');
+}
+
   // ======= Autosave Draft Periodically =======
   setInterval(() => {
     const content = quill.root.innerHTML;
@@ -231,45 +248,78 @@ if (typeof Quill !== 'undefined') {
     console.log('Autosave draft.');
   }, 15000);  // Autosave every 10 seconds
 
+  const manualSuggestButton = document.getElementById('manual-suggest-button');
   const suggestionBox = document.getElementById('suggestion-box');
   const suggestionText = document.getElementById('suggestion-text');
   const acceptButton = document.getElementById('accept-suggestion');
   const rejectButton = document.getElementById('reject-suggestion');
 
-  // Fetch suggestion and display in suggestion box
-  const fetchSuggestion = async () => {
-    if (isModalOpen) return;
-
-    const userInput = quill.getText().trim();
-    if (userInput.split(/\s+/).length < 50) return; // Auto suggest will trigger after 50 words
-
-    try {
-      const suggestion = await window.api.getAISuggestions(userInput);
-      console.log('Fetched suggestion:', suggestion);
-      if (suggestion) {
-        suggestionText.innerText = suggestion;
-        suggestionBox.classList.add('show');
-      } else {
-        suggestionBox.classList.remove('show');
-      }
-    } catch (error) {
-      console.error('Error fetching AI suggestion:', error);
-      suggestionBox.classList.remove('show');
-    }
-  };
-
-  quill.on('text-change', debounce(fetchSuggestion, 5000));
-
-  if (acceptButton && rejectButton) {
-    acceptButton.addEventListener('click', () => {
-      quill.insertText(quill.getLength(), ` ${suggestionText.innerText}`);
-      suggestionBox.classList.remove('show');
-    });
   
-    rejectButton.addEventListener('click', () => {
-      suggestionBox.classList.remove('show');
-    });
+
+  // Fetch suggestion and display in suggestion box
+  const fetchSuggestion = async (isManual = false) => {
+  if (isModalOpen) return;
+
+  const userInput = quill.getText().trim();
+
+  // Check if we should trigger suggestion based on word count
+  if (!isManual && userInput.split(/\s+/).length < 50) return;
+
+  // If manual request but editor is empty, show a toast and exit
+  if (isManual && userInput.length === 0) {
+    showToast('Please enter some text in the editor.');
+    return;
   }
+
+  try {
+    if (isManual) {
+      // Show loading indicator on the button (optional)
+      manualSuggestButton.disabled = true;
+      manualSuggestButton.classList.add('loading');
+    }
+
+    const suggestion = await window.api.getAISuggestions(userInput);
+    console.log('Fetched suggestion:', suggestion);
+    if (suggestion) {
+      suggestionText.innerText = suggestion;
+      suggestionBox.classList.add('show');
+    } else {
+      suggestionBox.classList.remove('show');
+      if (isManual) showToast('No suggestion available at this time.');
+    }
+  } catch (error) {
+    console.error('Error fetching AI suggestion:', error);
+    suggestionBox.classList.remove('show');
+    if (isManual) showToast('An error occurred while fetching the suggestion.');
+  } finally {
+    if (isManual) {
+      manualSuggestButton.disabled = false;
+      manualSuggestButton.classList.remove('loading');
+    }
+  }
+};
+
+// Event listener for the manual suggest button
+if (manualSuggestButton) {
+  manualSuggestButton.addEventListener('click', () => {
+    // Fetch suggestion manually
+    fetchSuggestion(true);
+  });
+}
+
+// Automatic suggestion on text change
+quill.on('text-change', debounce(() => fetchSuggestion(false), 5000));
+
+if (acceptButton && rejectButton) {
+  acceptButton.addEventListener('click', () => {
+    quill.insertText(quill.getLength(), ` ${suggestionText.innerText}`);
+    suggestionBox.classList.remove('show');
+  });
+
+  rejectButton.addEventListener('click', () => {
+    suggestionBox.classList.remove('show');
+  });
+}
 
   // ======= Distraction-Free Mode =======
   const toggleDistractionFreeButton = document.getElementById('toggle-distraction-free');

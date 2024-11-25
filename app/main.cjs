@@ -1,7 +1,7 @@
 // main.js
 
 const dotenv = require('dotenv');
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const { fileURLToPath } = require('url');
 const db = require('../database/database');
@@ -27,6 +27,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
+      spellcheck: true,
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
   });
@@ -39,6 +40,40 @@ function createWindow() {
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
   }
+
+  // ======= Implement Custom Context Menu for Spell Check =======
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const { selectionText, misspelledWord, dictionarySuggestions } = params;
+
+    if (misspelledWord) {
+      const menu = Menu.buildFromTemplate([
+        ...dictionarySuggestions.map((suggestion) => ({
+          label: suggestion,
+          click: () => mainWindow.webContents.replaceMisspelling(suggestion),
+        })),
+        { type: 'separator' },
+        {
+          label: 'Add to Dictionary',
+          click: () => mainWindow.webContents.session.addWordToSpellCheckerDictionary(misspelledWord),
+        },
+      ]);
+      menu.popup();
+    } else {
+      const menu = Menu.buildFromTemplate([
+        { role: 'undo', enabled: params.editFlags.canUndo },
+        { role: 'redo', enabled: params.editFlags.canRedo },
+        { type: 'separator' },
+        { role: 'cut', enabled: params.editFlags.canCut },
+        { role: 'copy', enabled: params.editFlags.canCopy },
+        { role: 'paste', enabled: params.editFlags.canPaste },
+        { role: 'delete', enabled: params.editFlags.canDelete },
+        { type: 'separator' },
+        { role: 'selectAll', enabled: params.editFlags.canSelectAll },
+      ]);
+      menu.popup();
+    }
+  });
+  // ======= End of Custom Context Menu Implementation =======
 }
 
 app.whenReady().then(() => {
