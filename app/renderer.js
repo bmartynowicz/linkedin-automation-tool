@@ -1,35 +1,46 @@
+// ======= Initialize the Renderer Process =======
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded.');
 
   let isModalOpen = false;
+  let emojiPicker = null;
 
   // ======= Utility Functions =======
-  
   /**
- * Debounce function: Delays the execution of the given function until after the specified delay.
- * @param {Function} func - The function to debounce.
- * @param {number} delay - The delay in milliseconds.
- * @returns {Function} - The debounced function.
- */
-const debounce = (func, delay) => {
-  let timeout;
-  return (...args) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), delay);
+   * Debounce function: Delays the execution of the given function until after the specified delay.
+   * @param {Function} func - The function to debounce.
+   * @param {number} delay - The delay in milliseconds.
+   * @returns {Function} - The debounced function.
+   */
+  const debounce = (func, delay) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), delay);
+    };
   };
-};
-  
-  const toggleElement = (element, className) => {
+
+  /**
+   * Toggles a class on an element.
+   * @param {HTMLElement} element - The element to toggle the class on.
+   * @param {string} className - The class to toggle.
+   * @returns {boolean} - True if the class is added, false if removed.
+   */
+  function toggleElement(element, className) {
     element.classList.toggle(className);
     return element.classList.contains(className);
-  };
+  }
 
   const applyTheme = (theme) => {
     document.body.classList.toggle('dark-theme', theme === 'dark');
     console.log(`${theme.charAt(0).toUpperCase() + theme.slice(1)} theme applied.`);
   };
 
-  const showToast = (message) => {
+  /**
+   * Shows a toast notification.
+   * @param {string} message - The message to display in the toast.
+   */
+  function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.innerText = message;
@@ -42,7 +53,7 @@ const debounce = (func, delay) => {
     }, 3000);
 
     console.log('Toast shown:', message);
-  };
+  }
 
   const openModal = (modal) => {
     if (modal) {
@@ -63,29 +74,28 @@ const debounce = (func, delay) => {
   };
 
   // ======= Sidebar Toggle =======
-const toggleMenuButton = document.getElementById('toggle-menu');
-const sidebar = document.getElementById('sidebar');
+  const toggleMenuButton = document.getElementById('toggle-menu');
+  const sidebar = document.getElementById('sidebar');
 
-if (toggleMenuButton && sidebar) {
-  toggleMenuButton.addEventListener('click', () => {
-    // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
-    const collapsed = toggleElement(sidebar, 'collapsed');
+  if (toggleMenuButton && sidebar) {
+    toggleMenuButton.addEventListener('click', () => {
+      // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
+      const collapsed = toggleElement(sidebar, 'collapsed');
 
-    // Update the toggle button's icon based on the new state
-    const icon = toggleMenuButton.querySelector('i');
-    if (collapsed) {
-      icon.classList.remove('fa-chevron-left');
-      icon.classList.add('fa-chevron-right');
-    } else {
-      icon.classList.remove('fa-chevron-right');
-      icon.classList.add('fa-chevron-left');
-    }
+      // Update the toggle button's icon based on the new state
+      const icon = toggleMenuButton.querySelector('i');
+      if (collapsed) {
+        icon.classList.remove('fa-chevron-left');
+        icon.classList.add('fa-chevron-right');
+      } else {
+        icon.classList.remove('fa-chevron-right');
+        icon.classList.add('fa-chevron-left');
+      }
 
-    // Log the current state of the sidebar for debugging purposes
-    console.log(`Sidebar ${collapsed ? 'Collapsed' : 'Expanded'}.`);
-  });
-}
-
+      // Log the current state of the sidebar for debugging purposes
+      console.log(`Sidebar ${collapsed ? 'Collapsed' : 'Expanded'}.`);
+    });
+  }
 
   // ======= Notifications =======
   const notificationsButton = document.getElementById('notifications');
@@ -103,11 +113,11 @@ if (toggleMenuButton && sidebar) {
         : '<li>No new notifications.</li>';
 
       notificationCount.textContent = notifications.length || '';
-      notificationCount.classList.toggle('hidden', !notifications.length);
+      notificationCount.style.display = notifications.length ? 'inline' : 'none';
     } catch (error) {
       console.error('Error fetching notifications:', error);
       notificationsList.innerHTML = '<li>Failed to load notifications.</li>';
-      notificationCount.classList.add('hidden');
+      notificationCount.style.display = 'none';
     }
   };
 
@@ -163,32 +173,88 @@ if (toggleMenuButton && sidebar) {
     });
   }
 
-  // ======= AI Suggestions =======
+// ======= Initialize the Quill Editor with Emoji Toolbar =======
+if (typeof Quill !== 'undefined') {
+  console.log('Quill is available.');
+
+  // Check if QuillEmoji is defined
+  console.log('QuillEmoji:', window.QuillEmoji);
+
+  if (window.QuillEmoji && window.QuillEmoji.default) {
+    // Access modules via window.QuillEmoji.default
+    const { EmojiBlot, ToolbarEmoji, TextAreaEmoji, ShortNameEmoji } = window.QuillEmoji.default;
+
+    // Log the modules to verify they are defined
+    console.log('EmojiBlot:', EmojiBlot);
+    console.log('ToolbarEmoji:', ToolbarEmoji);
+
+    // Register the emoji modules
+    Quill.register(
+      {
+        'formats/emoji': EmojiBlot,
+        'modules/emoji-toolbar': ToolbarEmoji,
+        'modules/emoji-textarea': TextAreaEmoji,
+        'modules/emoji-shortname': ShortNameEmoji,
+      },
+      true
+    );
+  } else {
+    console.error('QuillEmoji is not available or does not have a default export.');
+  }
+
+  // Initialize Quill with the emoji toolbar
   const quill = new Quill('#editor', {
     theme: 'snow',
     modules: {
-      toolbar: [['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], ['link', 'image'], ['clean']],
+      toolbar: {
+        container: '#toolbar',
+      },
+      'emoji-toolbar': true,
+      'emoji-shortname': true,
+      'emoji-textarea': false,
     },
+    formats: [
+      'bold', 'italic', 'underline', 'strike',
+      'blockquote', 'code-block',
+      'header', 'list', 'script', 'indent', 'direction',
+      'size', 'color', 'background', 'font', 'align',
+      'emoji', // Include 'emoji' in formats
+    ],
   });
+
+  console.log('Quill editor initialized with emoji support.');
+
+  // ======= Autosave Draft Periodically =======
+  setInterval(() => {
+    const content = quill.root.innerHTML;
+    localStorage.setItem('draft', content);
+    console.log('Autosave draft.');
+  }, 15000);  // Autosave every 10 seconds
 
   const suggestionBox = document.getElementById('suggestion-box');
   const suggestionText = document.getElementById('suggestion-text');
   const acceptButton = document.getElementById('accept-suggestion');
   const rejectButton = document.getElementById('reject-suggestion');
 
+  // Fetch suggestion and display in suggestion box
   const fetchSuggestion = async () => {
     if (isModalOpen) return;
 
     const userInput = quill.getText().trim();
-    if (userInput.split(/\s+/).length < 100) return;
+    if (userInput.split(/\s+/).length < 50) return; // Auto suggest will trigger after 50 words
 
     try {
       const suggestion = await window.api.getAISuggestions(userInput);
-      suggestionText.innerText = suggestion || '';
-      suggestionBox.classList.toggle('hidden', !suggestion);
+      console.log('Fetched suggestion:', suggestion);
+      if (suggestion) {
+        suggestionText.innerText = suggestion;
+        suggestionBox.classList.add('show');
+      } else {
+        suggestionBox.classList.remove('show');
+      }
     } catch (error) {
       console.error('Error fetching AI suggestion:', error);
-      suggestionBox.classList.add('hidden');
+      suggestionBox.classList.remove('show');
     }
   };
 
@@ -197,10 +263,12 @@ if (toggleMenuButton && sidebar) {
   if (acceptButton && rejectButton) {
     acceptButton.addEventListener('click', () => {
       quill.insertText(quill.getLength(), ` ${suggestionText.innerText}`);
-      suggestionBox.classList.add('hidden');
+      suggestionBox.classList.remove('show');
     });
-
-    rejectButton.addEventListener('click', () => suggestionBox.classList.add('hidden'));
+  
+    rejectButton.addEventListener('click', () => {
+      suggestionBox.classList.remove('show');
+    });
   }
 
   // ======= Distraction-Free Mode =======
@@ -234,4 +302,9 @@ if (toggleMenuButton && sidebar) {
       if (e.key === 'Escape') closeModal(modal);
     });
   });
+
+} else {
+  console.error('Quill is not available.');
+}
+
 });
