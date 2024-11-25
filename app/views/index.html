@@ -6,27 +6,32 @@
 
   <!-- Updated Content Security Policy to allow external scripts and styles -->
   <meta http-equiv="Content-Security-Policy" 
-        content="default-src 'self'; 
-                 script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.quilljs.com;
-                 style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.quilljs.com;
-                 font-src 'self' https://cdnjs.cloudflare.com;
-                 img-src 'self' data:;
-                 connect-src 'self' http://localhost:3000;
-                 base-uri 'self';">
+      content="default-src 'self'; 
+              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
+              style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
+              font-src 'self' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
+              img-src 'self' data: https://cdn.jsdelivr.net;
+              connect-src 'self' http://localhost:3000;
+              base-uri 'self';">
 
   <title>LinkedIn Automation Tool</title>
+ 
+  <!-- Quill CSS -->
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
   
-  <!-- Include Quill's Snow Theme CSS -->
-  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-  
+  <!-- Quill Emoji CSS -->
+  <link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.css"
+  />
+
   <!-- Include Font Awesome for Icons -->
   <link 
   rel="stylesheet" 
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
   crossorigin="anonymous" 
-  referrerpolicy="no-referrer"
-/>
-  
+  referrerpolicy="no-referrer"/>
+
   <!-- Custom CSS -->
   <link rel="stylesheet" href="../../assets/styles.css">
 </head>
@@ -38,9 +43,6 @@
       <button id="notifications" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
         <i class="fas fa-bell"></i>
         <span id="notification-count" class="badge hidden">0</span>
-      </button>
-      <button id="settings" aria-label="Settings" aria-haspopup="dialog">
-        <i class="fas fa-gear"></i>
       </button>
       <button id="profile" aria-label="Profile" aria-haspopup="dialog">
         <i class="fas fa-user"></i>
@@ -123,33 +125,76 @@
   </button>
 </nav>
 
-  
   <!-- Main Content Area -->
   <main>
-    <div id="editor-container">
-      <!-- Quill Editor -->
-      <div id="editor"></div>
+    <!-- Quill Toolbar -->
+<div id="toolbar" class="q1-toolbar">
+  <span class="ql-formats">
+    <button class="ql-bold" aria-label="Bold"></button>
+    <button class="ql-italic" aria-label="Italic"></button>
+    <button class="ql-underline" aria-label="Underline"></button>
+    <button class="ql-strike" aria-label="Strike"></button>
+  </span>
+  <span class="ql-formats">
+    <button class="ql-blockquote" aria-label="Blockquote"></button>
+    <button class="ql-code-block" aria-label="Code Block"></button>
+  </span>
+  <span class="ql-formats">
+    <button class="ql-list" value="ordered" aria-label="Ordered List"></button>
+    <button class="ql-list" value="bullet" aria-label="Bullet List"></button>
+    <button class="ql-indent" value="-1" aria-label="Decrease Indent"></button>
+    <button class="ql-indent" value="+1" aria-label="Increase Indent"></button>
+  </span>
+  <span class="ql-formats">
+    <select class="ql-header" aria-label="Header">
+      <option selected></option>
+      <option value="1"></option>
+      <option value="2"></option>
+    </select>
+    <select class="ql-font" aria-label="Font"></select>
+    <select class="ql-size" aria-label="Size"></select>
+  </span>
+  <span class="ql-formats">
+    <button class="ql-color" aria-label="Text Color"></button>
+    <button class="ql-background" aria-label="Background Color"></button>
+    <button class="ql-align" aria-label="Align"></button>
+  </span>
+  <span class="ql-formats">
+    <button class="ql-clean" aria-label="Remove Formatting"></button>
+  </span>
+  <span class="ql-formats">
+    <button class="ql-emoji" aria-label="Insert Emoji"></button>
+  </span>
+</div>
+
+    <!-- Quill Editor Container -->
+<div id="editor-container">
+  <div id="editor" class="q1-container q1-editor"></div>
       
       <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
-      <div id="suggestion-box" class="hidden" aria-live="polite">
-        <p id="suggestion-text"></p>
-        <div class="suggestion-buttons">
-          <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
-          <button id="reject-suggestion" class="suggestion-button reject">Reject</button>
-        </div>
-      </div>
+  <div id="suggestion-box" aria-live="polite">
+    <p id="suggestion-text"></p>
+    <div class="suggestion-buttons">
+      <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
+      <button id="reject-suggestion" class="suggestion-button reject">Reject</button>
+    </div>
+  </div>
       
       <!-- Distraction-Free Mode Toggle Button -->
-      <button id="toggle-distraction-free" class="toggle-button" aria-label="Toggle Distraction-Free Mode">
-        Focus Mode
-      </button>
-    </div>
+  <button id="toggle-distraction-free" class="toggle-button" aria-label="Toggle Distraction-Free Mode">
+    Focus Mode
+  </button>
+</div>
   </main>
-  
-  <!-- Include Quill's JS Library -->
-  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-  
-  <!-- Renderer Script -->
-  <script src="../renderer.js"></script>
+
+<!-- Quill JS -->
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+
+<!-- Quill Emoji JS -->
+<script src="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.min.js"></script>
+
+<!-- Renderer Script -->
+<script src="../renderer.js"></script>
+
 </body>
 </html>
