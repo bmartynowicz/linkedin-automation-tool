@@ -1,3 +1,5 @@
+// preload.js
+
 const { contextBridge, ipcRenderer } = require('electron');
 
 // Expose secure APIs to the renderer process
@@ -9,4 +11,5 @@ contextBridge.exposeInMainWorld('api', {
   getAISuggestions: (prompt) => ipcRenderer.invoke('get-ai-suggestions', prompt),
   fetchNotifications: () => ipcRenderer.invoke('fetch-notifications'),
   fetchUserData: () => ipcRenderer.invoke('fetch-user-data'),
+  sendFeedback: (type, suggestion) => ipcRenderer.send('send-feedback', type, suggestion),
 });

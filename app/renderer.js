@@ -215,6 +215,11 @@ if (typeof Quill !== 'undefined') {
       'emoji-toolbar': true,
       'emoji-shortname': true,
       'emoji-textarea': false,
+      history: {
+        delay: 1000,
+        maxStack: 100,
+        userOnly: true,
+      },
     },
     formats: [
       'bold', 'italic', 'underline', 'strike',
@@ -226,6 +231,15 @@ if (typeof Quill !== 'undefined') {
   });
 
   console.log('Quill editor initialized with emoji support.');
+
+  // ======= Add Event Listener for Toolbar Undo/Redo Buttons =======
+  document.getElementById('toolbar').addEventListener('click', (e) => {
+    if (e.target.closest('.ql-undo')) {
+      quill.history.undo();
+    } else if (e.target.closest('.ql-redo')) {
+      quill.history.redo();
+    }
+  });
 
   // Set spellcheck attribute to true on the editable area
 quill.on('editor-change', () => {
@@ -311,13 +325,17 @@ if (manualSuggestButton) {
 quill.on('text-change', debounce(() => fetchSuggestion(false), 5000));
 
 if (acceptButton && rejectButton) {
-  acceptButton.addEventListener('click', () => {
-    quill.insertText(quill.getLength(), ` ${suggestionText.innerText}`);
+  acceptButton.addEventListener('click', async () => {
+    const suggestion = suggestionText.innerText;
+    quill.insertText(quill.getLength(), ` ${suggestion}`);
     suggestionBox.classList.remove('show');
+    await window.api.sendFeedback('accepted', suggestion);
   });
 
-  rejectButton.addEventListener('click', () => {
+  rejectButton.addEventListener('click', async () => {
+    const suggestion = suggestionText.innerText;
     suggestionBox.classList.remove('show');
+    await window.api.sendFeedback('rejected', suggestion);
   });
 }
 

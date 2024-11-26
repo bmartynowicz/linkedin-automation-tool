@@ -1,4 +1,4 @@
-// main.js
+// main.cjs
 
 const dotenv = require('dotenv');
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
@@ -8,11 +8,10 @@ const db = require('../database/database');
 const { getAISuggestions } = require('../ai/ai');
 
 // Load environment variables
-dotenv.config()
+dotenv.config();
 
 console.log('Index HTML Path:', path.join(__dirname, 'views', 'index.html'));
 console.log('Database Path:', path.resolve(__dirname, 'database', 'app.db'));
-
 
 // Create the main application window
 function createWindow() {
@@ -145,7 +144,6 @@ ipcMain.on('post-status-update', (event, status) => {
 // Fetch user data
 ipcMain.handle('fetch-user-data', async () => {
   try {
-    // Replace with your actual database query logic
     const userData = await new Promise((resolve, reject) => {
       db.get('SELECT * FROM users WHERE id = 1', (err, row) => {
         if (err) return reject(err);
@@ -158,7 +156,6 @@ ipcMain.handle('fetch-user-data', async () => {
     throw error;
   }
 });
-
 
 // Fetch notifications
 ipcMain.handle('fetch-notifications', async () => {
@@ -180,4 +177,28 @@ ipcMain.handle('fetch-notifications', async () => {
     console.error('Error in fetch-notifications handler:', error);
     throw error;
   }
+});
+
+// Handle Feedback from Renderer Process
+ipcMain.on('send-feedback', (event, type, suggestion) => {
+  console.log("Received feedback with type:", type, "for suggestion:", suggestion);
+  if (!['accepted', 'rejected'].includes(type)) {
+    console.error('Invalid feedback type:', type);
+    return;
+  }
+
+  const stmt = db.prepare('INSERT INTO ai_suggestions (suggested_text, feedback, accepted) VALUES (?, ?, ?)');
+  stmt.run(
+    suggestion,
+    type,
+    type === 'accepted' ? 1 : 0,  // Assuming `accepted` is BOOLEAN (0 or 1)
+    (err) => {
+      if (err) {
+        console.error('Error inserting feedback into database:', err.message);
+      } else {
+        console.log(`Feedback recorded: ${type}`);
+      }
+    }
+  );
+  stmt.finalize();
 });
