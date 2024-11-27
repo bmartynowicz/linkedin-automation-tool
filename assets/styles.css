@@ -227,10 +227,6 @@ body.sidebar-collapsed #toolbar {
   border: 1px solid #ccc;
 }
 
-.ql-toolbar {
-  position: relative;
-}
-
 /* Style for the manual suggest button */
 #manual-suggest-button {
   background: none;
