@@ -190,6 +190,38 @@ header h1 {
   transition: margin-left 0.3s ease;
 }
 
+.editor-buttons {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+/* Style for the editor action buttons */
+.editor-action-button {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.editor-action-button:hover {
+  background-color: #0056b3;
+}
+
+.editor-action-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
 /* Adjust when the sidebar is collapsed */
 body.sidebar-collapsed #editor-container {
   margin-left: 60px;
@@ -207,24 +239,6 @@ body.sidebar-collapsed #toolbar {
   border-radius: 5px;
   padding: 15px;
   box-sizing: border-box;
-}
-
-/* ======= Emoji Picker Styles ======= */
-.ql-emoji-picker {
-  position: absolute !important;
-  top: calc(100% + 5px) !important; /* Adjust as needed */
-  left: auto !important;
-  right: 10px !important;
-  transform: none !important;
-  z-index: 1000 !important;
-}
-
-.ql-emoji-picker .ql-picker-options {
-  max-width: 300px;
-}
-
-.ql-emoji-picker.ql-flat {
-  border: 1px solid #ccc;
 }
 
 /* Style for the manual suggest button */
@@ -404,12 +418,14 @@ body.sidebar-collapsed #toolbar {
 }
 
 .modal-content {
-  background-color: #fff;
+  background-color: #fefefe;
   padding: 20px;
-  border-radius: 5px;
-  width: 90%;
-  max-width: 500px;
+  border-radius: 8px;
+  width: 80%; /* Could be more or less, depending on screen size */
+  max-width: 600px;
+  margin: 10% auto; /* 10% from the top and centered */
   position: relative;
+  border: 1px solid #888;
 }
 
 .modal-content:focus {
@@ -422,12 +438,85 @@ body.sidebar-collapsed #toolbar {
   right: 15px;
   font-size: 1.5rem;
   cursor: pointer;
-  background: none;
+  color: #aaa;
   border: none;
+  background: none;
 }
 
+
+.close-button:hover,
 .close-button:focus {
+  color: black;
   outline: none;
+}
+
+/* Saved Posts List */
+#saved-posts-list {
+  list-style: none;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+#saved-posts-list li {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+}
+
+#saved-posts-list li:hover {
+  background-color: #f1f1f1;
+}
+
+/* Buttons within Modal */
+#saved-posts-modal button {
+  margin-right: 10px;
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#saved-posts-modal button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+#saved-posts-modal button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+/* ======= Toast Notification Styles ======= */
+#toast-container {
+  position: fixed;
+  bottom: 30px; /* Best visibility with enough spacing */
+  right: 30px; /* Best visibility with enough spacing */
+  z-index: 1400; /* Above modals */
+}
+
+.toast {
+  position: fixed; /* Ensures toasts stay in place */
+  bottom: 30px; /* Consistent positioning */
+  right: 30px; /* Consistent positioning */
+  background-color: #333; /* Dark background for contrast */
+  color: #fff; /* Text color for contrast */
+  padding: 12px 20px; /* Padding for good visual balance */
+  border-radius: 5px; /* Rounded edges for better aesthetics */
+  margin-top: 10px; /* Space between multiple toasts */
+  opacity: 0; /* Initially hidden */
+  transition: opacity 0.5s ease; /* Smooth fade effect */
+  z-index: 1400; /* Keeps it above other elements */
+}
+
+.toast.show {
+  opacity: 1; /* Show toast with fade-in */
+}
+
+.toast.hide {
+  opacity: 0; /* Hide toast with fade-out */
 }
 
 .modal-content form {
@@ -493,24 +582,6 @@ body.sidebar-collapsed #toolbar {
 #logout-button:focus {
   background-color: #c0392b;
   outline: none;
-}
-
-/* ======= Toast Notification Styles ======= */
-.toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #333;
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 5px;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-  z-index: 1400; /* Above modals */
-}
-
-.toast.show {
-  opacity: 1;
 }
 
 /* ======= Hidden Class ======= */
