@@ -5,6 +5,42 @@ document.addEventListener('DOMContentLoaded', () => {
   let isModalOpen = false;
   let quill;
 
+    // ======= Sidebar Toggle =======
+    const toggleMenuButton = document.getElementById('toggle-menu');
+    const sidebar = document.getElementById('sidebar');
+
+    // ======= Notifications =======
+    const notificationsButton = document.getElementById('notifications');
+    const notificationsDropdown = document.getElementById('notifications-dropdown');
+    const notificationCount = document.getElementById('notification-count');
+    const notificationsList = document.getElementById('notifications-list');
+
+    // ======= Profile Modal =======
+    const profileButton = document.getElementById('profile');
+    const profileModal = document.getElementById('profile-modal');
+    const closeProfileButton = document.getElementById('close-profile');
+    const usernameDisplay = document.getElementById('username');
+    const profilePicture = document.getElementById('profile-picture');
+
+    // ======= Settings Modal =======
+    const settingsButton = document.getElementById('settings');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsButton = document.getElementById('close-settings');
+    const settingsForm = document.getElementById('settings-form');
+
+    // ======= Saved Posts Modal =======
+    const savedPostsModal = document.getElementById('saved-posts-modal');
+    const openSavedPostsButton = document.getElementById('open-saved-posts');
+    const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
+    const savedPostsList = document.getElementById('saved-posts-list');
+    const createNewPostModalButton = document.getElementById('create-new-post-modal');
+    const searchPostsInput = document.getElementById('search-posts');
+    const searchButton = document.getElementById('search-button');
+
+    // ======= Save Post Button Functionality =======
+    const savePostButton = document.getElementById('save-post');
+    const postTitleInput = document.getElementById('post-title');
+
   const debounce = (func, delay) => {
     let timeout;
     return (...args) => {
@@ -53,10 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // ======= Sidebar Toggle =======
-  const toggleMenuButton = document.getElementById('toggle-menu');
-  const sidebar = document.getElementById('sidebar');
-
   if (toggleMenuButton && sidebar) {
     toggleMenuButton.addEventListener('click', () => {
       // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
@@ -77,12 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`Sidebar ${collapsed ? 'Collapsed' : 'Expanded'}.`);
     });
   }
-
-  // ======= Notifications =======
-  const notificationsButton = document.getElementById('notifications');
-  const notificationsDropdown = document.getElementById('notifications-dropdown');
-  const notificationCount = document.getElementById('notification-count');
-  const notificationsList = document.getElementById('notifications-list');
 
   const fetchNotifications = async () => {
     try {
@@ -110,13 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchNotifications();
   }
 
-  // ======= Profile Modal =======
-  const profileButton = document.getElementById('profile');
-  const profileModal = document.getElementById('profile-modal');
-  const closeProfileButton = document.getElementById('close-profile');
-  const usernameDisplay = document.getElementById('username');
-  const profilePicture = document.getElementById('profile-picture');
-
   const fetchUserData = async () => {
     try {
       const user = await window.api.fetchUserData();
@@ -136,12 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchUserData();
   }
 
-  // ======= Settings Modal =======
-  const settingsButton = document.getElementById('settings');
-  const settingsModal = document.getElementById('settings-modal');
-  const closeSettingsButton = document.getElementById('close-settings');
-  const settingsForm = document.getElementById('settings-form');
-
   if (settingsButton && settingsModal && closeSettingsButton && settingsForm) {
     settingsButton.addEventListener('click', () => openModal(settingsModal));
     closeSettingsButton.addEventListener('click', () => closeModal(settingsModal));
@@ -153,15 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModal(settingsModal);
     });
   }
-
-  // ======= Saved Posts Modal =======
-  const savedPostsModal = document.getElementById('saved-posts-modal');
-  const openSavedPostsButton = document.getElementById('open-saved-posts');
-  const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
-  const savedPostsList = document.getElementById('saved-posts-list');
-  const createNewPostModalButton = document.getElementById('create-new-post-modal');
-  const searchPostsInput = document.getElementById('search-posts');
-  const searchButton = document.getElementById('search-button');
 
   if (openSavedPostsButton && savedPostsModal && closeSavedPostsButton) {
     openSavedPostsButton.addEventListener('click', () => {
@@ -180,11 +184,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ======= Function to Load a Post for Editing =======
   async function loadPostForEditing(post) {
+    console.log('loadPostForEditing called with post:', post);
+    
     if (quill && postTitleInput) {
+      console.log('Quill and postTitleInput are initialized.');
+      
+      // Set the post title
       postTitleInput.value = post.title || '';
-      quill.root.innerHTML = post.content;
+      console.log('Post title set to:', post.title || '');
+
+      // Convert HTML to Delta and set the editor content
+      try {
+        const delta = quill.clipboard.convert(post.content);
+        quill.setContents(delta);
+        console.log('Current editor content:', quill.root.innerHTML);
+        console.log('Editor content set using setContents.');
+      } catch (error) {
+        console.error('Error setting editor content:', error);
+        showToast('Failed to load post content.');
+        return;
+      }
+      
+      // Close the modal
       closeModal(savedPostsModal);
+      console.log('Saved Posts modal closed.');
+
+      // Show success toast
       showToast('Loaded post for editing.');
+
+      // Focus the editor (optional)
+      quill.focus();
+      console.log('Editor focused.');
+
+      // Optionally, scroll to the editor
+      document.getElementById('editor-container').scrollIntoView({ behavior: 'smooth' });
     } else {
       showToast('Editor is not initialized.');
       console.error('Quill or Post Title Input is not available.');
@@ -331,7 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
       editButton.classList.add('action-button', 'edit-button');
       editButton.setAttribute('aria-label', 'Edit Post');
       editButton.innerHTML = '<i class="fas fa-edit"></i>';
-      editButton.addEventListener('click', () => loadPostForEditing(post));
+      
+      // **Add Debugging Log**
+      editButton.addEventListener('click', () => {
+      console.log(`Edit button clicked for post ID: ${post.id}`);
+      loadPostForEditing(post);
+      });
+
       actions.appendChild(editButton);
 
       // Schedule Button
@@ -512,10 +551,6 @@ if (editorElement) {
     });
   }
 
-  // ======= Save Post Button Functionality =======
-  const savePostButton = document.getElementById('save-post');
-  const postTitleInput = document.getElementById('post-title');
-
   if (savePostButton) {
     savePostButton.addEventListener('click', async () => {
       if (!quill || !postTitleInput) {
@@ -667,7 +702,7 @@ if (acceptButton && rejectButton) {
   saveDraftButton.id = 'save-draft';
   saveDraftButton.innerText = 'Save Draft';
   saveDraftButton.classList.add('editor-action-button', 'save-draft-button');
-  document.querySelector('#editor-container').appendChild(saveDraftButton);
+  //document.querySelector('#editor-container').appendChild(saveDraftButton);
 
   saveDraftButton.addEventListener('click', () => {
     if (quill && postTitleInput) {
