@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const openSavedPostsButton = document.getElementById('open-saved-posts');
   const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
   const savedPostsList = document.getElementById('saved-posts-list');
-  const createNewPostButton = document.getElementById('create-new-post');
+  const createNewPostModalButton = document.getElementById('create-new-post-modal');
   const searchPostsInput = document.getElementById('search-posts');
   const searchButton = document.getElementById('search-button');
 
@@ -180,10 +180,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ======= Function to Load a Post for Editing =======
   async function loadPostForEditing(post) {
-    quill.root.innerHTML = post.content;
-    // Optionally, display post title somewhere or manage post state
-    closeModal(savedPostsModal);
-    showToast('Loaded post for editing.');
+    if (quill && postTitleInput) {
+      postTitleInput.value = post.title || '';
+      quill.root.innerHTML = post.content;
+      closeModal(savedPostsModal);
+      showToast('Loaded post for editing.');
+    } else {
+      showToast('Editor is not initialized.');
+      console.error('Quill or Post Title Input is not available.');
+    }
   }
 
   // ======= Function to Schedule a Post =======
@@ -429,7 +434,7 @@ if (typeof Quill !== 'undefined') {
   }
 
   // Initialize Quill with the emoji toolbar
-  const quill = new Quill('#editor', {
+  quill = new Quill('#editor', {
     theme: 'snow',
     modules: {
       toolbar: {
@@ -480,26 +485,42 @@ if (editorElement) {
 
   // ======= Autosave Draft Periodically =======
   setInterval(() => {
-    const content = quill.root.innerHTML;
-    localStorage.setItem('draft', content);
-    console.log('Autosave draft.');
-  }, 15000);  // Autosave every 10 seconds
+    if (quill && postTitleInput) {
+      const draft = {
+        title: postTitleInput.value.trim(),
+        content: quill.root.innerHTML.trim(),
+      };
+      localStorage.setItem('draft', JSON.stringify(draft));
+      console.log('Autosave draft.');
+    }
+  }, 15000);  // Autosave every 15 seconds
 
-  // ======= Create New Post Button =======
-  if (createNewPostButton) {
-    createNewPostButton.addEventListener('click', () => {
-      quill.setContents([]); // Clear the editor for a new post
-      closeModal(savedPostsModal);
-      showToast('Ready to create a new post.');
+  // ======= Create New Post Button in Editor =======
+  const createNewPostEditorButton = document.getElementById('create-new-post-editor');
+
+  if (createNewPostEditorButton) {
+    createNewPostEditorButton.addEventListener('click', () => {
+      if (quill && postTitleInput) {
+        quill.setContents([]); // Clear the editor for a new post
+        postTitleInput.value = ''; // Clear the title input
+        closeModal(savedPostsModal);
+        showToast('Ready to create a new post.');
+      } else {
+        showToast('Editor is not initialized.');
+        console.error('Quill or Post Title Input is not available.');
+      }
     });
   }
 
   // ======= Save Post Button Functionality =======
+  const savePostButton = document.getElementById('save-post');
+  const postTitleInput = document.getElementById('post-title');
+
   if (savePostButton) {
     savePostButton.addEventListener('click', async () => {
-      if (!quill) {
+      if (!quill || !postTitleInput) {
         showToast('Editor is not initialized.');
-        console.error('Quill instance is not available.');
+        console.error('Quill or Post Title Input is not available.');
         return;
       }
 
@@ -552,14 +573,6 @@ if (editorElement) {
         savePostButton.innerHTML = '<i class="fas fa-save"></i> Save Post';
       }
     });
-  }
-
-  // ======= Function to Load a Post for Editing =======
-  async function loadPostForEditing(post) {
-    quill.root.innerHTML = post.content;
-    // Optionally, display post title somewhere or manage post state
-    closeModal(savedPostsModal);
-    showToast('Loaded post for editing.');
   }
 
   const manualSuggestButton = document.getElementById('manual-suggest-button');
@@ -643,7 +656,9 @@ if (acceptButton && rejectButton) {
   if (toggleDistractionFreeButton) {
     toggleDistractionFreeButton.addEventListener('click', () => {
       const isDistractionFree = toggleElement(document.body, 'distraction-free');
-      toggleDistractionFreeButton.innerText = isDistractionFree ? 'Exit Focus Mode' : 'Focus Mode';
+      toggleDistractionFreeButton.innerHTML = isDistractionFree 
+        ? '<i class="fas fa-eye"></i> Exit Focus Mode' 
+        : '<i class="fas fa-eye-slash"></i> Focus Mode';
     });
   }
 
@@ -651,16 +666,29 @@ if (acceptButton && rejectButton) {
   const saveDraftButton = document.createElement('button');
   saveDraftButton.id = 'save-draft';
   saveDraftButton.innerText = 'Save Draft';
-  saveDraftButton.classList.add('toggle-button');
+  saveDraftButton.classList.add('editor-action-button', 'save-draft-button');
   document.querySelector('#editor-container').appendChild(saveDraftButton);
 
   saveDraftButton.addEventListener('click', () => {
-    localStorage.setItem('draft', quill.root.innerHTML);
-    showToast('Draft saved successfully!');
+    if (quill && postTitleInput) {
+      const draft = {
+        title: postTitleInput.value.trim(),
+        content: quill.root.innerHTML.trim(),
+      };
+      localStorage.setItem('draft', JSON.stringify(draft));
+      showToast('Draft saved successfully!');
+    } else {
+      showToast('Editor is not initialized.');
+      console.error('Quill or Post Title Input is not available.');
+    }
   });
 
   const savedDraft = localStorage.getItem('draft');
-  if (savedDraft) quill.root.innerHTML = savedDraft;
+  if (savedDraft && quill && postTitleInput) {
+    const { title, content } = JSON.parse(savedDraft);
+    postTitleInput.value = title || '';
+    quill.root.innerHTML = content || '';
+  }
 
   // ======= Accessibility Enhancements =======
   document.querySelectorAll('.modal').forEach((modal) => {

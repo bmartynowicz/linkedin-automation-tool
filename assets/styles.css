@@ -222,6 +222,16 @@ header h1 {
   cursor: not-allowed;
 }
 
+/* Style for the post title input */
+.post-title-input {
+  width: 100%;
+  padding: 10px 15px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
 /* Adjust when the sidebar is collapsed */
 body.sidebar-collapsed #editor-container {
   margin-left: 60px;
@@ -590,7 +600,7 @@ body.sidebar-collapsed #toolbar {
 }
 
 /* ======= Responsive Design ======= */
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   /* Adjust sidebar for smaller screens */
   #sidebar {
     width: 200px;
@@ -611,6 +621,16 @@ body.sidebar-collapsed #toolbar {
   /* Adjust editor container margin accordingly */
   #editor-container {
     margin-left: 200px;
+  }
+
+  .editor-buttons {
+    flex-direction: column;
+    bottom: 10px;
+    right: 10px;
+  }
+
+  #editor-container .ql-editor {
+    padding-bottom: 80px;
   }
 
   /* Adjust header icons size */

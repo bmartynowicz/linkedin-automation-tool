@@ -108,7 +108,7 @@
       
       <!-- Action Buttons -->
       <div class="modal-actions">
-        <button id="create-new-post" class="action-button" aria-label="Create New Post">
+        <button id="create-new-post-modal" class="action-button" aria-label="Create New Post">
           <i class="fas fa-plus"></i> Create New Post
         </button>
         <button id="schedule-post" class="action-button" disabled aria-label="Schedule Post">
@@ -230,7 +230,11 @@
 
     <!-- Quill Editor Container -->
     <div id="editor-container">
+      <!-- Post Title Input -->
+      <input type="text" id="post-title" class="post-title-input" placeholder="Enter Post Title" aria-label="Post Title">
+      
       <div id="editor" class="q1-container q1-editor"></div>
+      
       <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
       <div id="suggestion-box" aria-live="polite">
         <p id="suggestion-text"></p>
@@ -240,9 +244,9 @@
         </div>
       </div>
       
-      <!-- New Post, Save Post and Focus Button -->
+      <!-- New Post, Save Post, and Focus Mode Buttons -->
       <div class="editor-buttons">
-        <button id="create-new-post" class="editor-action-button" aria-label="Create New Post">
+        <button id="create-new-post-editor" class="editor-action-button" aria-label="Create New Post">
           <i class="fas fa-plus"></i> Create New Post
         </button>
         <button id="save-post" class="editor-action-button" aria-label="Save Post">
@@ -255,7 +259,8 @@
           <i class="fas fa-eye-slash"></i> Focus Mode
         </button>
       </div>
-  </main>
+  </div>
+</main>
 
   <!-- Confirmation Modal for Deletion -->
   <div id="delete-confirmation-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="delete-confirmation-title">
