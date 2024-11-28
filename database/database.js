@@ -46,10 +46,13 @@ function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
-        title TEXT NOT NULL,
+        title TEXT, 
         content TEXT NOT NULL,
+        status TEXT CHECK(status IN ('draft', 'scheduled', 'posted')) NOT NULL DEFAULT 'draft',
+        scheduled_time DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        edited_at DATETIME,  -- New column for last edited timestamp
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);

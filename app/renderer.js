@@ -3,15 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded.');
 
   let isModalOpen = false;
-  let emojiPicker = null;
+  let quill;
 
-  // ======= Utility Functions =======
-  /**
-   * Debounce function: Delays the execution of the given function until after the specified delay.
-   * @param {Function} func - The function to debounce.
-   * @param {number} delay - The delay in milliseconds.
-   * @returns {Function} - The debounced function.
-   */
   const debounce = (func, delay) => {
     let timeout;
     return (...args) => {
@@ -20,12 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   };
 
-  /**
-   * Toggles a class on an element.
-   * @param {HTMLElement} element - The element to toggle the class on.
-   * @param {string} className - The class to toggle.
-   * @returns {boolean} - True if the class is added, false if removed.
-   */
   function toggleElement(element, className) {
     element.classList.toggle(className);
     return element.classList.contains(className);
@@ -36,23 +23,16 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`${theme.charAt(0).toUpperCase() + theme.slice(1)} theme applied.`);
   };
 
-  /**
-   * Shows a toast notification.
-   * @param {string} message - The message to display in the toast.
-   */
   function showToast(message) {
     const toast = document.createElement('div');
-    toast.className = 'toast';
+    toast.className = 'toast show';
     toast.innerText = message;
     document.body.appendChild(toast);
-
     setTimeout(() => toast.classList.add('show'), 100);
     setTimeout(() => {
       toast.classList.remove('show');
       setTimeout(() => toast.remove(), 300);
     }, 3000);
-
-    console.log('Toast shown:', message);
   }
 
   const openModal = (modal) => {
@@ -81,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleMenuButton.addEventListener('click', () => {
       // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
       const collapsed = toggleElement(sidebar, 'collapsed');
+      toggleElement(document.body, 'sidebar-collapsed');
 
       // Update the toggle button's icon based on the new state
       const icon = toggleMenuButton.querySelector('i');
@@ -173,6 +154,256 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ======= Saved Posts Modal =======
+  const savedPostsModal = document.getElementById('saved-posts-modal');
+  const openSavedPostsButton = document.getElementById('open-saved-posts');
+  const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
+  const savedPostsList = document.getElementById('saved-posts-list');
+  const createNewPostModalButton = document.getElementById('create-new-post-modal');
+  const searchPostsInput = document.getElementById('search-posts');
+  const searchButton = document.getElementById('search-button');
+
+  if (openSavedPostsButton && savedPostsModal && closeSavedPostsButton) {
+    openSavedPostsButton.addEventListener('click', () => {
+      openModal(savedPostsModal);
+      loadSavedPosts(); // Function to load saved posts when modal opens
+    });
+
+    closeSavedPostsButton.addEventListener('click', () => closeModal(savedPostsModal));
+
+    window.addEventListener('click', (event) => {
+      if (event.target === savedPostsModal) {
+        closeModal(savedPostsModal);
+      }
+    });
+  }
+
+  // ======= Function to Load a Post for Editing =======
+  async function loadPostForEditing(post) {
+    if (quill && postTitleInput) {
+      postTitleInput.value = post.title || '';
+      quill.root.innerHTML = post.content;
+      closeModal(savedPostsModal);
+      showToast('Loaded post for editing.');
+    } else {
+      showToast('Editor is not initialized.');
+      console.error('Quill or Post Title Input is not available.');
+    }
+  }
+
+  // ======= Function to Schedule a Post =======
+  const schedulePost = (post) => {
+    // Create a modal for scheduling
+    const schedulerModal = document.createElement('div');
+    schedulerModal.classList.add('modal', 'hidden');
+    schedulerModal.setAttribute('role', 'dialog');
+    schedulerModal.setAttribute('aria-modal', 'true');
+    schedulerModal.setAttribute('aria-labelledby', 'scheduler-title');
+    schedulerModal.innerHTML = `
+    <div class="modal-content">
+      <span class="close-button" id="close-scheduler">&times;</span>
+      <h2 id="scheduler-title">Schedule Post</h2>
+      <form id="schedule-form">
+        <label for="schedule-date">Select Date and Time:</label>
+        <input type="text" id="schedule-date" name="schedule-date" placeholder="Select Date and Time" required>
+        <button type="submit">Schedule</button>
+      </form>
+    </div>
+  `;
+    document.body.appendChild(schedulerModal);
+
+    const closeSchedulerButton = schedulerModal.querySelector('#close-scheduler');
+    const scheduleForm = schedulerModal.querySelector('#schedule-form');
+    const scheduleDateInput = schedulerModal.querySelector('#schedule-date');
+
+    // Initialize Flatpickr
+    if (typeof flatpickr !== 'undefined') {
+      flatpickr(scheduleDateInput, {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today",
+      });
+    } else {
+      console.error('Flatpickr is not available.');
+    }
+
+    // Open the Scheduler Modal
+    openModal(schedulerModal);
+
+    // Event Listener to Close Scheduler Modal
+    closeSchedulerButton.addEventListener('click', () => {
+      closeModal(schedulerModal);
+      schedulerModal.remove();
+    });
+
+    /// Handle Schedule Form Submission
+  scheduleForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const scheduledTime = scheduleDateInput.value;
+
+    if (!scheduledTime) {
+      showToast('Please select a date and time.');
+      return;
+    }
+
+    // Basic validation for the scheduled time
+    const isValid = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(scheduledTime);
+    if (!isValid) {
+      showToast('Invalid date format. Please use YYYY-MM-DD HH:MM.');
+      return;
+    }
+
+    // Update the post status and scheduled_time in the database via IPC
+    const updatedPost = {
+      id: post.id,
+      title: post.title, // Include title if available
+      content: quill.root.innerHTML.trim(),
+      status: 'scheduled',
+      scheduled_time: scheduledTime,
+    };
+
+    showLoader(); // Show loader during the async operation
+    try {
+      const result = await window.api.schedulePost(updatedPost);
+      if (result.success) {
+        showToast('Post scheduled successfully!');
+        loadSavedPosts(); // Refresh the saved posts list
+      } else {
+        showToast(`Failed to schedule the post: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error scheduling post:', error);
+      showToast('An error occurred while scheduling the post.');
+    } finally {
+      hideLoader(); // Hide loader after the operation
+      closeModal(schedulerModal);
+      schedulerModal.remove();
+    }
+    });
+  };
+
+  // ======= Load Saved Posts Function =======
+  const loadSavedPosts = async () => {
+    showLoader();
+    try {
+      const posts = await window.api.getPosts();
+      displaySavedPosts(posts);
+    } catch (error) {
+      console.error('Error loading saved posts:', error);
+      showToast('An error occurred while loading saved posts.');
+    } finally {
+      hideLoader();
+    }
+  };
+
+  // ======= Function to Display Saved Posts =======
+  const displaySavedPosts = (posts) => {
+    savedPostsList.innerHTML = ''; // Clear existing list
+
+    if (posts.length === 0) {
+      savedPostsList.innerHTML = '<li>No saved posts found.</li>';
+      return;
+    }
+
+    posts.forEach((post) => {
+      const li = document.createElement('li');
+      li.classList.add('saved-post-item');
+      li.dataset.id = post.id;
+
+      // Post Title
+      const title = document.createElement('span');
+      title.classList.add('post-title');
+      title.innerText = post.title || `Post #${post.id}`;
+      li.appendChild(title);
+
+      // Post Status
+      const status = document.createElement('span');
+      status.classList.add('post-status');
+      status.innerText = `[${post.status}]`;
+      li.appendChild(status);
+
+      // Action Buttons Container
+      const actions = document.createElement('div');
+      actions.classList.add('post-actions');
+
+      // Edit Button
+      const editButton = document.createElement('button');
+      editButton.classList.add('action-button', 'edit-button');
+      editButton.setAttribute('aria-label', 'Edit Post');
+      editButton.innerHTML = '<i class="fas fa-edit"></i>';
+      editButton.addEventListener('click', () => loadPostForEditing(post));
+      actions.appendChild(editButton);
+
+      // Schedule Button
+      const scheduleButton = document.createElement('button');
+      scheduleButton.classList.add('action-button', 'schedule-button');
+      scheduleButton.setAttribute('aria-label', 'Schedule Post');
+      scheduleButton.innerHTML = '<i class="fas fa-calendar-alt"></i>';
+      scheduleButton.addEventListener('click', () => schedulePost(post));
+      actions.appendChild(scheduleButton);
+
+      // Delete Button
+      const deleteButton = document.createElement('button');
+      deleteButton.classList.add('action-button', 'delete-button');
+      deleteButton.setAttribute('aria-label', 'Delete Post');
+      deleteButton.innerHTML = '<i class="fas fa-trash-alt"></i>';
+      deleteButton.addEventListener('click', () => openDeleteConfirmation(post.id));
+      actions.appendChild(deleteButton);
+
+      li.appendChild(actions);
+      savedPostsList.appendChild(li);
+    });
+  };
+
+  // ======= Function to Perform Search =======
+  const performSearch = debounce(async () => {
+    const query = searchPostsInput.value.trim();
+    if (query.length === 0) {
+      loadSavedPosts(); // Load all posts if search query is empty
+      return;
+    }
+
+    showLoader();
+    try {
+      const posts = await window.api.searchPosts(query);
+      displaySavedPosts(posts);
+      showToast(`Found ${posts.length} post(s) matching "${query}".`);
+    } catch (error) {
+      console.error('Error searching posts:', error);
+      showToast('An error occurred while searching posts.');
+    } finally {
+      hideLoader();
+    }
+  }, 500);
+
+  // ======= Event Listeners for Search Functionality =======
+  if (searchButton && searchPostsInput) {
+    searchButton.addEventListener('click', performSearch);
+  }
+
+  if (searchPostsInput) {
+    searchPostsInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        performSearch();
+      }
+    });
+  }
+
+  // Loader Management
+const showLoader = () => {
+  const loader = document.getElementById('posts-loader');
+  if (loader) {
+    loader.classList.remove('hidden');
+  }
+};
+
+const hideLoader = () => {
+  const loader = document.getElementById('posts-loader');
+  if (loader) {
+    loader.classList.add('hidden');
+  }
+};
+
 // ======= Initialize the Quill Editor with Emoji Toolbar =======
 if (typeof Quill !== 'undefined') {
   console.log('Quill is available.');
@@ -203,7 +434,7 @@ if (typeof Quill !== 'undefined') {
   }
 
   // Initialize Quill with the emoji toolbar
-  const quill = new Quill('#editor', {
+  quill = new Quill('#editor', {
     theme: 'snow',
     modules: {
       toolbar: {
@@ -212,6 +443,11 @@ if (typeof Quill !== 'undefined') {
       'emoji-toolbar': true,
       'emoji-shortname': true,
       'emoji-textarea': false,
+      history: {
+        delay: 1000,
+        maxStack: 100,
+        userOnly: true,
+      },
     },
     formats: [
       'bold', 'italic', 'underline', 'strike',
@@ -224,52 +460,195 @@ if (typeof Quill !== 'undefined') {
 
   console.log('Quill editor initialized with emoji support.');
 
+  // ======= Add Event Listener for Toolbar Undo/Redo Buttons =======
+  document.getElementById('toolbar').addEventListener('click', (e) => {
+    if (e.target.closest('.ql-undo')) {
+      quill.history.undo();
+    } else if (e.target.closest('.ql-redo')) {
+      quill.history.redo();
+    }
+  });
+
+  // Set spellcheck attribute to true on the editable area
+quill.on('editor-change', () => {
+  const editorElement = document.querySelector('.ql-editor');
+  if (editorElement) {
+    editorElement.setAttribute('spellcheck', 'true');
+  }
+});
+
+// Initial setting in case the editor-change event hasn't fired yet
+const editorElement = document.querySelector('.ql-editor');
+if (editorElement) {
+  editorElement.setAttribute('spellcheck', 'true');
+}
+
   // ======= Autosave Draft Periodically =======
   setInterval(() => {
-    const content = quill.root.innerHTML;
-    localStorage.setItem('draft', content);
-    console.log('Autosave draft.');
-  }, 15000);  // Autosave every 10 seconds
+    if (quill && postTitleInput) {
+      const draft = {
+        title: postTitleInput.value.trim(),
+        content: quill.root.innerHTML.trim(),
+      };
+      localStorage.setItem('draft', JSON.stringify(draft));
+      console.log('Autosave draft.');
+    }
+  }, 15000);  // Autosave every 15 seconds
 
+  // ======= Create New Post Button in Editor =======
+  const createNewPostEditorButton = document.getElementById('create-new-post-editor');
+
+  if (createNewPostEditorButton) {
+    createNewPostEditorButton.addEventListener('click', () => {
+      if (quill && postTitleInput) {
+        quill.setContents([]); // Clear the editor for a new post
+        postTitleInput.value = ''; // Clear the title input
+        closeModal(savedPostsModal);
+        showToast('Ready to create a new post.');
+      } else {
+        showToast('Editor is not initialized.');
+        console.error('Quill or Post Title Input is not available.');
+      }
+    });
+  }
+
+  // ======= Save Post Button Functionality =======
+  const savePostButton = document.getElementById('save-post');
+  const postTitleInput = document.getElementById('post-title');
+
+  if (savePostButton) {
+    savePostButton.addEventListener('click', async () => {
+      if (!quill || !postTitleInput) {
+        showToast('Editor is not initialized.');
+        console.error('Quill or Post Title Input is not available.');
+        return;
+      }
+
+      const title = postTitleInput.value.trim();
+      const content = quill.root.innerHTML.trim();
+
+      if (!title) {
+        showToast('Please enter a title for your post.');
+        return;
+      }
+
+      if (!content) {
+        showToast('Post content cannot be empty.');
+        return;
+      }
+
+      // Prepare the post object
+      const post = {
+        title: title,
+        content: content,
+        status: 'draft', // You can set this to 'draft' or any other status as needed
+        // Add other necessary fields if required
+      };
+
+      // Show loader or disable the button to indicate saving is in progress
+      savePostButton.disabled = true;
+      savePostButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+      try {
+        const result = await window.api.savePost(post);
+        if (result.success) {
+          showToast('Post saved successfully!');
+          // Optionally, clear the editor and title input
+          quill.setContents([]);
+          postTitleInput.value = '';
+          // Refresh the saved posts list if it's open
+          if (!savedPostsModal.classList.contains('hidden')) {
+            loadSavedPosts();
+          }
+        } else {
+          showToast(`Failed to save post: ${result.message}`);
+          console.error('Save Post Error:', result.message);
+        }
+      } catch (error) {
+        showToast('An error occurred while saving the post.');
+        console.error('Save Post Exception:', error);
+      } finally {
+        // Re-enable the button and reset its text
+        savePostButton.disabled = false;
+        savePostButton.innerHTML = '<i class="fas fa-save"></i> Save Post';
+      }
+    });
+  }
+
+  const manualSuggestButton = document.getElementById('manual-suggest-button');
   const suggestionBox = document.getElementById('suggestion-box');
   const suggestionText = document.getElementById('suggestion-text');
   const acceptButton = document.getElementById('accept-suggestion');
   const rejectButton = document.getElementById('reject-suggestion');
 
   // Fetch suggestion and display in suggestion box
-  const fetchSuggestion = async () => {
-    if (isModalOpen) return;
+  const fetchSuggestion = async (isManual = false) => {
+  if (isModalOpen) return;
 
-    const userInput = quill.getText().trim();
-    if (userInput.split(/\s+/).length < 50) return; // Auto suggest will trigger after 50 words
+  const userInput = quill.getText().trim();
 
-    try {
-      const suggestion = await window.api.getAISuggestions(userInput);
-      console.log('Fetched suggestion:', suggestion);
-      if (suggestion) {
-        suggestionText.innerText = suggestion;
-        suggestionBox.classList.add('show');
-      } else {
-        suggestionBox.classList.remove('show');
-      }
-    } catch (error) {
-      console.error('Error fetching AI suggestion:', error);
-      suggestionBox.classList.remove('show');
-    }
-  };
+  // Check if we should trigger suggestion based on word count
+  if (!isManual && userInput.split(/\s+/).length < 50) return;
 
-  quill.on('text-change', debounce(fetchSuggestion, 5000));
-
-  if (acceptButton && rejectButton) {
-    acceptButton.addEventListener('click', () => {
-      quill.insertText(quill.getLength(), ` ${suggestionText.innerText}`);
-      suggestionBox.classList.remove('show');
-    });
-  
-    rejectButton.addEventListener('click', () => {
-      suggestionBox.classList.remove('show');
-    });
+  // If manual request but editor is empty, show a toast and exit
+  if (isManual && userInput.length === 0) {
+    showToast('Please enter some text in the editor.');
+    return;
   }
+
+  try {
+    if (isManual) {
+      // Show loading indicator on the button (optional)
+      manualSuggestButton.disabled = true;
+      manualSuggestButton.classList.add('loading');
+    }
+
+    const suggestion = await window.api.getAISuggestions(userInput);
+    console.log('Fetched suggestion:', suggestion);
+    if (suggestion) {
+      suggestionText.innerText = suggestion;
+      suggestionBox.classList.add('show');
+    } else {
+      suggestionBox.classList.remove('show');
+      if (isManual) showToast('No suggestion available at this time.');
+    }
+  } catch (error) {
+    console.error('Error fetching AI suggestion:', error);
+    suggestionBox.classList.remove('show');
+    if (isManual) showToast('An error occurred while fetching the suggestion.');
+  } finally {
+    if (isManual) {
+      manualSuggestButton.disabled = false;
+      manualSuggestButton.classList.remove('loading');
+    }
+  }
+};
+
+// Event listener for the manual suggest button
+if (manualSuggestButton) {
+  manualSuggestButton.addEventListener('click', () => {
+    // Fetch suggestion manually
+    fetchSuggestion(true);
+  });
+}
+
+// Automatic suggestion on text change
+quill.on('text-change', debounce(() => fetchSuggestion(false), 5000));
+
+if (acceptButton && rejectButton) {
+  acceptButton.addEventListener('click', async () => {
+    const suggestion = suggestionText.innerText;
+    quill.insertText(quill.getLength(), ` ${suggestion}`);
+    suggestionBox.classList.remove('show');
+    await window.api.sendFeedback('accepted', suggestion);
+  });
+
+  rejectButton.addEventListener('click', async () => {
+    const suggestion = suggestionText.innerText;
+    suggestionBox.classList.remove('show');
+    await window.api.sendFeedback('rejected', suggestion);
+  });
+}
 
   // ======= Distraction-Free Mode =======
   const toggleDistractionFreeButton = document.getElementById('toggle-distraction-free');
@@ -277,7 +656,9 @@ if (typeof Quill !== 'undefined') {
   if (toggleDistractionFreeButton) {
     toggleDistractionFreeButton.addEventListener('click', () => {
       const isDistractionFree = toggleElement(document.body, 'distraction-free');
-      toggleDistractionFreeButton.innerText = isDistractionFree ? 'Exit Focus Mode' : 'Focus Mode';
+      toggleDistractionFreeButton.innerHTML = isDistractionFree 
+        ? '<i class="fas fa-eye"></i> Exit Focus Mode' 
+        : '<i class="fas fa-eye-slash"></i> Focus Mode';
     });
   }
 
@@ -285,16 +666,29 @@ if (typeof Quill !== 'undefined') {
   const saveDraftButton = document.createElement('button');
   saveDraftButton.id = 'save-draft';
   saveDraftButton.innerText = 'Save Draft';
-  saveDraftButton.classList.add('toggle-button');
+  saveDraftButton.classList.add('editor-action-button', 'save-draft-button');
   document.querySelector('#editor-container').appendChild(saveDraftButton);
 
   saveDraftButton.addEventListener('click', () => {
-    localStorage.setItem('draft', quill.root.innerHTML);
-    showToast('Draft saved successfully!');
+    if (quill && postTitleInput) {
+      const draft = {
+        title: postTitleInput.value.trim(),
+        content: quill.root.innerHTML.trim(),
+      };
+      localStorage.setItem('draft', JSON.stringify(draft));
+      showToast('Draft saved successfully!');
+    } else {
+      showToast('Editor is not initialized.');
+      console.error('Quill or Post Title Input is not available.');
+    }
   });
 
   const savedDraft = localStorage.getItem('draft');
-  if (savedDraft) quill.root.innerHTML = savedDraft;
+  if (savedDraft && quill && postTitleInput) {
+    const { title, content } = JSON.parse(savedDraft);
+    postTitleInput.value = title || '';
+    quill.root.innerHTML = content || '';
+  }
 
   // ======= Accessibility Enhancements =======
   document.querySelectorAll('.modal').forEach((modal) => {

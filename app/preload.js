@@ -1,3 +1,5 @@
+// preload.js
+
 const { contextBridge, ipcRenderer } = require('electron');
 
 // Expose secure APIs to the renderer process
@@ -9,4 +11,12 @@ contextBridge.exposeInMainWorld('api', {
   getAISuggestions: (prompt) => ipcRenderer.invoke('get-ai-suggestions', prompt),
   fetchNotifications: () => ipcRenderer.invoke('fetch-notifications'),
   fetchUserData: () => ipcRenderer.invoke('fetch-user-data'),
+  sendFeedback: (type, suggestion) => ipcRenderer.send('send-feedback', type, suggestion),
+  searchPosts: (query) => ipcRenderer.invoke('search-posts', query),
+  savePost: (post) => ipcRenderer.invoke('save-post', post),
+  getPosts: () => ipcRenderer.invoke('get-posts'),
+  getPostById: (id) => ipcRenderer.invoke('get-post-by-id', id),
+  deletePost: (id) => ipcRenderer.invoke('delete-post', id),
+  schedulePost: (updatedPost) => ipcRenderer.invoke('schedule-post', updatedPost),
+  onPostPublished: (callback) => ipcRenderer.on('post-published', callback),
 });

@@ -20,10 +20,7 @@
   <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
   
   <!-- Quill Emoji CSS -->
-  <link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.css"
-  />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.css" />
 
   <!-- Include Font Awesome for Icons -->
   <link 
@@ -31,6 +28,9 @@
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
   crossorigin="anonymous" 
   referrerpolicy="no-referrer"/>
+
+  <!-- Flatpickr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="../../assets/styles.css">
@@ -57,144 +57,237 @@
     </ul>
   </div>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <div class="modal-content">
-        <span class="close-button" id="close-settings">&times;</span>
-        <h2 id="settings-title">Settings</h2>
-        <form id="settings-form">
-          <label for="theme-select">Theme:</label>
-          <select id="theme-select" name="theme">
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-          <button type="submit">Save</button>
-        </form>
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-content">
+      <span class="close-button" id="close-settings">&times;</span>
+      <h2 id="settings-title">Settings</h2>
+      <form id="settings-form">
+        <label for="theme-select">Theme:</label>
+        <select id="theme-select" name="theme">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+        <button type="submit">Save</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+    <div class="modal-content">
+      <span class="close-button" id="close-profile">&times;</span>
+      <h2 id="profile-title">Your Profile</h2>
+      <div class="profile-info">
+        <img id="profile-picture" src="../../assets/default-profile.png" alt="Profile Picture">
+        <p id="username">Username</p>
+      </div>
+      <button id="logout-button">Logout</button>
+    </div>
+  </div>
+  
+  <!-- Saved Posts Modal -->
+  <div id="saved-posts-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="saved-posts-title">
+    <div class="modal-content">
+      <span class="close-button" id="close-saved-posts">&times;</span>
+      <h2 id="saved-posts-title">Your Saved Posts</h2>
+      
+      <!-- Search Bar (Optional) -->
+      <div class="search-bar">
+        <input type="text" id="search-posts" placeholder="Search posts..." aria-label="Search Posts">
+        <button id="search-button" aria-label="Search"><i class="fas fa-search"></i></button>
+      </div>
+      
+      <!-- Loader Indicator -->
+      <div id="posts-loader" class="loader hidden" aria-label="Loading posts..."></div>
+      
+      <!-- Posts List -->
+      <ul id="saved-posts-list" aria-label="List of Saved Posts">
+        <!-- Dynamically populated list of posts -->
+      </ul>
+      
+      <!-- Action Buttons -->
+      <div class="modal-actions">
+        <button id="create-new-post-modal" class="action-button" aria-label="Create New Post">
+          <i class="fas fa-plus"></i> Create New Post
+        </button>
+        <button id="schedule-post" class="action-button" disabled aria-label="Schedule Post">
+          <i class="fas fa-calendar-alt"></i> Schedule Post
+        </button>
+        <button id="delete-post" class="action-button" disabled aria-label="Delete Post">
+          <i class="fas fa-trash-alt"></i> Delete Post
+        </button>
+      </div>
+      
+      <!-- Confirmation Modal for Deletion -->
+      <div id="delete-confirmation-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="delete-confirmation-title">
+        <div class="modal-content">
+          <span class="close-button" id="close-delete-confirmation">&times;</span>
+          <h2 id="delete-confirmation-title">Confirm Deletion</h2>
+          <p>Are you sure you want to delete this post?</p>
+          <div class="modal-actions">
+            <button id="confirm-delete" class="action-button confirm" aria-label="Confirm Delete">Yes, Delete</button>
+            <button id="cancel-delete" class="action-button cancel" aria-label="Cancel Delete">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
-
-<!-- Profile Modal -->
-<div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
-  <div class="modal-content">
-    <span class="close-button" id="close-profile">&times;</span>
-    <h2 id="profile-title">Your Profile</h2>
-    <div class="profile-info">
-      <img id="profile-picture" src="../../assets/default-profile.png" alt="Profile Picture">
-      <p id="username">Username</p>
-    </div>
-    <button id="logout-button">Logout</button>
   </div>
-</div>
   
   <!-- Updated Sidebar Navigation -->
-<nav id="sidebar" class="sidebar">
-  <ul class="nav-list">
-    <li class="nav-item">
-      <a href="#dashboard" aria-label="Dashboard">
-        <span class="icon"><i class="fas fa-tachometer-alt"></i></span> <!-- Icon -->
-        <span class="text">Dashboard</span> <!-- Text label -->
-      </a>
-    </li>
-    <li class="nav-item">
-      <a href="#content-creation" aria-label="Content Creation">
-        <span class="icon"><i class="fas fa-pencil-alt"></i></span> <!-- Icon -->
-        <span class="text">Content Creation</span> <!-- Text label -->
-      </a>
-    </li>
-    <li class="nav-item">
-      <a href="#scheduler" aria-label="Scheduler">
-        <span class="icon"><i class="fas fa-calendar-alt"></i></span> <!-- Icon -->
-        <span class="text">Scheduler</span> <!-- Text label -->
-      </a>
-    </li>
-    <li class="nav-item">
-      <a href="#analytics" aria-label="Analytics">
-        <span class="icon"><i class="fas fa-chart-line"></i></span> <!-- Icon -->
-        <span class="text">Analytics</span> <!-- Text label -->
-      </a>
-    </li>
-    <li class="nav-item">
-      <a href="#settings" aria-label="Settings">
-        <span class="icon"><i class="fas fa-cog"></i></span> <!-- Icon -->
-        <span class="text">Settings</span> <!-- Text label -->
-      </a>
-    </li>
-  </ul>
-  <button id="toggle-menu" aria-label="Toggle Menu">
-    <i class="fas fa-chevron-left"></i>
-  </button>
-</nav>
+  <nav id="sidebar" class="sidebar">
+    <ul class="nav-list">
+      <li class="nav-item">
+        <a href="#dashboard" aria-label="Dashboard">
+          <span class="icon"><i class="fas fa-tachometer-alt"></i></span>
+          <span class="text">Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#content-creation" aria-label="Content Creation">
+          <span class="icon"><i class="fas fa-pencil-alt"></i></span>
+          <span class="text">Content Creation</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#scheduler" aria-label="Scheduler">
+          <span class="icon"><i class="fas fa-calendar-alt"></i></span>
+          <span class="text">Scheduler</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#analytics" aria-label="Analytics">
+          <span class="icon"><i class="fas fa-chart-line"></i></span>
+          <span class="text">Analytics</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#settings" aria-label="Settings">
+          <span class="icon"><i class="fas fa-cog"></i></span>
+          <span class="text">Settings</span>
+        </a>
+      </li>
+    </ul>
+    <button id="toggle-menu" aria-label="Toggle Menu">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+  </nav>
 
   <!-- Main Content Area -->
   <main>
     <!-- Quill Toolbar -->
-<div id="toolbar" class="q1-toolbar">
-  <span class="ql-formats">
-    <button class="ql-bold" aria-label="Bold"></button>
-    <button class="ql-italic" aria-label="Italic"></button>
-    <button class="ql-underline" aria-label="Underline"></button>
-    <button class="ql-strike" aria-label="Strike"></button>
-  </span>
-  <span class="ql-formats">
-    <button class="ql-blockquote" aria-label="Blockquote"></button>
-    <button class="ql-code-block" aria-label="Code Block"></button>
-  </span>
-  <span class="ql-formats">
-    <button class="ql-list" value="ordered" aria-label="Ordered List"></button>
-    <button class="ql-list" value="bullet" aria-label="Bullet List"></button>
-    <button class="ql-indent" value="-1" aria-label="Decrease Indent"></button>
-    <button class="ql-indent" value="+1" aria-label="Increase Indent"></button>
-  </span>
-  <span class="ql-formats">
-    <select class="ql-header" aria-label="Header">
-      <option selected></option>
-      <option value="1"></option>
-      <option value="2"></option>
-    </select>
-    <select class="ql-font" aria-label="Font"></select>
-    <select class="ql-size" aria-label="Size"></select>
-  </span>
-  <span class="ql-formats">
-    <button class="ql-color" aria-label="Text Color"></button>
-    <button class="ql-background" aria-label="Background Color"></button>
-    <button class="ql-align" aria-label="Align"></button>
-  </span>
-  <span class="ql-formats">
-    <button class="ql-clean" aria-label="Remove Formatting"></button>
-  </span>
-  <span class="ql-formats">
-    <button class="ql-emoji" aria-label="Insert Emoji"></button>
-  </span>
-</div>
+    <div id="toolbar" class="q1-toolbar">
+      <span class="ql-formats">
+        <button class="ql-bold" aria-label="Bold"></button>
+        <button class="ql-italic" aria-label="Italic"></button>
+        <button class="ql-underline" aria-label="Underline"></button>
+        <button class="ql-strike" aria-label="Strike"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-blockquote" aria-label="Blockquote"></button>
+        <button class="ql-code-block" aria-label="Code Block"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-list" value="ordered" aria-label="Ordered List"></button>
+        <button class="ql-list" value="bullet" aria-label="Bullet List"></button>
+        <button class="ql-indent" value="-1" aria-label="Decrease Indent"></button>
+        <button class="ql-indent" value="+1" aria-label="Increase Indent"></button>
+      </span>
+      <span class="ql-formats">
+        <select class="ql-header" aria-label="Header">
+          <option selected></option>
+          <option value="1"></option>
+          <option value="2"></option>
+        </select>
+        <select class="ql-font" aria-label="Font"></select>
+        <select class="ql-size" aria-label="Size"></select>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-color" aria-label="Text Color"></button>
+        <button class="ql-background" aria-label="Background Color"></button>
+        <button class="ql-align" aria-label="Align"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-clean" aria-label="Remove Formatting"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-emoji" aria-label="Insert Emoji"></button>
+      </span>
+      <span class="ql-formats">
+        <button id="manual-suggest-button" aria-label="Get Suggestion">
+          <i class="fas fa-lightbulb"></i>
+        </button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-undo" aria-label="Undo">
+          <i class="fas fa-undo"></i>
+        </button>
+        <button class="ql-redo" aria-label="Redo">
+          <i class="fas fa-redo"></i>
+        </button>
+      </span>
+    </div>
 
     <!-- Quill Editor Container -->
-<div id="editor-container">
-  <div id="editor" class="q1-container q1-editor"></div>
+    <div id="editor-container">
+      <!-- Post Title Input -->
+      <input type="text" id="post-title" class="post-title-input" placeholder="Enter Post Title" aria-label="Post Title">
+      
+      <div id="editor" class="q1-container q1-editor"></div>
       
       <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
-  <div id="suggestion-box" aria-live="polite">
-    <p id="suggestion-text"></p>
-    <div class="suggestion-buttons">
-      <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
-      <button id="reject-suggestion" class="suggestion-button reject">Reject</button>
+      <div id="suggestion-box" aria-live="polite">
+        <p id="suggestion-text"></p>
+        <div class="suggestion-buttons">
+          <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
+          <button id="reject-suggestion" class="suggestion-button reject">Reject</button>
+        </div>
+      </div>
+      
+      <!-- New Post, Save Post, and Focus Mode Buttons -->
+      <div class="editor-buttons">
+        <button id="create-new-post-editor" class="editor-action-button" aria-label="Create New Post">
+          <i class="fas fa-plus"></i> Create New Post
+        </button>
+        <button id="save-post" class="editor-action-button" aria-label="Save Post">
+          <i class="fas fa-save"></i> Save Post
+        </button>
+        <button id="open-saved-posts" class="editor-action-button" aria-label="Saved Posts">
+          <i class="fas fa-folder-open"></i> View Saved Posts
+        </button>
+        <button id="toggle-distraction-free" class="editor-action-button" aria-label="Toggle Distraction-Free Mode">
+          <i class="fas fa-eye-slash"></i> Focus Mode
+        </button>
+      </div>
+  </div>
+</main>
+
+  <!-- Confirmation Modal for Deletion -->
+  <div id="delete-confirmation-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="delete-confirmation-title">
+    <div class="modal-content">
+      <span class="close-button" id="close-delete-confirmation">&times;</span>
+      <h2 id="delete-confirmation-title">Confirm Deletion</h2>
+      <p>Are you sure you want to delete this post?</p>
+      <div class="modal-actions">
+        <button id="confirm-delete" class="action-button confirm" aria-label="Confirm Delete">Yes, Delete</button>
+        <button id="cancel-delete" class="action-button cancel" aria-label="Cancel Delete">Cancel</button>
+      </div>
     </div>
   </div>
-      
-      <!-- Distraction-Free Mode Toggle Button -->
-  <button id="toggle-distraction-free" class="toggle-button" aria-label="Toggle Distraction-Free Mode">
-    Focus Mode
-  </button>
-</div>
-  </main>
 
-<!-- Quill JS -->
-<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+  <!-- Toast Notifications -->
+  <div id="toast-container"></div>
 
-<!-- Quill Emoji JS -->
-<script src="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.min.js"></script>
+  <!-- Quill JS -->
+  <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
 
-<!-- Renderer Script -->
-<script src="../renderer.js"></script>
+  <!-- Quill Emoji JS -->
+  <script src="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.min.js"></script>
 
+  <!-- Flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <!-- Renderer Script -->
+  <script src="../renderer.js"></script>
 </body>
 </html>

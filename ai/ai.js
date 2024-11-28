@@ -16,27 +16,45 @@ const openai = new OpenAI({
 });
 
 /**
- * Fetches AI suggestions based on the provided prompt.
+ * Fetches AI suggestions based on the provided prompt and options.
  * 
  * @param {string} prompt - The text input from the user.
+ * @param {Object} options - Additional options such as tone, max_tokens, etc.
  * @returns {Promise<string>} - The AI-generated suggestion or an empty string if an error occurs.
  */
-async function getAISuggestions(prompt) {
+async function getAISuggestions(prompt, options = {}) {
   // Validate the prompt
   if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
     console.error('Invalid prompt provided to getAISuggestions.');
     return '';
   }
 
+  // Destructure options with defaults
+  const {
+    max_tokens = 150,
+    temperature = 0.7,
+    tone = 'professional',
+  } = options;
+
+  // Enhance the prompt with more context for better AI suggestions
+  const enhancedPrompt = `
+  You are a professional LinkedIn content creator specializing in Information Technology, Leadership, and Business Building.
+  Improve the following LinkedIn post for clarity, engagement, and professionalism with a ${tone} tone. Aim to increase audience size and drive more interactions:
+
+  "${prompt}"
+
+  Provide a concise and impactful revision.
+  `;
+
   try {
     // Make a request to OpenAI's Chat Completion API
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL,
       messages: [
-        { role: 'user', content: `Improve the following LinkedIn post for clarity, engagement, and professionalism:\n\n"${prompt}"` },
+        { role: 'user', content: enhancedPrompt },
       ],
-      max_tokens: 150,
-      temperature: 0.7,
+      max_tokens: max_tokens,
+      temperature: temperature,
     });
 
     // Check if the response contains choices
