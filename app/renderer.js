@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let isModalOpen = false;
   let quill;
+  let selectedPost = null;
+  let postIdToDelete = null;
 
     // ======= Sidebar Toggle =======
     const toggleMenuButton = document.getElementById('toggle-menu');
@@ -36,10 +38,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const createNewPostModalButton = document.getElementById('create-new-post-modal');
     const searchPostsInput = document.getElementById('search-posts');
     const searchButton = document.getElementById('search-button');
+    const editPostButton = document.getElementById('edit-post');
+    const schedulePostButton = document.getElementById('schedule-post');
+    const deletePostButton = document.getElementById('delete-post');
+    const deleteConfirmationModal = document.getElementById('delete-confirmation-modal');
+    const confirmDeleteButton = document.getElementById('confirm-delete');
+    const cancelDeleteButton = document.getElementById('cancel-delete');
+    const closeDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
+    const newConfirmDeleteButton = document.getElementById('confirm-delete');
+    const newCancelDeleteButton = document.getElementById('cancel-delete');
+    const newCloseDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
+
+
 
     // ======= Save Post Button Functionality =======
     const savePostButton = document.getElementById('save-post');
     const postTitleInput = document.getElementById('post-title');
+
+    // ======== Suggestion Box Button Functionality =========
+    const manualSuggestButton = document.getElementById('manual-suggest-button');
+    const suggestionBox = document.getElementById('suggestion-box');
+    const suggestionText = document.getElementById('suggestion-text');
+    const acceptButton = document.getElementById('accept-suggestion');
+    const rejectButton = document.getElementById('reject-suggestion');
+    const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
+
 
   const debounce = (func, delay) => {
     let timeout;
@@ -173,14 +196,27 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSavedPosts(); // Function to load saved posts when modal opens
     });
 
-    closeSavedPostsButton.addEventListener('click', () => closeModal(savedPostsModal));
+    // Close Saved Posts Modal
+    closeSavedPostsButton.addEventListener('click', () => {
+      closeModal(savedPostsModal);
+      resetSelection();
+    });
 
+    // Handle clicks outside the modal to close it
     window.addEventListener('click', (event) => {
       if (event.target === savedPostsModal) {
         closeModal(savedPostsModal);
+        resetSelection();
       }
     });
   }
+
+  // Listener for 'post-published' event
+  window.api.onPostPublished((event, postId) => {
+    showToast(`Post ID ${postId} has been published to LinkedIn.`);
+    loadSavedPosts(); // Refresh the saved posts list
+  });
+
 
   // ======= Function to Load a Post for Editing =======
   async function loadPostForEditing(post) {
@@ -331,68 +367,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ======= Function to Display Saved Posts =======
   const displaySavedPosts = (posts) => {
-    savedPostsList.innerHTML = ''; // Clear existing list
+  savedPostsList.innerHTML = ''; // Clear existing list
 
-    if (posts.length === 0) {
-      savedPostsList.innerHTML = '<li>No saved posts found.</li>';
-      return;
-    }
+  if (posts.length === 0) {
+    savedPostsList.innerHTML = '<li>No saved posts found.</li>';
+    return;
+  }
 
-    posts.forEach((post) => {
-      const li = document.createElement('li');
-      li.classList.add('saved-post-item');
-      li.dataset.id = post.id;
+  posts.forEach((post) => {
+    const li = document.createElement('li');
+    li.classList.add('saved-post-item');
+    li.dataset.id = post.id;
 
-      // Post Title
-      const title = document.createElement('span');
-      title.classList.add('post-title');
-      title.innerText = post.title || `Post #${post.id}`;
-      li.appendChild(title);
+    // Post Title
+    const title = document.createElement('span');
+    title.classList.add('post-title');
+    title.innerText = post.title || `Post #${post.id}`;
+    li.appendChild(title);
 
-      // Post Status
-      const status = document.createElement('span');
-      status.classList.add('post-status');
-      status.innerText = `[${post.status}]`;
-      li.appendChild(status);
+    // Post Status
+    const status = document.createElement('span');
+    status.classList.add('post-status');
+    status.innerText = `[${post.status}]`;
+    li.appendChild(status);
 
-      // Action Buttons Container
-      const actions = document.createElement('div');
-      actions.classList.add('post-actions');
+    // Remove individual action buttons from each post
 
-      // Edit Button
-      const editButton = document.createElement('button');
-      editButton.classList.add('action-button', 'edit-button');
-      editButton.setAttribute('aria-label', 'Edit Post');
-      editButton.innerHTML = '<i class="fas fa-edit"></i>';
-      
-      // **Add Debugging Log**
-      editButton.addEventListener('click', () => {
-      console.log(`Edit button clicked for post ID: ${post.id}`);
-      loadPostForEditing(post);
-      });
+    // Add click event listener to handle selection
+    li.addEventListener('click', () => {
+      // Deselect previously selected post
+      const previouslySelected = savedPostsList.querySelector('.selected');
+      if (previouslySelected) {
+        previouslySelected.classList.remove('selected');
+      }
 
-      actions.appendChild(editButton);
+      // Select the clicked post
+      li.classList.add('selected');
+      selectedPost = post;
 
-      // Schedule Button
-      const scheduleButton = document.createElement('button');
-      scheduleButton.classList.add('action-button', 'schedule-button');
-      scheduleButton.setAttribute('aria-label', 'Schedule Post');
-      scheduleButton.innerHTML = '<i class="fas fa-calendar-alt"></i>';
-      scheduleButton.addEventListener('click', () => schedulePost(post));
-      actions.appendChild(scheduleButton);
+      // Enable action buttons at the bottom
+      editPostButton.disabled = false;
+      schedulePostButton.disabled = false;
+      deletePostButton.disabled = false;
 
-      // Delete Button
-      const deleteButton = document.createElement('button');
-      deleteButton.classList.add('action-button', 'delete-button');
-      deleteButton.setAttribute('aria-label', 'Delete Post');
-      deleteButton.innerHTML = '<i class="fas fa-trash-alt"></i>';
-      deleteButton.addEventListener('click', () => openDeleteConfirmation(post.id));
-      actions.appendChild(deleteButton);
-
-      li.appendChild(actions);
-      savedPostsList.appendChild(li);
+      console.log(`Post selected: ID ${post.id}`);
     });
-  };
+
+    savedPostsList.appendChild(li);
+  });
+};
 
   // ======= Function to Perform Search =======
   const performSearch = debounce(async () => {
@@ -401,19 +424,21 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSavedPosts(); // Load all posts if search query is empty
       return;
     }
-
+  
     showLoader();
     try {
       const posts = await window.api.searchPosts(query);
       displaySavedPosts(posts);
       showToast(`Found ${posts.length} post(s) matching "${query}".`);
+      // Reset selection
+      resetSelection();
     } catch (error) {
       console.error('Error searching posts:', error);
       showToast('An error occurred while searching posts.');
     } finally {
       hideLoader();
     }
-  }, 500);
+  }, 500);  
 
   // ======= Event Listeners for Search Functionality =======
   if (searchButton && searchPostsInput) {
@@ -427,6 +452,109 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Edit Post Button Click Event
+  editPostButton.addEventListener('click', () => {
+    if (selectedPost) {
+      loadPostForEditing(selectedPost);
+      // Close the modal after loading the post
+      closeModal(savedPostsModal);
+
+      // Reset selection and disable buttons
+      resetSelection();
+    } else {
+      showToast('Please select a post to edit.');
+    }
+  });
+
+  // Clear the saved posts modal selector
+  function resetSelection() {
+    // Deselect any selected post
+    const selectedLi = savedPostsList.querySelector('.selected');
+    if (selectedLi) {
+      selectedLi.classList.remove('selected');
+    }
+  
+    selectedPost = null;
+  
+    // Disable action buttons
+    editPostButton.disabled = true;
+    schedulePostButton.disabled = true;
+    deletePostButton.disabled = true;
+  }
+  
+// Schedule Post Button Click Event
+schedulePostButton.addEventListener('click', () => {
+  if (selectedPost) {
+    schedulePost(selectedPost);
+    // Optionally keep the modal open or close it based on your preference
+
+    // Reset selection and disable buttons
+    resetSelection();
+  } else {
+    showToast('Please select a post to schedule.');
+  }
+});
+
+// Delete Post Button Click Event
+deletePostButton.addEventListener('click', () => {
+  if (selectedPost) {
+    openDeleteConfirmation(selectedPost.id);
+  } else {
+    showToast('Please select a post to delete.');
+  }
+});
+
+// ======= Function to Open Delete Confirmation Modal =======
+const openDeleteConfirmation = (postId) => {
+  if (!deleteConfirmationModal) return;
+
+  postIdToDelete = postId; // Store the post ID to delete
+
+  // Open the modal
+  openModal(deleteConfirmationModal);
+};
+
+
+// Event Listener for Confirm Delete Button
+if (confirmDeleteButton) {
+  confirmDeleteButton.addEventListener('click', async () => {
+    if (postIdToDelete !== null) {
+      try {
+        const result = await window.api.deletePost(postIdToDelete);
+        if (result.success) {
+          showToast('Post deleted successfully.');
+          loadSavedPosts(); // Refresh the posts list
+          resetSelection(); // Reset selection and disable action buttons
+        } else {
+          showToast('Failed to delete the post.');
+        }
+      } catch (error) {
+        console.error('Error deleting post:', error);
+        showToast('An error occurred while deleting the post.');
+      } finally {
+        closeModal(deleteConfirmationModal);
+        postIdToDelete = null; // Reset the variable
+      }
+    }
+  });
+}
+
+// Event Listener for Cancel Delete Button
+if (cancelDeleteButton) {
+  cancelDeleteButton.addEventListener('click', () => {
+    closeModal(deleteConfirmationModal);
+    postIdToDelete = null; // Reset the variable
+  });
+}
+
+// Event Listener for Close Button
+if (closeDeleteConfirmationButton) {
+  closeDeleteConfirmationButton.addEventListener('click', () => {
+    closeModal(deleteConfirmationModal);
+    postIdToDelete = null; // Reset the variable
+  });
+}
 
   // Loader Management
 const showLoader = () => {
@@ -610,12 +738,6 @@ if (editorElement) {
     });
   }
 
-  const manualSuggestButton = document.getElementById('manual-suggest-button');
-  const suggestionBox = document.getElementById('suggestion-box');
-  const suggestionText = document.getElementById('suggestion-text');
-  const acceptButton = document.getElementById('accept-suggestion');
-  const rejectButton = document.getElementById('reject-suggestion');
-
   // Fetch suggestion and display in suggestion box
   const fetchSuggestion = async (isManual = false) => {
   if (isModalOpen) return;
@@ -682,6 +804,13 @@ if (acceptButton && rejectButton) {
     const suggestion = suggestionText.innerText;
     suggestionBox.classList.remove('show');
     await window.api.sendFeedback('rejected', suggestion);
+  });
+}
+
+if (closeSuggestionBoxButton) {
+  closeSuggestionBoxButton.addEventListener('click', async () => {
+    suggestionBox.classList.remove('show');
+      await window.api.sendFeedback('closed', suggestion);
   });
 }
 

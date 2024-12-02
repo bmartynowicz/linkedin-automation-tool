@@ -192,8 +192,8 @@ header h1 {
 
 .editor-buttons {
   position: absolute;
-  bottom: 25px;
-  right: 25px;
+  bottom: 3.5%;
+  right: 5%;
   display: flex;
   gap: 10px;
 }
@@ -281,8 +281,8 @@ body.sidebar-collapsed #toolbar {
 /* ======= Suggestion Box Styles ======= */
 #suggestion-box {
   position: absolute;
-  bottom: 70px;
-  right: 25px;
+  bottom: 9%;
+  right: 5%;
   padding: 15px;
   border-radius: 8px;
   background-color: #f9f9f9;
@@ -342,6 +342,25 @@ body.sidebar-collapsed #toolbar {
 .suggestion-button.reject:hover {
   background-color: #e53935;
 }
+
+/* Style for the close button inside the suggestion box */
+#suggestion-box .close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 1.5rem;
+  color: #aaa;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+#suggestion-box .close-button:hover,
+#suggestion-box .close-button:focus {
+  color: #000;
+  outline: none;
+}
+
 
 /* ======= Distraction-Free Mode Button Styles ======= */
 .toggle-button {
@@ -500,6 +519,34 @@ body.sidebar-collapsed #toolbar {
 #saved-posts-modal button:hover:not(:disabled) {
   background-color: #0056b3;
 }
+
+/* Buttons within Modal */
+#saved-posts-modal .modal-actions button {
+  margin-right: 10px;
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#saved-posts-modal .modal-actions button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+#saved-posts-modal .modal-actions button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+
+/* Style for selected post item */
+#saved-posts-list li.selected {
+  background-color: #d0e7ff; /* Light blue background */
+  border-left: 4px solid #007bff; /* Blue border to emphasize selection */
+}
+
 
 /* ======= Toast Notification Styles ======= */
 #toast-container {
