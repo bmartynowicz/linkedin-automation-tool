@@ -36,6 +36,10 @@
   <link rel="stylesheet" href="../../assets/styles.css">
 </head>
 <body>
+  
+  <!-- Toast Notifications -->
+  <div id="toast-container"></div>
+  
   <!-- Header Section -->
   <header>
     <h1>LinkedIn Automation Tool</h1>
@@ -243,16 +247,6 @@
       
       <div id="editor" class="q1-container q1-editor"></div>
       
-      <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
-      <div id="suggestion-box" aria-live="polite">
-        <button id="close-suggestion-box" class="close-button" aria-label="Close Suggestion Box">&times;</button>
-        <p id="suggestion-text"></p>
-        <div class="suggestion-buttons">
-          <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
-          <button id="reject-suggestion" class="suggestion-button reject">Reject</button>
-        </div>
-      </div>
-      
       <!-- New Post, Save Post, and Focus Mode Buttons -->
       <div class="editor-buttons">
         <button id="create-new-post-editor" class="editor-action-button" aria-label="Create New Post">
@@ -271,9 +265,6 @@
   </div>
 </main>
 
-  <!-- Toast Notifications -->
-  <div id="toast-container"></div>
-
   <!-- Quill JS -->
   <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
 
@@ -285,5 +276,16 @@
 
   <!-- Renderer Script -->
   <script src="../renderer.js"></script>
+
+  <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
+  <div id="suggestion-box" aria-live="polite">
+    <button id="close-suggestion-box" class="close-button" aria-label="Close Suggestion Box">&times;</button>
+    <p id="suggestion-text"></p>
+    <div class="suggestion-buttons">
+      <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
+      <button id="reject-suggestion" class="suggestion-button reject">Reject</button>
+    </div>
+  </div>
+
 </body>
 </html>
