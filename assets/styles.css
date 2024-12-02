@@ -2,8 +2,10 @@
 
 /* ======= Global Reset and Box Sizing ======= */
 html, body {
+  height: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 *, *::before, *::after {
@@ -16,7 +18,6 @@ body {
   line-height: 1.6;
   background-color: #f9f9f9;
   color: #333;
-  overflow: auto; /* Allow body to scroll if necessary */
 }
 
 /* ======= Header Styles ======= */
@@ -183,7 +184,6 @@ header h1 {
   margin-top: 120px; /* Header (60px) + Toolbar (60px) */
   padding: 20px;
   height: calc(100vh - 120px); /* Viewport height minus header and toolbar */
-  overflow-y: auto;
   position: relative;
   background-color: #ffffff;
   z-index: 800;
@@ -192,8 +192,8 @@ header h1 {
 
 .editor-buttons {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 3.5%;
+  right: 5%;
   display: flex;
   gap: 10px;
 }
@@ -224,7 +224,7 @@ header h1 {
 
 /* Style for the post title input */
 .post-title-input {
-  width: 100%;
+  width: 98%;
   padding: 10px 15px;
   margin-bottom: 10px;
   border: 1px solid #ccc;
@@ -243,12 +243,14 @@ body.sidebar-collapsed #toolbar {
 }
 
 #editor {
-  height: 100%;
+  height: 94%;
+  width: 98%;
   background-color: #ffffff;
   border: 1px solid #dddddd;
   border-radius: 5px;
   padding: 15px;
   box-sizing: border-box;
+  overflow: auto;
 }
 
 /* Style for the manual suggest button */
@@ -279,8 +281,8 @@ body.sidebar-collapsed #toolbar {
 /* ======= Suggestion Box Styles ======= */
 #suggestion-box {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 9%;
+  right: 5%;
   padding: 15px;
   border-radius: 8px;
   background-color: #f9f9f9;
@@ -340,6 +342,25 @@ body.sidebar-collapsed #toolbar {
 .suggestion-button.reject:hover {
   background-color: #e53935;
 }
+
+/* Style for the close button inside the suggestion box */
+#suggestion-box .close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 1.5rem;
+  color: #aaa;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+#suggestion-box .close-button:hover,
+#suggestion-box .close-button:focus {
+  color: #000;
+  outline: none;
+}
+
 
 /* ======= Distraction-Free Mode Button Styles ======= */
 .toggle-button {
@@ -499,6 +520,34 @@ body.sidebar-collapsed #toolbar {
   background-color: #0056b3;
 }
 
+/* Buttons within Modal */
+#saved-posts-modal .modal-actions button {
+  margin-right: 10px;
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#saved-posts-modal .modal-actions button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+#saved-posts-modal .modal-actions button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+
+/* Style for selected post item */
+#saved-posts-list li.selected {
+  background-color: #d0e7ff; /* Light blue background */
+  border-left: 4px solid #007bff; /* Blue border to emphasize selection */
+}
+
+
 /* ======= Toast Notification Styles ======= */
 #toast-container {
   position: fixed;
@@ -621,12 +670,6 @@ body.sidebar-collapsed #toolbar {
   /* Adjust editor container margin accordingly */
   #editor-container {
     margin-left: 200px;
-  }
-
-  .editor-buttons {
-    flex-direction: column;
-    bottom: 10px;
-    right: 10px;
   }
 
   #editor-container .ql-editor {

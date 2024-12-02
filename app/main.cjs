@@ -290,19 +290,14 @@ ipcMain.handle('get-post-by-id', async (event, id) => {
 });
 
 // Delete a post by ID
-ipcMain.handle('delete-post', async (event, id) => {
+ipcMain.handle('delete-post', async (event, postId) => {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM posts WHERE id = ?', [id], function(err) {
+    db.run(`DELETE FROM posts WHERE id = ?`, [postId], function (err) {
       if (err) {
-        console.error('Error deleting post:', err.message);
-        return reject(err);
-      }
-      if (this.changes > 0) {
-        console.log('Post deleted successfully:', id);
-        resolve({ success: true });
+        console.error('Error deleting post:', err);
+        resolve({ success: false, message: err.message });
       } else {
-        console.warn('No post found to delete with the given ID:', id);
-        resolve({ success: false });
+        resolve({ success: true });
       }
     });
   });
@@ -375,12 +370,6 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
     console.error('Error in schedule-post handler:', error);
     return { success: false, message: error.message };
   }
-});
-
-// Listen for 'post-published' event
-ipcRenderer.on('post-published', (event, postId) => {
-  showToast(`Post ID ${postId} has been published to LinkedIn.`);
-  loadSavedPosts(); // Refresh the saved posts list
 });
 
 // ======= IPC Handler to Search Posts =======

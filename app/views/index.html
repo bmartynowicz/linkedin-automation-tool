@@ -92,7 +92,7 @@
       <span class="close-button" id="close-saved-posts">&times;</span>
       <h2 id="saved-posts-title">Your Saved Posts</h2>
       
-      <!-- Search Bar (Optional) -->
+      <!-- Search Bar -->
       <div class="search-bar">
         <input type="text" id="search-posts" placeholder="Search posts..." aria-label="Search Posts">
         <button id="search-button" aria-label="Search"><i class="fas fa-search"></i></button>
@@ -108,12 +108,19 @@
       
       <!-- Action Buttons -->
       <div class="modal-actions">
-        <button id="create-new-post-modal" class="action-button" aria-label="Create New Post">
-          <i class="fas fa-plus"></i> Create New Post
+        <!-- Removed the redundant "Create New Post" button -->
+        
+        <!-- Edit Post Button -->
+        <button id="edit-post" class="action-button" disabled aria-label="Edit Post">
+          <i class="fas fa-edit"></i> Edit Post
         </button>
+        
+        <!-- Schedule Post Button -->
         <button id="schedule-post" class="action-button" disabled aria-label="Schedule Post">
           <i class="fas fa-calendar-alt"></i> Schedule Post
         </button>
+        
+        <!-- Delete Post Button -->
         <button id="delete-post" class="action-button" disabled aria-label="Delete Post">
           <i class="fas fa-trash-alt"></i> Delete Post
         </button>
@@ -133,6 +140,7 @@
       </div>
     </div>
   </div>
+  
   
   <!-- Updated Sidebar Navigation -->
   <nav id="sidebar" class="sidebar">
@@ -237,6 +245,7 @@
       
       <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
       <div id="suggestion-box" aria-live="polite">
+        <button id="close-suggestion-box" class="close-button" aria-label="Close Suggestion Box">&times;</button>
         <p id="suggestion-text"></p>
         <div class="suggestion-buttons">
           <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
@@ -261,19 +270,6 @@
       </div>
   </div>
 </main>
-
-  <!-- Confirmation Modal for Deletion -->
-  <div id="delete-confirmation-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="delete-confirmation-title">
-    <div class="modal-content">
-      <span class="close-button" id="close-delete-confirmation">&times;</span>
-      <h2 id="delete-confirmation-title">Confirm Deletion</h2>
-      <p>Are you sure you want to delete this post?</p>
-      <div class="modal-actions">
-        <button id="confirm-delete" class="action-button confirm" aria-label="Confirm Delete">Yes, Delete</button>
-        <button id="cancel-delete" class="action-button cancel" aria-label="Cancel Delete">Cancel</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Toast Notifications -->
   <div id="toast-container"></div>

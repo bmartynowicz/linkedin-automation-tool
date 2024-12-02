@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld('api', {
   savePost: (post) => ipcRenderer.invoke('save-post', post),
   getPosts: () => ipcRenderer.invoke('get-posts'),
   getPostById: (id) => ipcRenderer.invoke('get-post-by-id', id),
-  deletePost: (id) => ipcRenderer.invoke('delete-post', id),
+  deletePost: (postId) => ipcRenderer.invoke('delete-post', postId),
   schedulePost: (updatedPost) => ipcRenderer.invoke('schedule-post', updatedPost),
   onPostPublished: (callback) => ipcRenderer.on('post-published', callback),
 });
