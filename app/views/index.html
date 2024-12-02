@@ -279,11 +279,19 @@
 
   <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
   <div id="suggestion-box" aria-live="polite">
-    <button id="close-suggestion-box" class="close-button" aria-label="Close Suggestion Box">&times;</button>
-    <p id="suggestion-text"></p>
+    <button id="close-suggestion-box" class="close-button" aria-label="Close Suggestion Box">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="suggestion-content">
+      <i class="fas fa-lightbulb suggestion-icon"></i>
+      <div>
+        <h3 class="suggestion-title">AI Suggestion</h3>
+        <p id="suggestion-text"></p>
+      </div>
+    </div>
     <div class="suggestion-buttons">
-      <button id="accept-suggestion" class="suggestion-button accept">Accept</button>
-      <button id="reject-suggestion" class="suggestion-button reject">Reject</button>
+      <button id="reject-suggestion" class="suggestion-button reject">Dismiss</button>
+      <button id="accept-suggestion" class="suggestion-button accept">Apply</button>
     </div>
   </div>
 

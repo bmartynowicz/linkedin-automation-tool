@@ -282,27 +282,49 @@ body.sidebar-collapsed #toolbar {
 /* ======= Suggestion Box Styles ======= */
 #suggestion-box {
   position: fixed;
-  padding: 15px;
+  padding: 20px;
   border-radius: 8px;
-  background-color: #f9f9f9;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  max-width: 300px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  max-width: 350px;
   max-height: 200px;
   z-index: 2000; /* Above toolbar */
   visibility: hidden;
   opacity: 0;
   overflow: auto;
   transition: opacity 0.4s ease-in-out, visibility 0.4s;
+  transform: translateY(10px);
 }
 
 #suggestion-box.show {
   visibility: visible;
   opacity: 1;
+  transform: translateY(0);
+}
+
+.suggestion-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.suggestion-icon {
+  font-size: 1.5rem;
+  color: #f1c40f;
+}
+
+.suggestion-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
 }
 
 #suggestion-box p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
   color: #333;
 }
 
@@ -310,7 +332,9 @@ body.sidebar-collapsed #toolbar {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 10px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 10px;
+  margin-top: 15px;
 }
 
 .suggestion-button {
@@ -327,30 +351,30 @@ body.sidebar-collapsed #toolbar {
 }
 
 .suggestion-button.accept {
-  background-color: #4CAF50;
+  background-color: #007bff;
   color: white;
 }
 
 .suggestion-button.accept:hover {
-  background-color: #45a049;
+  background-color: #0056b3;
 }
 
 .suggestion-button.reject {
-  background-color: #f44336;
+  background-color: #6c757d;
   color: white;
 }
 
 .suggestion-button.reject:hover {
-  background-color: #e53935;
+  background-color: #5a6268;
 }
 
 /* Style for the close button inside the suggestion box */
 #suggestion-box .close-button {
   position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 1.5rem;
-  color: #aaa;
+  top: 15px;
+  right: 20px;
+  font-size: 1rem;
+  color: #888;
   background: none;
   border: none;
   cursor: pointer;
@@ -358,10 +382,13 @@ body.sidebar-collapsed #toolbar {
 
 #suggestion-box .close-button:hover,
 #suggestion-box .close-button:focus {
-  color: #000;
+  color: #333;
   outline: none;
 }
 
+#suggestion-box .close-button i {
+  pointer-events: none;
+}
 
 /* ======= Distraction-Free Mode Button Styles ======= */
 .toggle-button {
