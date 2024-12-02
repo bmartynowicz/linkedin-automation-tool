@@ -804,57 +804,61 @@ if (editorElement) {
 
   const showSuggestionBox = () => {
     const range = quill.getSelection();
-    if (range) {
-      const bounds = quill.getBounds(range.index);
-      const containerRect = quill.container.getBoundingClientRect();
-  
-      // Temporarily make the suggestion box visible to get accurate dimensions
-      suggestionBox.style.visibility = 'hidden';
-      suggestionBox.style.display = 'block';
-      const suggestionBoxRect = suggestionBox.getBoundingClientRect();
-      suggestionBox.style.visibility = '';
-      suggestionBox.style.display = '';
-  
-      let top, left;
-  
-      if (window.innerWidth <= 600) {
-        // Use fixed positioning for small screens
+    if (!range) return;
+
+    const bounds = quill.getBounds(range.index);
+    const containerRect = quill.container.getBoundingClientRect();
+
+    // Temporarily make the suggestion box visible to get accurate dimensions
+    suggestionBox.style.visibility = 'hidden';
+    suggestionBox.style.display = 'block';
+    const suggestionBoxRect = suggestionBox.getBoundingClientRect();
+    suggestionBox.style.visibility = '';
+    suggestionBox.style.display = '';
+
+    let top, left;
+    const fixedHeaderHeight = 60; // Adjust based on header height
+    const fixedFooterHeight = 0;  // Adjust if footer exists
+
+    const cursorTop = containerRect.top + bounds.bottom;
+    const cursorLeft = containerRect.left + bounds.left;
+
+    const availableSpaceBelow = window.innerHeight - cursorTop - fixedFooterHeight - 10;
+    const availableSpaceAbove = cursorTop - fixedHeaderHeight - 10;
+
+    if (window.innerWidth <= 600) {
+        // Mobile: Use fixed positioning
         suggestionBox.style.top = null;
         suggestionBox.style.left = null;
         suggestionBox.style.transform = null;
-      } else {
-        // Position relative to viewport since position is fixed
-        const cursorTop = containerRect.top + bounds.bottom;
-        const cursorLeft = containerRect.left + bounds.left;
-  
-        // Preferred position: below and to the right of the cursor
-        top = cursorTop + 5; // 5px below the cursor
-        left = cursorLeft + 5; // 5px to the right of the cursor
-  
-        // Adjust if the suggestion box goes beyond the viewport
-        if (left + suggestionBoxRect.width > window.innerWidth) {
-          left = window.innerWidth - suggestionBoxRect.width - 5;
-        }
-  
-        if (top + suggestionBoxRect.height > window.innerHeight) {
-          // Try to position above the cursor
-          if (cursorTop - suggestionBoxRect.height - 5 > 0) {
+        suggestionBox.style.maxHeight = `${window.innerHeight - fixedHeaderHeight - fixedFooterHeight - 20}px`;
+        suggestionBox.style.overflowY = 'auto';
+    } else {
+        // Calculate dynamic positioning for larger screens
+        if (availableSpaceBelow >= suggestionBoxRect.height || availableSpaceBelow >= availableSpaceAbove) {
+            // Position below the cursor
+            top = cursorTop + 5;
+            suggestionBox.style.maxHeight = `${availableSpaceBelow}px`;
+        } else {
+            // Position above the cursor
             top = cursorTop - suggestionBoxRect.height - bounds.height - 5;
-          } else {
-            // If not enough space above, adjust height of suggestion box
-            top = 5;
-            suggestionBox.style.maxHeight = `${window.innerHeight - top - 10}px`;
-            suggestionBox.style.overflowY = 'auto';
-          }
+            suggestionBox.style.maxHeight = `${availableSpaceAbove}px`;
         }
-  
+
+        left = cursorLeft + 5;
+
+        // Adjust if suggestion box goes beyond the viewport width
+        if (left + suggestionBoxRect.width > window.innerWidth) {
+            left = window.innerWidth - suggestionBoxRect.width - 10;
+        }
+
         suggestionBox.style.top = `${top}px`;
         suggestionBox.style.left = `${left}px`;
-      }
+        suggestionBox.style.overflowY = 'auto';
     }
-  
+
     suggestionBox.classList.add('show');
-  };       
+  };     
   
 // Event listener for the manual suggest button
 if (manualSuggestButton) {
