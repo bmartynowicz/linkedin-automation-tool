@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let quill;
   let selectedPost = null;
   let postIdToDelete = null;
+  let lastSuggestionTime = 0;
+  let suggestionCooldown = false;
 
     // ======= Sidebar Toggle =======
     const toggleMenuButton = document.getElementById('toggle-menu');
@@ -35,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const openSavedPostsButton = document.getElementById('open-saved-posts');
     const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
     const savedPostsList = document.getElementById('saved-posts-list');
-    const createNewPostModalButton = document.getElementById('create-new-post-modal');
     const searchPostsInput = document.getElementById('search-posts');
     const searchButton = document.getElementById('search-button');
     const editPostButton = document.getElementById('edit-post');
@@ -45,24 +46,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmDeleteButton = document.getElementById('confirm-delete');
     const cancelDeleteButton = document.getElementById('cancel-delete');
     const closeDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
-    const newConfirmDeleteButton = document.getElementById('confirm-delete');
-    const newCancelDeleteButton = document.getElementById('cancel-delete');
-    const newCloseDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
-
-
 
     // ======= Save Post Button Functionality =======
     const savePostButton = document.getElementById('save-post');
     const postTitleInput = document.getElementById('post-title');
 
     // ======== Suggestion Box Button Functionality =========
+    // Keywords or phrases to trigger suggestions
+    const suggestionKeywords = ['help', 'need', 'assist', 'improve', 'suggest', 'idea'];
+    //Delays to prevent overwhelming the user with suggestions
+    const TYPING_PAUSE_DURATION = 3000; // 3 seconds
+    const SUGGESTION_COOLDOWN_DURATION = 10000; // 10 seconds cooldown between suggestions
+
     const manualSuggestButton = document.getElementById('manual-suggest-button');
     const suggestionBox = document.getElementById('suggestion-box');
     const suggestionText = document.getElementById('suggestion-text');
     const acceptButton = document.getElementById('accept-suggestion');
     const rejectButton = document.getElementById('reject-suggestion');
     const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
-
 
   const debounce = (func, delay) => {
     let timeout;
@@ -83,16 +84,27 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function showToast(message) {
+    const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
-    toast.className = 'toast show';
+    toast.className = 'toast';
     toast.innerText = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.classList.add('show'), 100);
+  
+    // Append the toast to the container
+    toastContainer.appendChild(toast);
+  
+    // Show the toast
+    setTimeout(() => {
+      toast.classList.add('show');
+    }, 100);
+  
+    // Hide and remove the toast after a delay
     setTimeout(() => {
       toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
+      setTimeout(() => {
+        toastContainer.removeChild(toast);
+      }, 500);
     }, 3000);
-  }
+  }  
 
   const openModal = (modal) => {
     if (modal) {
@@ -740,47 +752,110 @@ if (editorElement) {
 
   // Fetch suggestion and display in suggestion box
   const fetchSuggestion = async (isManual = false) => {
-  if (isModalOpen) return;
+    if (isModalOpen) return;
 
-  const userInput = quill.getText().trim();
+    const userInput = quill.getText().trim();
 
-  // Check if we should trigger suggestion based on word count
-  if (!isManual && userInput.split(/\s+/).length < 50) return;
-
-  // If manual request but editor is empty, show a toast and exit
-  if (isManual && userInput.length === 0) {
-    showToast('Please enter some text in the editor.');
-    return;
-  }
-
-  try {
-    if (isManual) {
-      // Show loading indicator on the button (optional)
-      manualSuggestButton.disabled = true;
-      manualSuggestButton.classList.add('loading');
+    // If manual request but editor is empty, show a toast and exit
+    if (isManual && userInput.length === 0) {
+      showToast('Please enter some text in the editor.');
+      return;
     }
 
-    const suggestion = await window.api.getAISuggestions(userInput);
-    console.log('Fetched suggestion:', suggestion);
-    if (suggestion) {
-      suggestionText.innerText = suggestion;
-      suggestionBox.classList.add('show');
-    } else {
+    // Check if in cooldown period
+    const now = Date.now();
+    if (!isManual && (suggestionCooldown || now - lastSuggestionTime < SUGGESTION_COOLDOWN_DURATION)) {
+      return;
+    }
+
+    try {
+      if (isManual) {
+        // Show loading indicator on the button (optional)
+        manualSuggestButton.disabled = true;
+        manualSuggestButton.classList.add('loading');
+      }
+
+      const suggestion = await window.api.getAISuggestions(userInput);
+      console.log('Fetched suggestion:', suggestion);
+      if (suggestion) {
+        suggestionText.innerText = suggestion;
+        showSuggestionBox();
+        lastSuggestionTime = now;
+        suggestionCooldown = true;
+        // Reset cooldown after duration
+        setTimeout(() => {
+          suggestionCooldown = false;
+        }, SUGGESTION_COOLDOWN_DURATION);
+      } else {
+        suggestionBox.classList.remove('show');
+        if (isManual) showToast('No suggestion available at this time.');
+      }
+    } catch (error) {
+      console.error('Error fetching AI suggestion:', error);
       suggestionBox.classList.remove('show');
-      if (isManual) showToast('No suggestion available at this time.');
+      if (isManual) showToast('An error occurred while fetching the suggestion.');
+    } finally {
+      if (isManual) {
+        manualSuggestButton.disabled = false;
+        manualSuggestButton.classList.remove('loading');
+      }
     }
-  } catch (error) {
-    console.error('Error fetching AI suggestion:', error);
-    suggestionBox.classList.remove('show');
-    if (isManual) showToast('An error occurred while fetching the suggestion.');
-  } finally {
-    if (isManual) {
-      manualSuggestButton.disabled = false;
-      manualSuggestButton.classList.remove('loading');
-    }
-  }
-};
+  };
 
+  const showSuggestionBox = () => {
+    const range = quill.getSelection();
+    if (range) {
+      const bounds = quill.getBounds(range.index);
+      const containerRect = quill.container.getBoundingClientRect();
+  
+      // Temporarily make the suggestion box visible to get accurate dimensions
+      suggestionBox.style.visibility = 'hidden';
+      suggestionBox.style.display = 'block';
+      const suggestionBoxRect = suggestionBox.getBoundingClientRect();
+      suggestionBox.style.visibility = '';
+      suggestionBox.style.display = '';
+  
+      let top, left;
+  
+      if (window.innerWidth <= 600) {
+        // Use fixed positioning for small screens
+        suggestionBox.style.top = null;
+        suggestionBox.style.left = null;
+        suggestionBox.style.transform = null;
+      } else {
+        // Position relative to viewport since position is fixed
+        const cursorTop = containerRect.top + bounds.bottom;
+        const cursorLeft = containerRect.left + bounds.left;
+  
+        // Preferred position: below and to the right of the cursor
+        top = cursorTop + 5; // 5px below the cursor
+        left = cursorLeft + 5; // 5px to the right of the cursor
+  
+        // Adjust if the suggestion box goes beyond the viewport
+        if (left + suggestionBoxRect.width > window.innerWidth) {
+          left = window.innerWidth - suggestionBoxRect.width - 5;
+        }
+  
+        if (top + suggestionBoxRect.height > window.innerHeight) {
+          // Try to position above the cursor
+          if (cursorTop - suggestionBoxRect.height - 5 > 0) {
+            top = cursorTop - suggestionBoxRect.height - bounds.height - 5;
+          } else {
+            // If not enough space above, adjust height of suggestion box
+            top = 5;
+            suggestionBox.style.maxHeight = `${window.innerHeight - top - 10}px`;
+            suggestionBox.style.overflowY = 'auto';
+          }
+        }
+  
+        suggestionBox.style.top = `${top}px`;
+        suggestionBox.style.left = `${left}px`;
+      }
+    }
+  
+    suggestionBox.classList.add('show');
+  };       
+  
 // Event listener for the manual suggest button
 if (manualSuggestButton) {
   manualSuggestButton.addEventListener('click', () => {
@@ -789,8 +864,17 @@ if (manualSuggestButton) {
   });
 }
 
-// Automatic suggestion on text change
-quill.on('text-change', debounce(() => fetchSuggestion(false), 5000));
+// Quill Editor will wait for a set of keyword variables or TYPING_PAUSE_DURATION to surface a suggestion
+quill.on('text-change', debounce(() => {
+  const userInput = quill.getText().toLowerCase();
+
+  // Check if any of the keywords are present
+  const keywordDetected = suggestionKeywords.some(keyword => userInput.includes(keyword));
+
+  if (keywordDetected) {
+    fetchSuggestion(false); // Trigger suggestion automatically
+  }
+}, TYPING_PAUSE_DURATION));
 
 if (acceptButton && rejectButton) {
   acceptButton.addEventListener('click', async () => {
@@ -798,19 +882,40 @@ if (acceptButton && rejectButton) {
     quill.insertText(quill.getLength(), ` ${suggestion}`);
     suggestionBox.classList.remove('show');
     await window.api.sendFeedback('accepted', suggestion);
+
+    // Update last suggestion time and set cooldown
+    lastSuggestionTime = Date.now();
+    suggestionCooldown = true;
+    setTimeout(() => {
+      suggestionCooldown = false;
+    }, SUGGESTION_COOLDOWN_DURATION);
   });
 
   rejectButton.addEventListener('click', async () => {
     const suggestion = suggestionText.innerText;
     suggestionBox.classList.remove('show');
     await window.api.sendFeedback('rejected', suggestion);
+
+    // Update last suggestion time and set cooldown
+    lastSuggestionTime = Date.now();
+    suggestionCooldown = true;
+    setTimeout(() => {
+      suggestionCooldown = false;
+    }, SUGGESTION_COOLDOWN_DURATION / 2); // Shorter cooldown after rejection
   });
 }
 
 if (closeSuggestionBoxButton) {
   closeSuggestionBoxButton.addEventListener('click', async () => {
     suggestionBox.classList.remove('show');
-      await window.api.sendFeedback('closed', suggestion);
+    await window.api.sendFeedback('closed', suggestionText.innerText);
+
+    // Update last suggestion time and set cooldown
+    lastSuggestionTime = Date.now();
+    suggestionCooldown = true;
+    setTimeout(() => {
+      suggestionCooldown = false;
+    }, SUGGESTION_COOLDOWN_DURATION / 2); // Shorter cooldown
   });
 }
 
