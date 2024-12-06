@@ -1,7 +1,13 @@
-import express from 'express';
-import db from '../database/database.js';
-import cors from 'cors';
-import dotenv from 'dotenv';
+// server.js
+
+const express = require('express');
+const db = require('../database/database.js');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const linkedinAuth = require('../automation/linkedin.js'); 
+const path = require('path');
+const usersService = require('../services/usersService.js');
+const fetch = require('node-fetch'); // Ensure node-fetch is installed
 
 dotenv.config();
 
@@ -13,6 +19,9 @@ app.use(express.json());
 
 // Enable CORS for all routes (Adjust origin as needed for security)
 app.use(cors());
+
+// Use LinkedIn OAuth routes
+app.use('/', linkedinAuth);
 
 // ======= API Endpoints =======
 
@@ -179,7 +188,13 @@ app.get('/api/analytics', (req, res) => {
   });
 });
 
-// ======= Start the Server =======
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+/**
+ * Function to start the Express server
+ */
+function startServer() {
+  app.listen(PORT, () => {
+    console.log(`Express server is running on port ${PORT}`);
+  });
+}
+
+module.exports = { startServer };

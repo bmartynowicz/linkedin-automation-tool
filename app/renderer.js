@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeProfileButton = document.getElementById('close-profile');
     const usernameDisplay = document.getElementById('username');
     const profilePicture = document.getElementById('profile-picture');
+    const linkedinLoginButton = document.getElementById('linkedin-login-button');
 
     // ======= Settings Modal =======
     const settingsButton = document.getElementById('settings');
@@ -223,8 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Listener for 'post-published' event
-  window.api.onPostPublished((event, postId) => {
+  // Listen to 'post-published' event
+  window.api.on('post-published', (postId) => {
     showToast(`Post ID ${postId} has been published to LinkedIn.`);
     loadSavedPosts(); // Refresh the saved posts list
   });
@@ -527,7 +528,6 @@ const openDeleteConfirmation = (postId) => {
   openModal(deleteConfirmationModal);
 };
 
-
 // Event Listener for Confirm Delete Button
 if (confirmDeleteButton) {
   confirmDeleteButton.addEventListener('click', async () => {
@@ -582,6 +582,65 @@ const hideLoader = () => {
     loader.classList.add('hidden');
   }
 };
+
+// ======= Handle LinkedIn Auth Feedback =======
+
+// Listen to 'post-success' event
+window.api.on('post-success', (args) => {
+  console.log('Received "post-success" event:', args);
+  showToast(`Post ID ${args} has been published to LinkedIn.`);
+  loadSavedPosts(); // Refresh the saved posts list
+});
+
+// Listen to 'post-error' event
+window.api.on('post-error', (args) => {
+  console.error('Received "post-error" event:', args);
+  showToast(`Error posting to LinkedIn: ${args}`);
+});
+
+// Listen to 'post-published' event
+window.api.on('post-published', (postId) => {
+  console.log('Received "post-published" event:', postId);
+  showToast(`Post ID ${postId} has been published to LinkedIn.`);
+  loadSavedPosts(); // Refresh the saved posts list
+});
+
+// Listen to 'update-user-data' event (example)
+window.api.on('update-user-data', (userData) => {
+  console.log('Received "update-user-data" event:', userData);
+  usernameDisplay.textContent = userData.name;
+  profilePicture.src = userData.profilePicture || '../../assets/default-profile.png';
+  showToast('User data updated.');
+});
+
+// Listen to 'linkedin-auth-success' event
+window.api.on('linkedin-auth-success', (userData) => {
+  console.log('Received "linkedin-auth-success" event:', userData);
+  usernameDisplay.textContent = userData.name;
+  profilePicture.src = userData.profilePicture || '../../assets/default-profile.png';
+  showToast('Successfully logged in with LinkedIn!');
+});
+
+// Listen to 'linkedin-auth-failure' event
+window.api.on('linkedin-auth-failure', (errorData) => {
+  console.error('Received "linkedin-auth-failure" event:', errorData);
+  showToast('Failed to authenticate with LinkedIn.');
+});
+
+// Listen to 'linkedin-auth-closed' event
+window.api.on('linkedin-auth-closed', () => {
+  console.warn('Received "linkedin-auth-closed" event');
+  showToast('LinkedIn authentication was canceled.');
+});
+
+if (linkedinLoginButton) {
+  linkedinLoginButton.addEventListener('click', () => {
+    console.log('LinkedIn login button clicked');
+    window.api.openLinkedInAuthWindow();
+  });
+} else {
+  console.error('LinkedIn login button not found.');
+}
 
 // ======= Initialize the Quill Editor with Emoji Toolbar =======
 if (typeof Quill !== 'undefined') {
@@ -974,4 +1033,15 @@ if (closeSuggestionBoxButton) {
   console.error('Quill is not available.');
 }
 
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const testIpcButton = document.getElementById('test-ipc-button');
+
+  if (testIpcButton) {
+    testIpcButton.addEventListener('click', () => {
+      console.log('Test IPC button clicked');
+      window.api.sendTestMessage();
+    });
+  }
 });
