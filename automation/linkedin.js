@@ -1,150 +1,81 @@
-// linkedin.js
-
-const axios = require('axios');
+const express = require('express');
+const router = express.Router();
+const fetch = require('node-fetch');
 const dotenv = require('dotenv');
-const puppeteer = require('puppeteer');
-const schedule = require('node-schedule');
-const db = require('../database/database');
-const dotenvExpand = require('dotenv-expand');
+const usersService = require('../services/usersService'); // Adjust the path if necessary
 
 dotenv.config();
 
-/**
- * Posts content to LinkedIn using LinkedIn's Official API.
- * 
- * Ensure that the following environment variables are set in your .env file:
- * - LINKEDIN_CLIENT_ID: Your LinkedIn application's Client ID.
- * - LINKEDIN_CLIENT_SECRET: Your LinkedIn application's Client Secret.
- * - LINKEDIN_ACCESS_TOKEN: Your LinkedIn OAuth 2.0 Access Token.
- * 
- * @param {string} content - The content to post on LinkedIn.
- * @returns {Object} - Result of the posting operation.
- */
-async function postToLinkedIn(content) {
-  try {
-    const accessToken = process.env.LINKEDIN_ACCESS_TOKEN; // Securely manage your access token
-    const personURN = process.env.LINKEDIN_PERSON_URN;  
+// Route to handle LinkedIn OAuth callback
+router.get('/auth/linkedin/callback', async (req, res) => {
+  console.log('--- LinkedIn OAuth Callback Received ---');
+  console.log('Query Parameters:', req.query);
 
-    if (!accessToken || !personURN) {
-      console.error('LinkedIn access token or person URN is missing in environment variables.');
-      return { success: false, message: 'Missing LinkedIn credentials.' };
+  const authorizationCode = req.query.code;
+  const error = req.query.error;
+  const errorDescription = req.query.error_description;
+
+  if (error) {
+    console.error('Error during LinkedIn OAuth:', error, '-', errorDescription);
+    return res.status(400).json({ error: errorDescription || 'Authorization failed.' });
+  }
+
+  if (!authorizationCode) {
+    console.warn('Authorization code is missing in the callback request.');
+    return res.status(400).json({ error: 'Authorization code is missing.' });
+  }
+
+  try {
+    // Exchange authorization code for access token
+    const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: authorizationCode,
+        redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
+        client_id: process.env.LINKEDIN_CLIENT_ID,
+        client_secret: process.env.LINKEDIN_CLIENT_SECRET,
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+    console.log('Access Token Response:', tokenData);
+
+    if (tokenData.error) {
+      throw new Error(tokenData.error_description || 'Failed to obtain access token.');
     }
 
-    const response = await axios.post(
-      'https://api.linkedin.com/v2/ugcPosts',
-      {
-        author: `urn:li:person:${personURN}`,
-        lifecycleState: 'PUBLISHED',
-        specificContent: {
-          "com.linkedin.ugc.ShareContent": {
-            shareCommentary: {
-              text: content,
-            },
-            shareMediaCategory: 'NONE',
-          },
-        },
-        visibility: {
-          "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-        },
+    const accessToken = tokenData.access_token;
+    console.log('Access Token Obtained:', accessToken);
+
+    // Fetch LinkedIn user profile
+    const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
       },
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Restli-Protocol-Version': '2.0.0',
-        },
-      }
-    );
-
-    if (response.status === 201) {
-      console.log('Post successfully published to LinkedIn.', { content });
-      return { success: true };
-    } else {
-      console.error('Failed to publish post to LinkedIn.', { status: response.status, data: response.data });
-      return { success: false, message: response.data };
-    }
-  } catch (error) {
-    console.error('Error in postToLinkedIn:', error.message);
-    return { success: false, message: error.message };
-  }
-}
-
-/**
- * Schedules existing posts that are marked as 'scheduled' in the database.
- * This function should be called when the application starts.
- */
-function scheduleExistingPosts(mainWindow) { // Pass mainWindow to send IPC messages if needed
-  db.all("SELECT * FROM posts WHERE status = 'scheduled' AND scheduled_time > datetime('now')", (err, rows) => {
-    if (err) {
-      console.error('Error fetching scheduled posts:', err.message);
-      return;
-    }
-
-    rows.forEach((post) => {
-      const scheduledTime = new Date(post.scheduled_time);
-      if (isNaN(scheduledTime.getTime())) {
-        console.error('Invalid scheduled_time for post ID:', post.id);
-        return;
-      }
-
-      schedule.scheduleJob(scheduledTime, async () => {
-        console.log(`Executing scheduled post ID ${post.id} at ${scheduledTime}`);
-        try {
-          const result = await postToLinkedIn(post.content);
-          if (result.success) {
-            // Update post status to 'posted'
-            db.run("UPDATE posts SET status = 'posted', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [post.id], (err) => {
-              if (err) {
-                console.error('Error updating post status to posted:', err.message);
-              } else {
-                console.log('Post successfully posted to LinkedIn.', { id: post.id });
-                // Notify renderer about the post being published
-                if (mainWindow && mainWindow.webContents) {
-                  mainWindow.webContents.send('post-published', post.id);
-                }
-              }
-            });
-          } else {
-            console.error('Failed to post to LinkedIn.', { id: post.id, error: result.message });
-            // Optionally, handle failed scheduling (e.g., retry, notify user)
-          }
-        } catch (error) {
-          console.error('Error posting to LinkedIn during scheduled job:', { error: error.message, id: post.id });
-        }
-      });
-
-      console.log('Scheduled a post to be posted at:', { id: post.id, scheduled_time: post.scheduled_time });
-    });
-  });
-}
-
-/**
- * Example Function Using Puppeteer for Non-API Supported Functionalities
- * 
- * @param {string} targetUrl - The URL to navigate to.
- */
-async function performNonAPIFunctionality(targetUrl) {
-  if (!targetUrl || typeof targetUrl !== 'string') {
-    console.error('Invalid URL provided.');
-    return;
-  }
-
-  try {
-    const browser = await puppeteer.launch({
-      headless: process.env.PUPPETEER_HEADLESS === 'true',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      defaultViewport: null,
     });
 
-    const page = await browser.newPage();
-    await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+    const profileData = await profileResponse.json();
+    console.log('User Profile Response:', profileData);
 
-    // Implement your Puppeteer logic here...
+    if (profileData.error) {
+      throw new Error(profileData.error.message || 'Failed to fetch LinkedIn profile.');
+    }
 
-    console.log(`Performed non-API functionality on ${targetUrl}`);
+    const userID = profileData.id;
+    const name = `${profileData.localizedFirstName} ${profileData.localizedLastName}`;
+    console.log(`User ID: ${userID}, Name: ${name}`);
+
+    // Save user data to the database
+    const user = await usersService.findOrCreateUser(userID, name, accessToken);
+    console.log('User Data Saved:', user);
+
+    res.status(200).json({ message: 'Authentication successful.', user });
   } catch (error) {
-    console.error('Error performing non-API functionality:', error);
+    console.error('Error during LinkedIn OAuth callback processing:', error);
+    res.status(500).json({ error: error.message });
   }
-}
+});
 
-module.exports = { postToLinkedIn, scheduleExistingPosts, performNonAPIFunctionality };
+module.exports = router;
