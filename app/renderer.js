@@ -175,13 +175,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const fetchUserData = async () => {
     try {
       const user = await window.api.fetchUserData();
-      usernameDisplay.textContent = user.username;
-      profilePicture.src = user.profilePicture || '../../assets/default-profile.png';
-      console.log('User Data Displayed:', user.username);
+  
+      // Update UI with user data
+      document.getElementById('username').textContent = user.name;
+      document.getElementById('profile-picture').src = user.profile_picture || '../../assets/default-profile.png';
+  
+      console.log('User data displayed:', user.name);
     } catch (error) {
       console.error('Error fetching user data:', error);
-      usernameDisplay.textContent = 'Guest';
-      profilePicture.src = '../../assets/default-profile.png';
+      document.getElementById('username').textContent = 'Guest';
+      document.getElementById('profile-picture').src = '../../assets/default-profile.png';
     }
   };
 
@@ -752,62 +755,33 @@ if (editorElement) {
 
   if (savePostButton) {
     savePostButton.addEventListener('click', async () => {
-      if (!quill || !postTitleInput) {
-        showToast('Editor is not initialized.');
-        console.error('Quill or Post Title Input is not available.');
+      const user = await window.api.fetchUserData();
+      if (!user || !user.linkedin_id) {
+        showToast('Unable to fetch user information. Please log in again.');
         return;
       }
-
-      const title = postTitleInput.value.trim();
-      const content = quill.root.innerHTML.trim();
-
-      if (!title) {
-        showToast('Please enter a title for your post.');
-        return;
-      }
-
-      if (!content) {
-        showToast('Post content cannot be empty.');
-        return;
-      }
-
-      // Prepare the post object
+    
       const post = {
-        title: title,
-        content: content,
-        status: 'draft', // You can set this to 'draft' or any other status as needed
-        // Add other necessary fields if required
+        title: postTitleInput.value.trim(),
+        content: quill.root.innerHTML.trim(),
+        status: 'draft',
+        linkedin_id: user.linkedin_id, // Use linkedin_id to associate the post
       };
-
-      // Show loader or disable the button to indicate saving is in progress
-      savePostButton.disabled = true;
-      savePostButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
+    
       try {
         const result = await window.api.savePost(post);
         if (result.success) {
           showToast('Post saved successfully!');
-          // Optionally, clear the editor and title input
-          quill.setContents([]);
+          // Clear the editor and inputs
           postTitleInput.value = '';
-          // Refresh the saved posts list if it's open
-          if (!savedPostsModal.classList.contains('hidden')) {
-            loadSavedPosts();
-          }
-        } else {
-          showToast(`Failed to save post: ${result.message}`);
-          console.error('Save Post Error:', result.message);
+          quill.setContents([]);
         }
       } catch (error) {
-        showToast('An error occurred while saving the post.');
-        console.error('Save Post Exception:', error);
-      } finally {
-        // Re-enable the button and reset its text
-        savePostButton.disabled = false;
-        savePostButton.innerHTML = '<i class="fas fa-save"></i> Save Post';
+        console.error('Error saving post:', error.message);
+        showToast('Failed to save post.');
       }
-    });
-  }
+    })};
+  
 
   // Fetch suggestion and display in suggestion box
   const fetchSuggestion = async (isManual = false) => {

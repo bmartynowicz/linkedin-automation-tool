@@ -4,10 +4,9 @@ const express = require('express');
 const db = require('../database/database.js');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const linkedinAuth = require('../automation/linkedin.js'); 
-const path = require('path');
-const usersService = require('../services/usersService.js');
-const fetch = require('node-fetch'); // Ensure node-fetch is installed
+const linkedinAuth = require('../automation/linkedin.js');
+const cron = require('node-cron');
+const { refreshAccessToken } = require('../services/usersService.js');
 
 dotenv.config();
 
@@ -196,5 +195,21 @@ function startServer() {
     console.log(`Express server is running on port ${PORT}`);
   });
 }
+
+cron.schedule('0 * * * *', () => { // Runs every hour
+  console.log('Running token refresh cron job...');
+  db.all('SELECT linkedin_id FROM users', [], async (err, rows) => {
+    if (err) {
+      return console.error('Error fetching users for token refresh:', err.message);
+    }
+    for (const user of rows) {
+      try {
+        await refreshAccessToken(user.linkedin_id);
+      } catch (err) {
+        console.error(`Failed to refresh token for user ${user.linkedin_id}:`, err.message);
+      }
+    }
+  });
+});
 
 module.exports = { startServer };

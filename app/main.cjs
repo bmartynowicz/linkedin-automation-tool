@@ -8,6 +8,7 @@ const { fileURLToPath } = require('url');
 const usersService = require('../services/usersService.js');
 const db = require('../database/database');
 const { postToLinkedIn, scheduleExistingPosts ,performNonAPIFunctionality } = require('../automation/linkedin');
+const { savePost } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
 const crypto = require('crypto');
@@ -230,42 +231,13 @@ ipcMain.on('send-feedback', (event, type, suggestion) => {
 // ======= IPC Handlers for Post Operations =======
 
 // Save a new or updated post
-ipcMain.handle('save-post', async (event, post) => {
-  const { id, title, content, status, scheduled_time } = post;
-
-  if (id) {
-    // Update existing post
-    const stmt = db.prepare(`
-      UPDATE posts
-      SET title = ?, content = ?, status = ?, scheduled_time = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-    return new Promise((resolve, reject) => {
-      stmt.run(title, content, status, scheduled_time, id, function(err) {
-        if (err) {
-          console.error('Error updating post:', err.message);
-          return reject(err);
-        }
-        console.log('Post updated successfully:', id);
-        resolve({ success: true, id });
-      });
-    });
-  } else {
-    // Insert new post
-    const stmt = db.prepare(`
-      INSERT INTO posts (title, content, status, scheduled_time)
-      VALUES (?, ?, ?, ?)
-    `);
-    return new Promise((resolve, reject) => {
-      stmt.run(title, content, status, scheduled_time, function(err) {
-        if (err) {
-          console.error('Error inserting post:', err.message);
-          return reject(err);
-        }
-        console.log('Post saved successfully:', this.lastID);
-        resolve({ success: true, id: this.lastID });
-      });
-    });
+ipcMain.handle('savePost', async (_, post) => {
+  try {
+    const result = await savePost(post);
+    return result;
+  } catch (error) {
+    console.error('Error in savePost IPC handler:', error.message);
+    return { success: false, message: error.message };
   }
 });
 

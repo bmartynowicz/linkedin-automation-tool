@@ -29,6 +29,9 @@ function initializeDatabase() {
         name TEXT NOT NULL,
         email TEXT,
         access_token TEXT NOT NULL,
+        refresh_token TEXT, -- Added for storing LinkedIn refresh token
+        expires_in INTEGER, -- Added to store token validity duration
+        token_creation_time DATETIME, -- Added to track token generation time
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -47,15 +50,17 @@ function initializeDatabase() {
     db.run(`
       CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
+        user_id INTEGER NOT NULL, -- Use for internal relations
+        linkedin_id TEXT NOT NULL, -- Use for external references
         title TEXT, 
         content TEXT NOT NULL,
-        status TEXT CHECK(status IN ('draft', 'scheduled', 'posted')) NOT NULL DEFAULT 'draft',
+        status TEXT CHECK(status IN ('draft', 'scheduled', 'posted', 'closed')) NOT NULL DEFAULT 'draft',
         scheduled_time DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         edited_at DATETIME,  -- New column for last edited timestamp
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY(linkedin_id) REFERENCES users(linkedin_id) ON DELETE CASCADE
       )
     `);
 

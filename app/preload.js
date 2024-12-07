@@ -11,6 +11,7 @@ const allowedChannels = [
   'linkedin-auth-failure',
   'linkedin-auth-closed',
   'update-user-data',
+  'savePost'
   // Add any other event channels you intend to expose
 ];
 
@@ -89,8 +90,8 @@ contextBridge.exposeInMainWorld('api', {
     return ipcRenderer.invoke('search-posts', query);
   },
   savePost: (post) => {
-    console.log('Invoking "save-post" with post:', post);
-    return ipcRenderer.invoke('save-post', post);
+    console.log('Invoking "savePost" with post:', post);
+    return ipcRenderer.invoke('savePost', post);
   },
   getPosts: () => {
     console.log('Invoking "get-posts"');
