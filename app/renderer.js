@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let postIdToDelete = null;
   let lastSuggestionTime = 0;
   let suggestionCooldown = false;
+  let editingPostId = null;
 
     // ======= Sidebar Toggle =======
     const toggleMenuButton = document.getElementById('toggle-menu');
@@ -175,13 +176,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const fetchUserData = async () => {
     try {
       const user = await window.api.fetchUserData();
-      usernameDisplay.textContent = user.username;
-      profilePicture.src = user.profilePicture || '../../assets/default-profile.png';
-      console.log('User Data Displayed:', user.username);
+  
+      // Update UI with user data
+      document.getElementById('username').textContent = user.name;
+      document.getElementById('profile-picture').src = user.profile_picture || '../../assets/default-profile.png';
+  
+      console.log('User data displayed:', user.name);
     } catch (error) {
       console.error('Error fetching user data:', error);
-      usernameDisplay.textContent = 'Guest';
-      profilePicture.src = '../../assets/default-profile.png';
+      document.getElementById('username').textContent = 'Guest';
+      document.getElementById('profile-picture').src = '../../assets/default-profile.png';
     }
   };
 
@@ -241,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Set the post title
       postTitleInput.value = post.title || '';
       console.log('Post title set to:', post.title || '');
-
+  
       // Convert HTML to Delta and set the editor content
       try {
         const delta = quill.clipboard.convert(post.content);
@@ -253,18 +257,22 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Failed to load post content.');
         return;
       }
-      
+  
+      // Track the post being edited
+      editingPostId = post.id;
+      console.log('Editing post ID set to:', editingPostId);
+  
       // Close the modal
       closeModal(savedPostsModal);
       console.log('Saved Posts modal closed.');
-
+  
       // Show success toast
       showToast('Loaded post for editing.');
-
+  
       // Focus the editor (optional)
       quill.focus();
       console.log('Editor focused.');
-
+  
       // Optionally, scroll to the editor
       document.getElementById('editor-container').scrollIntoView({ behavior: 'smooth' });
     } else {
@@ -752,59 +760,32 @@ if (editorElement) {
 
   if (savePostButton) {
     savePostButton.addEventListener('click', async () => {
-      if (!quill || !postTitleInput) {
-        showToast('Editor is not initialized.');
-        console.error('Quill or Post Title Input is not available.');
+      const user = await window.api.fetchUserData();
+      if (!user || !user.linkedin_id) {
+        showToast('Unable to fetch user information. Please log in again.');
         return;
       }
-
-      const title = postTitleInput.value.trim();
-      const content = quill.root.innerHTML.trim();
-
-      if (!title) {
-        showToast('Please enter a title for your post.');
-        return;
-      }
-
-      if (!content) {
-        showToast('Post content cannot be empty.');
-        return;
-      }
-
-      // Prepare the post object
+  
       const post = {
-        title: title,
-        content: content,
-        status: 'draft', // You can set this to 'draft' or any other status as needed
-        // Add other necessary fields if required
+        id: editingPostId, // Include the editing post ID (null for new posts)
+        title: postTitleInput.value.trim(),
+        content: quill.root.innerHTML.trim(),
+        status: 'draft',
+        linkedin_id: user.linkedin_id, // Use linkedin_id to associate the post
       };
-
-      // Show loader or disable the button to indicate saving is in progress
-      savePostButton.disabled = true;
-      savePostButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
+  
       try {
         const result = await window.api.savePost(post);
         if (result.success) {
           showToast('Post saved successfully!');
-          // Optionally, clear the editor and title input
-          quill.setContents([]);
+          // Clear the editor and inputs
           postTitleInput.value = '';
-          // Refresh the saved posts list if it's open
-          if (!savedPostsModal.classList.contains('hidden')) {
-            loadSavedPosts();
-          }
-        } else {
-          showToast(`Failed to save post: ${result.message}`);
-          console.error('Save Post Error:', result.message);
+          quill.setContents([]);
+          editingPostId = null; // Reset editing ID after save
         }
       } catch (error) {
-        showToast('An error occurred while saving the post.');
-        console.error('Save Post Exception:', error);
-      } finally {
-        // Re-enable the button and reset its text
-        savePostButton.disabled = false;
-        savePostButton.innerHTML = '<i class="fas fa-save"></i> Save Post';
+        console.error('Error saving post:', error.message);
+        showToast('Failed to save post.');
       }
     });
   }
