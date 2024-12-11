@@ -8,7 +8,7 @@ const { fileURLToPath } = require('url');
 const usersService = require('../services/usersService.js');
 const db = require('../database/database');
 const { postToLinkedIn, scheduleExistingPosts ,performNonAPIFunctionality } = require('../automation/linkedin');
-const { savePost } = require('../services/postsService.js');
+const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
 const crypto = require('crypto');
@@ -17,6 +17,8 @@ const jwtDecode = require('jwt-decode');
 
 // Load environment variables
 dotenv.config();
+
+global.currentUser = null; // Initialize global state for the current user
 
 console.log('Index HTML Path:', path.join(__dirname, 'views', 'index.html'));
 console.log('Database Path:', path.resolve(__dirname, 'database', 'app.db'));
@@ -231,8 +233,8 @@ ipcMain.on('send-feedback', (event, type, suggestion) => {
 // ======= IPC Handlers for Post Operations =======
 
 // Save a new or updated post
-ipcMain.handle('savePost', async (_, post) => {
-  console.log('savePost handler invoked with post:', post); // Debugging log
+ipcMain.handle('savePost', async (event, post) => {
+  console.log('Saving post:', post);
   try {
     const result = await savePost(post);
     return result;
@@ -244,49 +246,43 @@ ipcMain.handle('savePost', async (_, post) => {
 
 // Retrieve all posts
 ipcMain.handle('get-posts', async () => {
-  return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM posts ORDER BY created_at DESC', (err, rows) => {
-      if (err) {
-        console.error('Error retrieving posts:', err.message);
-        return reject(err);
-      }
-      console.log('Retrieved posts successfully:', rows.length);
-      resolve(rows);
-    });
-  });
+  if (!global.currentUser || !global.currentUser.linkedinId) {
+    throw new Error('No user is logged in.');
+  }
+  const linkedinId = global.currentUser.linkedinId;
+  console.log(`Fetching posts for LinkedIn ID: ${linkedinId}`);
+  return getPostsByLinkedInId(linkedinId);
 });
 
 // Retrieve a single post by ID
-ipcMain.handle('get-post-by-id', async (event, id) => {
-  return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM posts WHERE id = ?', [id], (err, row) => {
-      if (err) {
-        console.error('Error retrieving post by ID:', err.message);
-        return reject(err);
-      }
-      if (row) {
-        console.log('Retrieved post by ID successfully:', id);
-        resolve(row);
-      } else {
-        console.warn('No post found with the given ID:', id);
-        resolve(null);
-      }
-    });
-  });
+ipcMain.handle('get-post-by-id', async (event, postId) => {
+  console.log(`Fetching post by ID: ${postId}`);
+  try {
+    const post = await getPostById(postId);
+    if (!post) {
+      return { success: false, message: 'Post not found.' };
+    }
+    return post;
+  } catch (error) {
+    console.error('Error in get-post-by-id IPC handler:', error.message);
+    return { success: false, message: error.message };
+  }
 });
 
+
 // Delete a post by ID
-ipcMain.handle('delete-post', async (event, postId) => {
-  return new Promise((resolve, reject) => {
-    db.run(`DELETE FROM posts WHERE id = ?`, [postId], function (err) {
-      if (err) {
-        console.error('Error deleting post:', err);
-        resolve({ success: false, message: err.message });
-      } else {
-        resolve({ success: true });
-      }
-    });
-  });
+ipcMain.handle('delete-post', async (event, { postId, userId }) => {
+  console.log(`Deleting post with ID ${postId} for user ID ${userId}`);
+  try {
+    const result = await deletePost(postId, userId);
+    if (result.changes === 0) {
+      return { success: false, message: 'No post found or you do not have permission to delete this post.' };
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Error in delete-post IPC handler:', error.message);
+    return { success: false, message: error.message };
+  }
 });
 
 // ======= IPC Handler for Scheduling Posts =======
@@ -359,21 +355,15 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
 });
 
 // ======= IPC Handler to Search Posts =======
-ipcMain.handle('search-posts', async (event, query) => {
-  if (!query) {
-    return { success: false, message: 'Search query is required.' };
+ipcMain.handle('search-posts', async (event, { query, linkedinId }) => {
+  console.log(`Searching posts for LinkedIn ID: ${linkedinId} with query: ${query}`);
+  try {
+    const results = await searchPosts(query, linkedinId);
+    return results;
+  } catch (error) {
+    console.error('Error in search-posts IPC handler:', error.message);
+    return { success: false, message: error.message };
   }
-
-  return new Promise((resolve, reject) => {
-    const searchQuery = `%${query}%`;
-    db.all('SELECT * FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC', [searchQuery, searchQuery], (err, rows) => {
-      if (err) {
-        console.error('Error searching posts:', err.message);
-        return reject(err);
-      }
-      resolve(rows);
-    });
-  });
 });
 
 // ======= IPC Handler for LinkedIn Auth Feedback =======
@@ -492,6 +482,13 @@ ipcMain.on('open-linkedin-auth-window', () => {
 
           // Save accessToken and userID to the database
           const user = await usersService.findOrCreateUser(userID, name, email, accessToken);
+          global.currentUser = {
+            linkedinId: userID,
+            name: name,
+            email: email,
+            accessToken: accessToken,
+          };
+          console.log('Current user set globally:', global.currentUser);
           console.log('User data saved to database:', user);
 
           // Notify the renderer process about successful authentication
