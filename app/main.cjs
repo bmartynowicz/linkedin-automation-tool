@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
-const usersService = require('../services/usersService.js');
+const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../services/usersService.js');
 const db = require('../database/database');
 const { postToLinkedIn, scheduleExistingPosts ,performNonAPIFunctionality } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
@@ -17,8 +17,6 @@ const jwtDecode = require('jwt-decode');
 
 // Load environment variables
 dotenv.config();
-
-global.currentUser = null; // Initialize global state for the current user
 
 console.log('Index HTML Path:', path.join(__dirname, 'views', 'index.html'));
 console.log('Database Path:', path.resolve(__dirname, 'database', 'app.db'));
@@ -176,10 +174,26 @@ ipcMain.on('post-status-update', (event, status) => {
 // Fetch user data
 ipcMain.handle('fetch-user-data', async () => {
   try {
-    const userData = await usersService.getCurrentUser(); // Implement this function
+    const userData = await getCurrentUser(); // Call getCurrentUser directly
+    global.currentUser = userData; // Keep the global user updated
     return userData || { username: 'Guest', profilePicture: '../../assets/default-profile.png' };
   } catch (error) {
-    console.error('Error fetching user data:', error);
+    console.error('Error fetching user data:', error.message);
+    throw error;
+  }
+});
+
+// Fetch the current user
+ipcMain.handle('fetch-current-user', async () => {
+  try {
+    const userData = await getCurrentUser();
+    if (userData) {
+      global.currentUser = userData; // Update the global user state
+      console.log('Current user fetched and set globally:', global.currentUser);
+    }
+    return userData || { username: 'Guest', profilePicture: '../../assets/default-profile.png' };
+  } catch (error) {
+    console.error('Error fetching current user:', error.message);
     throw error;
   }
 });
@@ -246,12 +260,18 @@ ipcMain.handle('savePost', async (event, post) => {
 
 // Retrieve all posts
 ipcMain.handle('get-posts', async () => {
-  if (!global.currentUser || !global.currentUser.linkedinId) {
+  if (!global.currentUser || !global.currentUser.linkedin_id) {
+    console.error('No user is logged in. Current user:', global.currentUser);
     throw new Error('No user is logged in.');
   }
-  const linkedinId = global.currentUser.linkedinId;
-  console.log(`Fetching posts for LinkedIn ID: ${linkedinId}`);
-  return getPostsByLinkedInId(linkedinId);
+  const linkedin_id = global.currentUser.linkedin_id;
+  console.log(`Fetching posts for LinkedIn ID: ${linkedin_id}`);
+  try {
+    return await getPostsByLinkedInId(linkedin_id);
+  } catch (error) {
+    console.error('Error fetching posts:', error.message);
+    throw error;
+  }
 });
 
 // Retrieve a single post by ID
@@ -355,22 +375,52 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
 });
 
 // ======= IPC Handler to Search Posts =======
-ipcMain.handle('search-posts', async (event, { query, linkedinId }) => {
-  console.log(`Searching posts for LinkedIn ID: ${linkedinId} with query: ${query}`);
+ipcMain.handle('search-posts', async (event, { query, linkedin_id }) => {
+  console.log(`Searching posts for LinkedIn ID: ${linkedin_id} with query: ${query}`);
   try {
-    const results = await searchPosts(query, linkedinId);
+    const results = await searchPosts(query, linkedin_id);
     return results;
   } catch (error) {
-    console.error('Error in search-posts IPC handler:', error.message);
-    return { success: false, message: error.message };
+    console.error('Error in search-posts handler:', error.message);
+    throw error;
   }
 });
 
 // ======= IPC Handler for LinkedIn Auth Feedback =======
 
-ipcMain.on('linkedin-auth-success', (event, userData) => {
-  console.log('LinkedIn Authentication Successful:', userData);
-  // Implement logic to update UI or store user data as needed
+// LinkedIn Authentication and User Login
+ipcMain.on('linkedin-auth-success', async (event, { userID, name, email, accessToken, refreshToken, expiresIn }) => {
+  console.log('LinkedIn Authentication Successful:', { userID, name, email });
+
+  try {
+    const user = await findOrCreateUser(userID, name, email, accessToken, refreshToken, expiresIn);
+    global.currentUser = {
+      linkedinId: user.linkedin_id,
+      name: user.name,
+      email: user.email,
+      accessToken: user.access_token,
+    };
+    console.log('User logged in and set globally:', global.currentUser); // Debug log
+    event.sender.send('auth-success', { userID, name, email });
+  } catch (error) {
+    console.error('Error saving user data after LinkedIn auth:', error.message);
+    event.sender.send('auth-error', { message: error.message });
+  }
+});
+
+// Refresh LinkedIn Access Token
+ipcMain.handle('refresh-access-token', async (event, linkedin_id) => {
+  console.log('Refreshing access token for LinkedIn ID:', linkedin_id);
+  try {
+    const newAccessToken = await refreshAccessToken(linkedin_id);
+    if (global.currentUser && global.currentUser.linkedin_id === linkedin_id) {
+      global.currentUser.accessToken = newAccessToken; // Update global user state
+    }
+    return { success: true, accessToken: newAccessToken };
+  } catch (error) {
+    console.error('Error refreshing LinkedIn access token:', error.message);
+    return { success: false, message: error.message };
+  }
 });
 
 ipcMain.on('linkedin-auth-failure', (event, errorData) => {
@@ -387,7 +437,32 @@ ipcMain.on('linkedin-auth-closed', () => {
 ipcMain.on('open-linkedin-auth-window', () => {
   console.log('Received "open-linkedin-auth-window" IPC message');
 
-  const authWindow = new BrowserWindow({
+  const authWindow = createAuthWindow();
+
+  // Generate a unique state parameter for CSRF protection
+  const state = crypto.randomBytes(16).toString('hex');
+  global.oauthState = state; // Store globally for later verification
+
+  const authUrl = generateAuthUrl(state);
+  authWindow.loadURL(authUrl);
+  authWindow.show();
+  console.log('Auth window loaded with URL:', authUrl);
+
+  // Handle redirect to the redirect URI
+  authWindow.webContents.on('will-redirect', async (event, url) => {
+    await handleAuthRedirect(event, url, authWindow);
+  });
+
+  // Handle window closed before completing auth
+  authWindow.on('closed', () => {
+    console.log('Auth window was closed by the user');
+    notifyRenderer('linkedin-auth-closed');
+  });
+});
+
+// Helper: Create LinkedIn Authentication Window
+function createAuthWindow() {
+  return new BrowserWindow({
     width: 600,
     height: 700,
     show: false,
@@ -396,147 +471,116 @@ ipcMain.on('open-linkedin-auth-window', () => {
       contextIsolation: true,
     },
   });
+}
 
-  // Generate a unique state parameter for CSRF protection
-  const state = crypto.randomBytes(16).toString('hex');
-  global.oauthState = state; // Store globally for later verification
-
+// Helper: Generate LinkedIn Auth URL
+function generateAuthUrl(state) {
   const scope = process.env.LINKEDIN_SCOPES; // 'openid profile email w_member_social'
   const encodedScope = encodeURIComponent(scope); // 'openid%20profile%20email%20w_member_social'
-  const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.LINKEDIN_REDIRECT_URI)}&scope=${encodedScope}&state=${state}`;
-  
-  authWindow.loadURL(authUrl);
-  authWindow.show();
-  console.log('Auth window loaded with URL:', authUrl);
 
-  // Handle redirect to the redirect URI
-  authWindow.webContents.on('will-redirect', async (event, url) => {
-    console.log('Auth window redirecting to URL:', url);
-    if (url.startsWith(process.env.LINKEDIN_REDIRECT_URI)) {
-      event.preventDefault(); // Prevent the actual navigation
+  return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+    process.env.LINKEDIN_REDIRECT_URI
+  )}&scope=${encodedScope}&state=${state}`;
+}
 
-      // Parse the authorization code and state from the URL
-      const urlObj = new URL(url);
-      const authorizationCode = urlObj.searchParams.get('code');
-      const receivedState = urlObj.searchParams.get('state');
+// Helper: Handle Redirect and Authentication
+async function handleAuthRedirect(event, url, authWindow) {
+  console.log('Auth window redirecting to URL:', url);
 
-      if (receivedState !== global.oauthState) {
-        console.error('State parameter mismatch. Possible CSRF attack.');
-        authWindow.close();
-        // Notify renderer process about the failure
-        const allWindows = BrowserWindow.getAllWindows();
-        if (allWindows.length > 0) {
-          const mainWindow = allWindows[0];
-          mainWindow.webContents.send('linkedin-auth-failure', { message: 'State parameter mismatch' });
-          console.log('Sent "linkedin-auth-failure" IPC message to renderer');
-        }
-        return;
-      }
+  if (!url.startsWith(process.env.LINKEDIN_REDIRECT_URI)) return;
 
-      if (authorizationCode) {
-        console.log('Authorization code received:', authorizationCode);
-        try {
-          // Exchange authorization code for access token
-          const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              grant_type: 'authorization_code',
-              code: authorizationCode,
-              redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
-              client_id: process.env.LINKEDIN_CLIENT_ID,
-              client_secret: process.env.LINKEDIN_CLIENT_SECRET,
-            }),
-          });
+  event.preventDefault(); // Prevent the actual navigation
 
-          const tokenData = await tokenResponse.json();
-          console.log('Token data received:', {
-            access_token: tokenData.access_token ? '*****' : undefined,
-            expires_in: tokenData.expires_in,
-            scope: tokenData.scope,
-            token_type: tokenData.token_type,
-            id_token: tokenData.id_token ? '*****' : undefined,
-          });
+  const urlObj = new URL(url);
+  const authorizationCode = urlObj.searchParams.get('code');
+  const receivedState = urlObj.searchParams.get('state');
 
-          if (tokenData.error) {
-            throw new Error(tokenData.error_description || 'Failed to obtain access token');
-          }
+  if (receivedState !== global.oauthState) {
+    console.error('State parameter mismatch. Possible CSRF attack.');
+    authWindow.close();
+    notifyRenderer('linkedin-auth-failure', { message: 'State parameter mismatch' });
+    return;
+  }
 
-          const accessToken = tokenData.access_token;
-          const idToken = tokenData.id_token; // Ensure you request the id_token in scopes
-          console.log('Access token obtained:', accessToken);
+  if (!authorizationCode) {
+    console.warn('Authorization code not found in URL.');
+    authWindow.close();
+    return;
+  }
 
-          // Decode id_token to get user information
-          const decodedIdToken = jwtDecode(idToken);
-          console.log('Decoded ID Token:', { sub: decodedIdToken.sub, name: decodedIdToken.name, email: decodedIdToken.email });
+  console.log('Authorization code received:', authorizationCode);
+  try {
+    const tokenData = await exchangeAuthorizationCodeForTokens(authorizationCode);
+    const user = await handleUserAuthentication(tokenData);
+    global.currentUser = user;
 
-          const userID = decodedIdToken.sub; // Standard OIDC subject identifier
-          const name = decodedIdToken.name;
-          const email = decodedIdToken.email;
-          console.log(`User ID: ${userID}, Name: ${name}, Email: ${email}`);
+    console.log('Current user set globally:', global.currentUser);
+    notifyRenderer('linkedin-auth-success', user);
 
-          // Validate user data before database operations
-          if (!userID || !name) {
-            throw new Error('User information is incomplete.');
-          }
+    authWindow.close();
+  } catch (error) {
+    console.error('Error during LinkedIn OAuth flow:', error.message);
+    notifyRenderer('linkedin-auth-failure', { message: error.message });
+    authWindow.close();
+  }
+}
 
-          // Save accessToken and userID to the database
-          const user = await usersService.findOrCreateUser(userID, name, email, accessToken);
-          global.currentUser = {
-            linkedinId: userID,
-            name: name,
-            email: email,
-            accessToken: accessToken,
-          };
-          console.log('Current user set globally:', global.currentUser);
-          console.log('User data saved to database:', user);
-
-          // Notify the renderer process about successful authentication
-          const allWindows = BrowserWindow.getAllWindows();
-          if (allWindows.length > 0) {
-            const mainWindow = allWindows[0];
-            mainWindow.webContents.send('linkedin-auth-success', { userID, name, email });
-            console.log('Sent "linkedin-auth-success" IPC message to renderer');
-          }
-
-          // Close the auth window
-          authWindow.close();
-          console.log('Auth window closed after successful authentication');
-        } catch (error) {
-          console.error('Error during LinkedIn OAuth flow:', error.message);
-          // Notify the renderer process about the failure
-          const allWindows = BrowserWindow.getAllWindows();
-          if (allWindows.length > 0) {
-            const mainWindow = allWindows[0];
-            mainWindow.webContents.send('linkedin-auth-failure', { message: error.message });
-            console.log('Sent "linkedin-auth-failure" IPC message to renderer');
-          }
-          authWindow.close();
-          console.log('Auth window closed after authentication failure');
-        }
-      } else {
-        console.warn('Authorization code not found in URL.');
-        authWindow.close();
-        console.log('Auth window closed due to missing authorization code');
-      }
-
-      event.preventDefault();
-    }
+// Helper: Exchange Authorization Code for Access and Refresh Tokens
+async function exchangeAuthorizationCodeForTokens(authorizationCode) {
+  const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: authorizationCode,
+      redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
+      client_id: process.env.LINKEDIN_CLIENT_ID,
+      client_secret: process.env.LINKEDIN_CLIENT_SECRET,
+    }),
   });
 
-  // Handle window closed before completing auth
-  authWindow.on('closed', () => {
-    console.log('Auth window was closed by the user');
-    // Notify the renderer process about the closure
-    const allWindows = BrowserWindow.getAllWindows();
-    if (allWindows.length > 0) {
-      const mainWindow = allWindows[0];
-      mainWindow.webContents.send('linkedin-auth-closed');
-      console.log('Sent "linkedin-auth-closed" IPC message to renderer');
-    }
+  const tokenData = await tokenResponse.json();
+  console.log('Token data received:', {
+    access_token: tokenData.access_token ? '*****' : undefined,
+    expires_in: tokenData.expires_in,
+    scope: tokenData.scope,
+    token_type: tokenData.token_type,
+    id_token: tokenData.id_token ? '*****' : undefined,
   });
-});
 
-ipcMain.on('test-message', () => {
-  console.log('Received "test-message" IPC message');
-});
+  if (tokenData.error) throw new Error(tokenData.error_description || 'Failed to obtain access token');
+
+  return tokenData;
+}
+
+// Helper: Handle User Authentication and Save to Database
+async function handleUserAuthentication(tokenData) {
+  const decodedIdToken = jwtDecode(tokenData.id_token);
+  const userID = decodedIdToken.sub;
+  const name = decodedIdToken.name;
+  const email = decodedIdToken.email;
+
+  if (!userID || !name) throw new Error('User information is incomplete.');
+
+  console.log(`User ID: ${userID}, Name: ${name}, Email: ${email}`);
+
+  return await findOrCreateUser(
+    userID,
+    name,
+    email,
+    tokenData.access_token,
+    tokenData.refresh_token,
+    tokenData.expires_in
+  );
+}
+
+// Helper: Notify Renderer Process
+function notifyRenderer(channel, data = {}) {
+  const allWindows = BrowserWindow.getAllWindows();
+  if (allWindows.length > 0) {
+    const mainWindow = allWindows[0];
+    mainWindow.webContents.send(channel, data);
+    console.log(`Sent "${channel}" IPC message to renderer`, data);
+  }
+}
+

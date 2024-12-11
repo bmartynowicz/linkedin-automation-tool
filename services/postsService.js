@@ -2,20 +2,17 @@ const db = require('../database/database.js');
 
 /**
  * Fetches posts for a specific LinkedIn ID.
- * @param {string} linkedinId - The LinkedIn ID of the user.
+ * @param {string} linkedin_id - The LinkedIn ID of the user.
  * @returns {Promise<Array>} - The list of posts created by the user.
  */
-async function getPostsByLinkedInId(linkedinId) {
-  return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM posts WHERE linkedin_id = ?', [linkedinId], (err, rows) => {
-      if (err) {
-        console.error('Error fetching posts:', err.message);
-        return reject(err);
-      }
-      resolve(rows || []);
+async function getPostsByLinkedInId(linkedin_id) {
+    return new Promise((resolve, reject) => {
+      db.all('SELECT * FROM posts WHERE linkedin_id = ?', [linkedin_id], (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
     });
-  });
-}
+  }
 
 /**
  * Saves a post to the database.
@@ -95,24 +92,21 @@ async function deletePost(postId, userId) {
 /**
  * Searches for posts matching a query.
  * @param {string} query - The search term.
- * @param {string} linkedinId - The LinkedIn ID of the user.
+ * @param {string} linkedin_id - The LinkedIn ID of the user.
  * @returns {Promise<Array>} - The list of matching posts.
  */
-async function searchPosts(query, linkedinId) {
-  return new Promise((resolve, reject) => {
-    db.all(
-      `SELECT * FROM posts WHERE linkedin_id = ? AND (title LIKE ? OR content LIKE ?)`,
-      [linkedinId, `%${query}%`, `%${query}%`],
-      (err, rows) => {
-        if (err) {
-          console.error('Error searching posts:', err.message);
-          return reject(err);
+async function searchPosts(query, linkedin_id) {
+    return new Promise((resolve, reject) => {
+      db.all(
+        `SELECT * FROM posts WHERE linkedin_id = ? AND (title LIKE ? OR content LIKE ?)`,
+        [linkedin_id, `%${query}%`, `%${query}%`],
+        (err, rows) => {
+          if (err) return reject(err);
+          resolve(rows);
         }
-        resolve(rows || []);
-      }
-    );
-  });
-}
+      );
+    });
+  }
 
 /**
  * Gets a single post by ID.
