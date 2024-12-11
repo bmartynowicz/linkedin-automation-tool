@@ -194,56 +194,43 @@
   <main>
     <!-- Quill Toolbar -->
     <div id="toolbar" class="q1-toolbar">
+      <!-- Basic Text Formatting -->
       <span class="ql-formats">
         <button class="ql-bold" aria-label="Bold"></button>
         <button class="ql-italic" aria-label="Italic"></button>
         <button class="ql-underline" aria-label="Underline"></button>
-        <button class="ql-strike" aria-label="Strike"></button>
       </span>
-      <span class="ql-formats">
-        <button class="ql-blockquote" aria-label="Blockquote"></button>
-        <button class="ql-code-block" aria-label="Code Block"></button>
-      </span>
-      <span class="ql-formats">
-        <button class="ql-list" value="ordered" aria-label="Ordered List"></button>
-        <button class="ql-list" value="bullet" aria-label="Bullet List"></button>
-        <button class="ql-indent" value="-1" aria-label="Decrease Indent"></button>
-        <button class="ql-indent" value="+1" aria-label="Increase Indent"></button>
-      </span>
-      <span class="ql-formats">
-        <select class="ql-header" aria-label="Header">
-          <option selected></option>
-          <option value="1"></option>
-          <option value="2"></option>
-        </select>
-        <select class="ql-font" aria-label="Font"></select>
-        <select class="ql-size" aria-label="Size"></select>
-      </span>
-      <span class="ql-formats">
-        <button class="ql-color" aria-label="Text Color"></button>
-        <button class="ql-background" aria-label="Background Color"></button>
-        <button class="ql-align" aria-label="Align"></button>
-      </span>
-      <span class="ql-formats">
-        <button class="ql-clean" aria-label="Remove Formatting"></button>
-      </span>
+
+      <!-- Emoji Integration -->
       <span class="ql-formats">
         <button class="ql-emoji" aria-label="Insert Emoji"></button>
       </span>
+
+      <!-- Custom Bulleted Lists with Emojis -->
       <span class="ql-formats">
-        <button id="manual-suggest-button" aria-label="Get Suggestion">
-          <i class="fas fa-lightbulb"></i>
+        <button id="ql-custom-bullet" class="q1-custom-bullet" aria-label="Emoji Bullet List">
+          <i class="fas fa-list"></i>
         </button>
       </span>
-      <span class="ql-formats">
-        <button class="ql-undo" aria-label="Undo">
-          <i class="fas fa-undo"></i>
-        </button>
-        <button class="ql-redo" aria-label="Redo">
-          <i class="fas fa-redo"></i>
-        </button>
-      </span>
-    </div>
+
+  <!-- Manual Suggestion (AI Assistance) -->
+  <span class="ql-formats">
+    <button id="manual-suggest-button" aria-label="Get Suggestion">
+      <i class="fas fa-lightbulb"></i>
+    </button>
+  </span>
+
+  <!-- Undo/Redo -->
+  <span class="ql-formats">
+    <button class="ql-undo" aria-label="Undo">
+      <i class="fas fa-undo"></i>
+    </button>
+    <button class="ql-redo" aria-label="Redo">
+      <i class="fas fa-redo"></i>
+    </button>
+  </span>
+</div>
+
 
     <!-- Quill Editor Container -->
     <div id="editor-container">

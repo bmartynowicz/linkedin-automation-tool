@@ -67,6 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const rejectButton = document.getElementById('reject-suggestion');
     const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
 
+    // ======= Emoji Bullet Button =======
+    const emojiBulletButton = document.getElementById('ql-custom-bullet');
+
   const debounce = (func, delay) => {
     let timeout;
     return (...args) => {
@@ -227,13 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
-  // Listen to 'post-published' event
-  window.api.on('post-published', (postId) => {
-    showToast(`Post ID ${postId} has been published to LinkedIn.`);
-    loadSavedPosts(); // Refresh the saved posts list
-  });
-
 
   // ======= Function to Load a Post for Editing =======
   async function loadPostForEditing(post) {
@@ -650,45 +646,68 @@ if (linkedinLoginButton) {
   console.error('LinkedIn login button not found.');
 }
 
-// ======= Initialize the Quill Editor with Emoji Toolbar =======
+// ======= Register the Custom Bullet Format =======
+const Block = Quill.import('blots/block');
+
+class CustomBullet extends Block {
+  static create(value) {
+    const node = super.create();
+    node.setAttribute('data-custom-bullet', value || '◾');
+    node.style.listStyleType = 'none'; // Remove native list style
+    node.style.display = 'list-item'; // Treat as a list item
+    node.style.paddingLeft = '20px'; // Add padding for text alignment
+    node.style.textIndent = '-20px'; // Ensure proper bullet alignment
+    return node;
+  }
+
+  static formats(node) {
+      return node.getAttribute('data-custom-bullet') || '◾';
+  }
+
+  format(name, value) {
+      if (name === CustomBullet.blotName && value) {
+          this.domNode.setAttribute('data-custom-bullet', value);
+      } else {
+          super.format(name, value);
+      }
+  }
+}
+
+CustomBullet.blotName = 'custom-bullet';
+CustomBullet.tagName = 'LI'; // Use list item tag
+Quill.register(CustomBullet, true);
+
+// ======= Initialize the Quill Editor =======
+// ======= Initialize the Quill Editor =======
 if (typeof Quill !== 'undefined') {
   console.log('Quill is available.');
 
-  // Check if QuillEmoji is defined
-  console.log('QuillEmoji:', window.QuillEmoji);
-
-  if (window.QuillEmoji && window.QuillEmoji.default) {
-    // Access modules via window.QuillEmoji.default
-    const { EmojiBlot, ToolbarEmoji, TextAreaEmoji, ShortNameEmoji } = window.QuillEmoji.default;
-
-    // Log the modules to verify they are defined
-    console.log('EmojiBlot:', EmojiBlot);
-    console.log('ToolbarEmoji:', ToolbarEmoji);
-
-    // Register the emoji modules
-    Quill.register(
-      {
-        'formats/emoji': EmojiBlot,
-        'modules/emoji-toolbar': ToolbarEmoji,
-        'modules/emoji-textarea': TextAreaEmoji,
-        'modules/emoji-shortname': ShortNameEmoji,
-      },
-      true
-    );
-  } else {
-    console.error('QuillEmoji is not available or does not have a default export.');
-  }
-
-  // Initialize Quill with the emoji toolbar
+  // Initialize Quill
   quill = new Quill('#editor', {
     theme: 'snow',
     modules: {
       toolbar: {
-        container: '#toolbar',
+        container: '#toolbar', // Use your custom toolbar
+        handlers: {
+          // Add a custom handler for 'custom-bullet'
+          'custom-bullet': function () {
+            const range = this.quill.getSelection(); // Get current selection
+            if (range) {
+              const currentFormat = this.quill.getFormat(range.index, range.length);
+              if (currentFormat['custom-bullet']) {
+                this.quill.format('custom-bullet', false); // Remove the format
+                console.log('Custom bullet removed.');
+              } else {
+                this.quill.format('custom-bullet', '◾'); // Apply the format
+                console.log('Custom bullet applied.');
+              }
+            } else {
+              console.error('No text selected.');
+            }
+          },
+        },
       },
-      'emoji-toolbar': true,
-      'emoji-shortname': true,
-      'emoji-textarea': false,
+      'emoji-toolbar': true, // Emoji picker support
       history: {
         delay: 1000,
         maxStack: 100,
@@ -696,15 +715,56 @@ if (typeof Quill !== 'undefined') {
       },
     },
     formats: [
-      'bold', 'italic', 'underline', 'strike',
-      'blockquote', 'code-block',
-      'header', 'list', 'script', 'indent', 'direction',
-      'size', 'color', 'background', 'font', 'align',
-      'emoji', // Include 'emoji' in formats
+      'bold', 'italic', 'underline', 'header', 'emoji', 'custom-bullet', // Include custom-bullet in formats
     ],
   });
 
-  console.log('Quill editor initialized with emoji support.');
+  console.log('Quill editor initialized.');
+
+  // ======= Add Toolbar Handler for Custom Bullet =======
+  const toolbar = quill.getModule('toolbar');
+
+  toolbar.addHandler('custom-bullet', function () {
+    const range = this.quill.getSelection();
+    if (range) {
+      const currentFormat = this.quill.getFormat(range.index, range.length);
+      if (currentFormat['custom-bullet']) {
+        this.quill.format('custom-bullet', false); // Remove custom bullet
+        console.log('Custom bullet removed.');
+      } else {
+        this.quill.format('custom-bullet', '◾'); // Apply custom bullet
+        console.log('Custom bullet applied.');
+      }
+    } else {
+      console.error('No text selected.');
+    }
+  });
+
+  console.log('Custom bullet list handler registered.');
+
+// Add Click Event Listener for Manual Use (Optional)
+
+if (emojiBulletButton) {
+  emojiBulletButton.addEventListener('click', () => {
+    const range = quill.getSelection();
+    if (range) {
+      const currentFormat = quill.getFormat(range.index, range.length);
+      if (currentFormat['custom-bullet']) {
+        quill.format('custom-bullet', false); // Remove the format
+        console.log('Custom bullet removed.');
+      } else {
+        quill.format('custom-bullet', '◾'); // Apply the format
+        console.log('Custom bullet applied.');
+      }
+    } else {
+      console.error('No text selected.');
+    }
+  });
+} else {
+  console.error('Custom bullet button not found in toolbar.');
+}
+
+console.log('Custom bullet list initialized.');
 
   // ======= Add Event Listener for Toolbar Undo/Redo Buttons =======
   document.getElementById('toolbar').addEventListener('click', (e) => {
@@ -735,9 +795,10 @@ if (editorElement) {
       const draft = {
         title: postTitleInput.value.trim(),
         content: quill.root.innerHTML.trim(),
+        lastSaved: new Date().toLocaleTimeString(),
       };
       localStorage.setItem('draft', JSON.stringify(draft));
-      console.log('Autosave draft.');
+      console.log(`Autosaved at ${draft.lastSaved}`);
     }
   }, 15000);  // Autosave every 15 seconds
 
@@ -980,7 +1041,6 @@ if (closeSuggestionBoxButton) {
   saveDraftButton.id = 'save-draft';
   saveDraftButton.innerText = 'Save Draft';
   saveDraftButton.classList.add('editor-action-button', 'save-draft-button');
-  //document.querySelector('#editor-container').appendChild(saveDraftButton);
 
   saveDraftButton.addEventListener('click', () => {
     if (quill && postTitleInput) {
@@ -1013,16 +1073,5 @@ if (closeSuggestionBoxButton) {
 } else {
   console.error('Quill is not available.');
 }
-
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-  const testIpcButton = document.getElementById('test-ipc-button');
-
-  if (testIpcButton) {
-    testIpcButton.addEventListener('click', () => {
-      console.log('Test IPC button clicked');
-      window.api.sendTestMessage();
-    });
-  }
-});
