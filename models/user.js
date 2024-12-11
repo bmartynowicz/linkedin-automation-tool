@@ -4,17 +4,14 @@ const db = require('../database/database.js');
 
 /**
  * Finds a user by LinkedIn ID.
- * @param {string} linkedinId - The LinkedIn user ID.
+ * @param {string} linkedin_id - The LinkedIn user ID.
  * @returns {Promise<Object>} - The user object if found, else null.
  */
-function findUserByLinkedInId(linkedinId) {
+async function findUserByLinkedInId(linkedin_id) {
   return new Promise((resolve, reject) => {
     const query = `SELECT * FROM users WHERE linkedin_id = ?`;
-    db.get(query, [linkedinId], (err, row) => {
-      if (err) {
-        console.error('Error finding user by LinkedIn ID:', err.message);
-        return reject(err);
-      }
+    db.get(query, [linkedin_id], (err, row) => {
+      if (err) return reject(err);
       resolve(row);
     });
   });
@@ -22,26 +19,20 @@ function findUserByLinkedInId(linkedinId) {
 
 /**
  * Creates a new user.
- * @param {string} linkedinId - The LinkedIn user ID.
+ * @param {string} linkedin_id - The LinkedIn user ID.
  * @param {string} name - The user's name.
  * @param {string} accessToken - The LinkedIn access token.
  * @returns {Promise<Object>} - The newly created user object.
  */
-function createUser(linkedinId, name, accessToken) {
+function createUser(linkedin_id, name, accessToken) {
   return new Promise((resolve, reject) => {
     const query = `
       INSERT INTO users (linkedin_id, name, access_token)
       VALUES (?, ?, ?)
     `;
-    db.run(query, [linkedinId, name, accessToken], function(err) {
-      if (err) {
-        console.error('Error creating new user:', err.message);
-        return reject(err);
-      }
-      // Retrieve the newly created user
-      findUserById(this.lastID)
-        .then(user => resolve(user))
-        .catch(err => reject(err));
+    db.run(query, [linkedin_id, name, accessToken], function (err) {
+      if (err) return reject(err);
+      resolve({ id: this.lastID, linkedin_id, name, accessToken });
     });
   });
 }
@@ -90,6 +81,4 @@ function updateUserAccessToken(id, accessToken) {
 module.exports = {
   findUserByLinkedInId,
   createUser,
-  findUserById,
-  updateUserAccessToken,
 };

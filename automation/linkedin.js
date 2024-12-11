@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 const dotenv = require('dotenv');
-const usersService = require('../services/usersService'); // Adjust the path if necessary
+const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../services/usersService.js');
 
 dotenv.config();
 
@@ -68,7 +68,7 @@ router.get('/auth/linkedin/callback', async (req, res) => {
     console.log(`User ID: ${userID}, Name: ${name}`);
 
     // Save user data to the database
-    const user = await usersService.findOrCreateUser(userID, name, accessToken);
+    const user = await findOrCreateUser(userID, name, accessToken);
     console.log('User Data Saved:', user);
 
     res.status(200).json({ message: 'Authentication successful.', user });
