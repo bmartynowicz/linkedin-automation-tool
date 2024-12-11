@@ -292,15 +292,22 @@ ipcMain.handle('get-post-by-id', async (event, postId) => {
 
 // Delete a post by ID
 ipcMain.handle('delete-post', async (event, { postId, userId }) => {
+  if (!postId || !userId) {
+    console.error('Post ID or User ID is missing:', { postId, userId });
+    throw new Error('Invalid post or user identifier.');
+  }
+
   console.log(`Deleting post with ID ${postId} for user ID ${userId}`);
+
   try {
     const result = await deletePost(postId, userId);
     if (result.changes === 0) {
-      return { success: false, message: 'No post found or you do not have permission to delete this post.' };
+      console.error(`No post found with ID ${postId} for user ID ${userId}`);
+      return { success: false, message: 'No post found or unauthorized.' };
     }
     return { success: true };
   } catch (error) {
-    console.error('Error in delete-post IPC handler:', error.message);
+    console.error('Error deleting post:', error.message);
     return { success: false, message: error.message };
   }
 });

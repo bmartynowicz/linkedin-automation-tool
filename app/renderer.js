@@ -523,10 +523,18 @@ deletePostButton.addEventListener('click', () => {
 });
 
 // ======= Function to Open Delete Confirmation Modal =======
-const openDeleteConfirmation = (postId) => {
+const openDeleteConfirmation = async (postId) => {
   if (!deleteConfirmationModal) return;
 
   postIdToDelete = postId; // Store the post ID to delete
+  console.log('Post ID to delete:', postId);
+
+  try {
+    const user = await window.api.fetchUserData(); // Await user data
+    console.log('Current user:', user);
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+  }
 
   // Open the modal
   openModal(deleteConfirmationModal);
@@ -537,7 +545,18 @@ if (confirmDeleteButton) {
   confirmDeleteButton.addEventListener('click', async () => {
     if (postIdToDelete !== null) {
       try {
-        const result = await window.api.deletePost(postIdToDelete);
+        // Fetch the current user
+        const user = await window.api.fetchUserData();
+        if (!user || !user.linkedin_id) {
+          showToast('Unable to identify the current user. Please log in again.');
+          return;
+        }
+
+        const result = await window.api.deletePost({
+          postId: postIdToDelete,
+          userId: user.linkedin_id, // Pass LinkedIn ID for ownership validation
+        });
+
         if (result.success) {
           showToast('Post deleted successfully.');
           loadSavedPosts(); // Refresh the posts list
