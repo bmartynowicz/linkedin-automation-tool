@@ -12,7 +12,7 @@ async function findUserByLinkedInId(linkedin_id) {
         resolve(row);
       });
     });
-  }
+}
 
 /**
  * Finds or creates a user based on LinkedIn authentication data.
@@ -34,7 +34,7 @@ async function findOrCreateUser(userID, name, email, accessToken, refreshToken, 
       // Create new user
       return createUser(userID, name, email, accessToken, refreshToken, expiresIn);
     }
-  }
+}
 
 // Create a new user
 async function createUser(userID, name, email, accessToken, refreshToken, expiresIn) {
@@ -56,7 +56,7 @@ async function createUser(userID, name, email, accessToken, refreshToken, expire
         }
       );
     });
-  }
+}
 
 /**
  * Fetches the current user based on the session or single-user setup.
@@ -72,7 +72,21 @@ async function getCurrentUser() {
         resolve(row || null);
       });
     });
-  }
+}
+
+async function getCurrentUserWithPreferences() {
+    // Fetch the current user
+    const user = await getCurrentUser();
+    if (!user) throw new Error('No user found.');
+  
+    // Fetch user preferences or fallback to defaults
+    const preferences = await userModel.getUserPreferences(user.id);
+    console.log('Fetching preferences for user ID:', user.id);
+    return {
+      ...user,
+      preferences: preferences || { theme: 'light', tone: 'professional', notification_settings: {} }, // Provide default preferences
+    };
+}
 
 // Update user data
 async function updateUser(userID, name, email, accessToken, refreshToken, expiresIn) {
@@ -89,6 +103,37 @@ async function updateUser(userID, name, email, accessToken, refreshToken, expire
         }
       );
     });
+}
+
+/**
+ * Fetches user preferences for the current user.
+ * @param {number} userId - The user's database ID.
+ * @returns {Promise<Object>} - The user's preferences.
+ */
+async function getUserPreferences(userId) {
+    try {
+      const preferences = await userModel.getUserPreferences(userId);
+      return preferences || { theme: 'light', notification_settings: {} }; // Default values
+    } catch (error) {
+      console.error('Error fetching user preferences:', error.message);
+      throw error;
+    }
+}
+
+/**
+ * Updates user preferences for the current user.
+ * @param {number} userId - The user's database ID.
+ * @param {Object} preferences - The preferences object to update.
+ * @returns {Promise<void>}
+ */
+async function updateUserPreferences(userId, preferences) {
+    try {
+      await userModel.updateUserPreferences(userId, preferences);
+      console.log('User preferences updated successfully.');
+    } catch (error) {
+      console.error('Error updating user preferences:', error.message);
+      throw error;
+    }
   }
 
 /**
@@ -122,10 +167,13 @@ async function refreshAccessToken(linkedin_id) {
     const { access_token, expires_in: newExpiresIn } = response.data;
     await updateUser(linkedin_id, user.name, user.email, access_token, refresh_token, newExpiresIn);
     return access_token;
-  }
+}
 
 module.exports = {
   findOrCreateUser,
   getCurrentUser,
+  getCurrentUserWithPreferences,
   refreshAccessToken,
+  getUserPreferences,
+  updateUserPreferences,
 };

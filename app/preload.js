@@ -85,6 +85,11 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Invoking "fetch-user-data"');
     return ipcRenderer.invoke('fetch-user-data');
   },
+  // Expose IPC invoke and send methods securely
+  getCurrentUserWithPreferences: () => {
+    console.log('Invoking "get-current-user-with-preferences"');
+    return ipcRenderer.invoke('get-current-user-with-preferences');
+  },
   searchPosts: (query) => {
     console.log('Invoking "search-posts" with query:', query);
     return ipcRenderer.invoke('search-posts', query);
@@ -116,5 +121,9 @@ contextBridge.exposeInMainWorld('api', {
   sendTestMessage: () => {
     console.log('Sending "test-message" to main process');
     ipcRenderer.send('test-message');
+  },
+  saveSettings: (settingsData) => {
+    console.log('Invoking saveSettings with data:', settingsData);
+    return ipcRenderer.invoke('save-settings', settingsData);
   },
 });

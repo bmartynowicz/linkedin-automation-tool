@@ -118,9 +118,11 @@ function initializeDatabase() {
     db.run(`
       CREATE TABLE IF NOT EXISTS user_preferences (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
+        user_id INTEGER NOT NULL,
+        linkedin_id TEXT, -- Optional, tracks LinkedIn ID for the user
         theme TEXT DEFAULT 'light',
-        notification_settings TEXT,
+        tone TEXT DEFAULT 'professional', -- Adding 'tone' preference directly to the table
+        notification_settings TEXT DEFAULT '{}', -- Default to empty JSON object
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);

@@ -61,21 +61,37 @@
     </ul>
   </div>
 
-  <!-- Settings Modal -->
-  <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-    <div class="modal-content">
-      <span class="close-button" id="close-settings">&times;</span>
-      <h2 id="settings-title">Settings</h2>
-      <form id="settings-form">
-        <label for="theme-select">Theme:</label>
-        <select id="theme-select" name="theme">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-        <button type="submit">Save</button>
-      </form>
-    </div>
+  <!-- Settings Page -->
+  <div id="settings-page" class="hidden">
+    <h2>User Settings</h2>
+    <form id="settings-form">
+      <!-- Theme Settings -->
+      <label for="theme-select">Theme:</label>
+      <select id="theme-select">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+  
+      <!-- Tone Settings -->
+      <label for="tone-select">Tone Preference:</label>
+      <select id="tone-select">
+        <option value="professional">Professional</option>
+        <option value="casual">Casual</option>
+        <option value="friendly">Friendly</option>
+      </select>
+  
+      <!-- LinkedIn Details -->
+      <div id="linkedin-details">
+        <h3>LinkedIn Integration</h3>
+        <p id="linkedin-status">Status: Not Linked</p>
+        <button type="button" id="reauthenticate-linkedin">Reauthenticate</button>
+      </div>
+  
+      <!-- Save Button -->
+      <button type="submit">Save Settings</button>
+    </form>
   </div>
+  
 
   <!-- Profile Modal -->
   <div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
@@ -149,8 +165,7 @@
       </div>
     </div>
   </div>
-  
-  
+   
   <!-- Updated Sidebar Navigation -->
   <nav id="sidebar" class="sidebar">
     <ul class="nav-list">
@@ -190,56 +205,47 @@
     </button>
   </nav>
 
-  <!-- Main Content Area -->
-  <main>
-    <!-- Quill Toolbar -->
-    <div id="toolbar" class="q1-toolbar">
-      <!-- Basic Text Formatting -->
-      <span class="ql-formats">
-        <button class="ql-bold" aria-label="Bold"></button>
-        <button class="ql-italic" aria-label="Italic"></button>
-        <button class="ql-underline" aria-label="Underline"></button>
-      </span>
-
-      <!-- Emoji Integration -->
-      <span class="ql-formats">
-        <button class="ql-emoji" aria-label="Insert Emoji"></button>
-      </span>
-
-      <!-- Custom Bulleted Lists with Emojis -->
-      <span class="ql-formats">
-        <button id="ql-custom-bullet" class="q1-custom-bullet" aria-label="Emoji Bullet List">
-          <i class="fas fa-list"></i>
-        </button>
-      </span>
-
-  <!-- Manual Suggestion (AI Assistance) -->
-  <span class="ql-formats">
-    <button id="manual-suggest-button" aria-label="Get Suggestion">
-      <i class="fas fa-lightbulb"></i>
-    </button>
-  </span>
-
-  <!-- Undo/Redo -->
-  <span class="ql-formats">
-    <button class="ql-undo" aria-label="Undo">
-      <i class="fas fa-undo"></i>
-    </button>
-    <button class="ql-redo" aria-label="Redo">
-      <i class="fas fa-redo"></i>
-    </button>
-  </span>
-</div>
-
-
-    <!-- Quill Editor Container -->
-    <div id="editor-container">
-      <!-- Post Title Input -->
-      <input type="text" id="post-title" class="post-title-input" placeholder="Enter Post Title" aria-label="Post Title">
-      
-      <div id="editor" class="q1-container q1-editor"></div>
-      
-      <!-- New Post, Save Post, and Focus Mode Buttons -->
+  <main id="main-content">
+    <!-- Content Editor -->
+    <div id="content-editor">
+      <!-- Quill Toolbar -->
+      <div id="toolbar" class="q1-toolbar">
+        <!-- Toolbar Buttons -->
+        <span class="ql-formats">
+          <button class="ql-bold" aria-label="Bold"></button>
+          <button class="ql-italic" aria-label="Italic"></button>
+          <button class="ql-underline" aria-label="Underline"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-emoji" aria-label="Insert Emoji"></button>
+        </span>
+        <span class="ql-formats">
+          <button id="ql-custom-bullet" class="q1-custom-bullet" aria-label="Emoji Bullet List">
+            <i class="fas fa-list"></i>
+          </button>
+        </span>
+        <span class="ql-formats">
+          <button id="manual-suggest-button" aria-label="Get Suggestion">
+            <i class="fas fa-lightbulb"></i>
+          </button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-undo" aria-label="Undo">
+            <i class="fas fa-undo"></i>
+          </button>
+          <button class="ql-redo" aria-label="Redo">
+            <i class="fas fa-redo"></i>
+          </button>
+        </span>
+      </div>
+  
+      <!-- Editor Container -->
+      <div id="editor-container">
+        <input type="text" id="post-title" class="post-title-input" placeholder="Enter Post Title" aria-label="Post Title">
+        <div id="editor" class="q1-container q1-editor"></div>
+      </div>
+  
+      <!-- Editor Buttons -->
       <div class="editor-buttons">
         <button id="create-new-post-editor" class="editor-action-button" aria-label="Create New Post">
           <i class="fas fa-plus"></i> Create New Post
@@ -254,8 +260,39 @@
           <i class="fas fa-eye-slash"></i> Focus Mode
         </button>
       </div>
-  </div>
-</main>
+    </div>
+  
+    <!-- Settings Page -->
+    <div id="settings-page" class="hidden">
+      <h2>User Settings</h2>
+      <form id="settings-form">
+        <!-- Theme Settings -->
+        <label for="theme-select">Theme:</label>
+        <select id="theme-select">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+  
+        <!-- Tone Settings -->
+        <label for="tone-select">Tone Preference:</label>
+        <select id="tone-select">
+          <option value="professional">Professional</option>
+          <option value="casual">Casual</option>
+          <option value="friendly">Friendly</option>
+        </select>
+  
+        <!-- LinkedIn Details -->
+        <div id="linkedin-details">
+          <h3>LinkedIn Integration</h3>
+          <p id="linkedin-status">Status: Not Linked</p>
+          <button type="button" id="reauthenticate-linkedin">Reauthenticate</button>
+        </div>
+  
+        <!-- Save Button -->
+        <button type="submit">Save Settings</button>
+      </form>
+    </div>
+  </main>  
 
   <!-- Quill JS -->
   <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>

@@ -286,6 +286,21 @@ body.sidebar-collapsed #toolbar {
   overflow: auto;
 }
 
+/* Adjust settings page layout based on sidebar */
+#settings-page {
+  margin-left: 250px; /* Default width of the sidebar */
+  margin-top: 60px; /* Below the header */
+  padding: 20px;
+  transition: margin-left 0.3s ease; /* Smooth adjustment when sidebar collapses */
+  background-color: #ffffff;
+  height: calc(100vh - 60px); /* Full height minus header */
+  overflow-y: auto; /* Enable scrolling for content overflow */
+}
+
+body.sidebar-collapsed #settings-page {
+  margin-left: 60px; /* Adjust when sidebar is collapsed */
+}
+
 /* Style for the manual suggest button */
 #manual-suggest-button {
   background: none;
@@ -762,6 +777,11 @@ body.sidebar-collapsed #toolbar {
     max-width: 400px;
     margin: 0;
     border-radius: 8px;
+  }
+  
+  #settings-page {
+    margin-left: 50px; /* Adjust for smaller collapsed sidebar */
+    padding: 10px; /* Reduce padding for smaller screens */
   }
 }
 

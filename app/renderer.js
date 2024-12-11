@@ -10,65 +10,71 @@ document.addEventListener('DOMContentLoaded', () => {
   let suggestionCooldown = false;
   let editingPostId = null;
 
-    // ======= Sidebar Toggle =======
-    const toggleMenuButton = document.getElementById('toggle-menu');
-    const sidebar = document.getElementById('sidebar');
+  // ======= Content Editor =======
+  const contentEditor = document.getElementById('content-editor');
+  const contentCreationButton = document.querySelector('#sidebar .nav-item a[href="#content-creation"]');
 
-    // ======= Notifications =======
-    const notificationsButton = document.getElementById('notifications');
-    const notificationsDropdown = document.getElementById('notifications-dropdown');
-    const notificationCount = document.getElementById('notification-count');
-    const notificationsList = document.getElementById('notifications-list');
+  // ======= Sidebar Toggle =======
+  const toggleMenuButton = document.getElementById('toggle-menu');
+  const sidebar = document.getElementById('sidebar');
 
-    // ======= Profile Modal =======
-    const profileButton = document.getElementById('profile');
-    const profileModal = document.getElementById('profile-modal');
-    const closeProfileButton = document.getElementById('close-profile');
-    const usernameDisplay = document.getElementById('username');
-    const profilePicture = document.getElementById('profile-picture');
-    const linkedinLoginButton = document.getElementById('linkedin-login-button');
+  // ======= Notifications =======
+  const notificationsButton = document.getElementById('notifications');
+  const notificationsDropdown = document.getElementById('notifications-dropdown');
+  const notificationCount = document.getElementById('notification-count');
+  const notificationsList = document.getElementById('notifications-list');
 
-    // ======= Settings Modal =======
-    const settingsButton = document.getElementById('settings');
-    const settingsModal = document.getElementById('settings-modal');
-    const closeSettingsButton = document.getElementById('close-settings');
-    const settingsForm = document.getElementById('settings-form');
+  // ======= Profile Modal =======
+  const profileButton = document.getElementById('profile');
+  const profileModal = document.getElementById('profile-modal');
+  const closeProfileButton = document.getElementById('close-profile');
+  const usernameDisplay = document.getElementById('username');
+  const profilePicture = document.getElementById('profile-picture');
+  const linkedinLoginButton = document.getElementById('linkedin-login-button');
 
-    // ======= Saved Posts Modal =======
-    const savedPostsModal = document.getElementById('saved-posts-modal');
-    const openSavedPostsButton = document.getElementById('open-saved-posts');
-    const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
-    const savedPostsList = document.getElementById('saved-posts-list');
-    const searchPostsInput = document.getElementById('search-posts');
-    const searchButton = document.getElementById('search-button');
-    const editPostButton = document.getElementById('edit-post');
-    const schedulePostButton = document.getElementById('schedule-post');
-    const deletePostButton = document.getElementById('delete-post');
-    const deleteConfirmationModal = document.getElementById('delete-confirmation-modal');
-    const confirmDeleteButton = document.getElementById('confirm-delete');
-    const cancelDeleteButton = document.getElementById('cancel-delete');
-    const closeDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
+  // ======= Settings Page =======
+  const settingsButton = document.querySelector('#sidebar .nav-item a[href="#settings"]');
+  const settingsPage = document.getElementById('settings-page');
+  const settingsForm = document.getElementById('settings-form');
+  const themeSelect = document.getElementById('theme-select');
+  const toneSelect = document.getElementById('tone-select');
+  const reauthenticateButton = document.getElementById('reauthenticate-linkedin');
 
-    // ======= Save Post Button Functionality =======
-    const savePostButton = document.getElementById('save-post');
-    const postTitleInput = document.getElementById('post-title');
 
-    // ======== Suggestion Box Button Functionality =========
-    // Keywords or phrases to trigger suggestions
-    const suggestionKeywords = ['help', 'need', 'assist', 'improve', 'suggest', 'idea'];
-    //Delays to prevent overwhelming the user with suggestions
-    const TYPING_PAUSE_DURATION = 3000; // 3 seconds
-    const SUGGESTION_COOLDOWN_DURATION = 10000; // 10 seconds cooldown between suggestions
+  // ======= Saved Posts Modal =======
+  const savedPostsModal = document.getElementById('saved-posts-modal');
+  const openSavedPostsButton = document.getElementById('open-saved-posts');
+  const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
+  const savedPostsList = document.getElementById('saved-posts-list');
+  const searchPostsInput = document.getElementById('search-posts');
+  const searchButton = document.getElementById('search-button');
+  const editPostButton = document.getElementById('edit-post');
+  const schedulePostButton = document.getElementById('schedule-post');
+  const deletePostButton = document.getElementById('delete-post');
+  const deleteConfirmationModal = document.getElementById('delete-confirmation-modal');
+  const confirmDeleteButton = document.getElementById('confirm-delete');
+  const cancelDeleteButton = document.getElementById('cancel-delete');
+  const closeDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
 
-    const manualSuggestButton = document.getElementById('manual-suggest-button');
-    const suggestionBox = document.getElementById('suggestion-box');
-    const suggestionText = document.getElementById('suggestion-text');
-    const acceptButton = document.getElementById('accept-suggestion');
-    const rejectButton = document.getElementById('reject-suggestion');
-    const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
+  // ======= Save Post Button Functionality =======
+  const savePostButton = document.getElementById('save-post');
+  const postTitleInput = document.getElementById('post-title');
 
-    // ======= Emoji Bullet Button =======
-    const emojiBulletButton = document.getElementById('ql-custom-bullet');
+  // ======== Suggestion Box Button Functionality =========
+  // Keywords or phrases to trigger suggestions
+  const suggestionKeywords = ['help', 'need', 'assist', 'improve', 'suggest', 'idea'];
+  //Delays to prevent overwhelming the user with suggestions
+  const TYPING_PAUSE_DURATION = 3000; // 3 seconds
+  const SUGGESTION_COOLDOWN_DURATION = 10000; // 10 seconds cooldown between suggestions
+  const manualSuggestButton = document.getElementById('manual-suggest-button');
+  const suggestionBox = document.getElementById('suggestion-box');
+  const suggestionText = document.getElementById('suggestion-text');
+  const acceptButton = document.getElementById('accept-suggestion');
+  const rejectButton = document.getElementById('reject-suggestion');
+  const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
+
+  // ======= Emoji Bullet Button =======
+  const emojiBulletButton = document.getElementById('ql-custom-bullet');
 
   const debounce = (func, delay) => {
     let timeout;
@@ -83,10 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return element.classList.contains(className);
   }
 
-  const applyTheme = (theme) => {
+  // Apply Theme Dynamically
+  function applyTheme(theme) {
     document.body.classList.toggle('dark-theme', theme === 'dark');
-    console.log(`${theme.charAt(0).toUpperCase() + theme.slice(1)} theme applied.`);
-  };
+    console.log(`Applied ${theme} theme.`);
+  }
 
   function showToast(message) {
     const toastContainer = document.getElementById('toast-container');
@@ -198,18 +205,86 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchUserData();
   }
 
-  if (settingsButton && settingsModal && closeSettingsButton && settingsForm) {
-    settingsButton.addEventListener('click', () => openModal(settingsModal));
-    closeSettingsButton.addEventListener('click', () => closeModal(settingsModal));
-
-    settingsForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const theme = document.getElementById('theme-select').value;
-      applyTheme(theme);
-      closeModal(settingsModal);
+  // Handle Settings Navigation
+  if (settingsButton && contentEditor && settingsPage) {
+    settingsButton.addEventListener('click', async () => {
+      try {
+        // Hide content editor and show settings page
+        contentEditor.classList.add('hidden');
+        settingsPage.classList.remove('hidden');
+    
+        // Fetch user preferences via IPC
+        const user = await window.api.getCurrentUserWithPreferences();
+        if (!user) throw new Error('User not found.');
+    
+        // Populate the settings form with user preferences
+        themeSelect.value = user.preferences.theme;
+        toneSelect.value = user.preferences.tone;
+    
+        console.log('Settings loaded successfully.');
+        
+      } catch (error) {
+        console.error('Error navigating to settings:', error.message);
+      }
     });
   }
 
+  // Attach Event Listener for Form Submission
+  if (settingsForm) {
+    settingsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+    
+      const theme = themeSelect.value;
+      const tone = toneSelect.value;
+    
+      if (!theme || !tone) {
+        showToast('Please complete all fields before saving.');
+        return;
+      }
+    
+      try {
+        const result = await window.api.saveSettings({ theme, tone });
+        if (result.success) {
+          showToast('Settings saved successfully!');
+          applyTheme(theme);
+        } else {
+          showToast('Failed to save settings.');
+        }
+      } catch (error) {
+        console.error('Error saving settings:', error.message);
+        showToast('An error occurred while saving settings.');
+      }
+    });
+  }
+
+  // Attach Event Listener for LinkedIn Reauthentication
+  if (reauthenticateButton) {
+    reauthenticateButton.addEventListener('click', async () => {
+      try {
+        console.log('Reauthentication button clicked');
+        const result = await window.api.reauthenticateLinkedIn();
+        if (result.success) {
+          showToast('Reauthenticated with LinkedIn successfully.');
+        } else {
+          showToast('Failed to reauthenticate with LinkedIn.');
+        }
+      } catch (error) {
+        console.error('Error during reauthentication:', error.message);
+        showToast('An error occurred during LinkedIn reauthentication.');
+      }
+    });    
+  }
+
+  // Add a handler for returning to the Content Editor
+  if (contentCreationButton) {
+    contentCreationButton.addEventListener('click', () => {
+      // Show content editor and hide settings page
+      settingsPage.classList.add('hidden');
+      contentEditor.classList.remove('hidden');
+    });
+  }
+
+  // Add a handler for managing the save post functionality
   if (openSavedPostsButton && savedPostsModal && closeSavedPostsButton) {
     openSavedPostsButton.addEventListener('click', () => {
       openModal(savedPostsModal);
@@ -696,7 +771,6 @@ CustomBullet.blotName = 'custom-bullet';
 CustomBullet.tagName = 'LI'; // Use list item tag
 Quill.register(CustomBullet, true);
 
-// ======= Initialize the Quill Editor =======
 // ======= Initialize the Quill Editor =======
 if (typeof Quill !== 'undefined') {
   console.log('Quill is available.');

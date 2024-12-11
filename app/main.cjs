@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
-const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../services/usersService.js');
+const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 const db = require('../database/database');
 const { postToLinkedIn, scheduleExistingPosts ,performNonAPIFunctionality } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
@@ -145,6 +145,28 @@ ipcMain.handle('get-ai-suggestions', async (event, prompt) => {
   }
 });
 
+// Handle Save Settings on Settings Page
+ipcMain.handle('saveSettings', async (event, settingsData) => {
+  try {
+    await Database.saveSettings(settingsData); // Save to your database
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save settings:', error);
+    return { success: false, message: error.message };
+  }
+});
+
+// Handle fetching the current settings
+ipcMain.handle('fetchSettings', async () => {
+  try {
+    const settings = await Database.getSettings(); // Retrieve from your database
+    return { success: true, data: settings };
+  } catch (error) {
+    console.error('Failed to fetch settings:', error);
+    return { success: false, message: error.message };
+  }
+});
+
 // Handle LinkedIn post requests
 ipcMain.on('post-to-linkedin', async (event, content) => {
   console.log("Received LinkedIn post request with content:", content);
@@ -195,6 +217,34 @@ ipcMain.handle('fetch-current-user', async () => {
   } catch (error) {
     console.error('Error fetching current user:', error.message);
     throw error;
+  }
+});
+
+// Get the current user and their preferences
+ipcMain.handle('get-current-user-with-preferences', async () => {
+  try {
+    const user = await getCurrentUserWithPreferences();
+    return user;
+  } catch (error) {
+    console.error('Error fetching user with preferences:', error);
+    throw error;
+  }
+});
+
+// Handler for saving user settings
+ipcMain.handle('save-settings', async (event, settingsData) => {
+  try {
+    const user = await getCurrentUser(); // Ensure this fetches the correct user
+    if (!user) throw new Error('User not found.');
+
+    // Use updateUserPreferences directly from usersService.js
+    await updateUserPreferences(user.id, settingsData);
+
+    console.log('Settings saved:', settingsData);
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    return { success: false, error: error.message };
   }
 });
 
