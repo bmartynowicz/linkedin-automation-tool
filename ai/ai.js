@@ -38,12 +38,13 @@ async function getAISuggestions(prompt, options = {}) {
 
   // Enhance the prompt with more context for better AI suggestions
   const enhancedPrompt = `
-  You are a professional LinkedIn content creator specializing in Information Technology, Leadership, and Business Building.
-  Improve the following LinkedIn post for clarity, engagement, and professionalism with a ${tone} tone. Aim to increase audience size and drive more interactions:
+  You are assisting a LinkedIn user in ${userContext.industry} who focuses on ${userContext.content_focus}.
+  They prefer posts with a ${userContext.tone} tone. Based on their recent activity, posts about ${userContext.topics} perform best.
+  Optimize the following post for maximum engagement:
 
   "${prompt}"
 
-  Provide a concise and impactful revision.
+  Provide a professional and engaging revision with tailored hashtags and a concise CTA.
   `;
 
   try {
