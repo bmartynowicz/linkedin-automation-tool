@@ -232,6 +232,7 @@ ipcMain.on('send-feedback', (event, type, suggestion) => {
 
 // Save a new or updated post
 ipcMain.handle('savePost', async (_, post) => {
+  console.log('savePost handler invoked with post:', post); // Debugging log
   try {
     const result = await savePost(post);
     return result;

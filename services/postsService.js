@@ -23,7 +23,7 @@ async function getPostsByLinkedInId(linkedinId) {
  * @returns {Promise<Object>} - The result of the save operation.
  */
 async function savePost(post) {
-    const { title, content, status, linkedin_id } = post;
+    const { id, title, content, status, linkedin_id } = post;
   
     return new Promise((resolve, reject) => {
       // Fetch user_id using linkedin_id
@@ -39,22 +39,39 @@ async function savePost(post) {
   
         const user_id = row.id;
   
-        // Save the post with user_id and linkedin_id
-        db.run(
-          `INSERT INTO posts (user_id, linkedin_id, title, content, status, created_at, updated_at) 
-           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [user_id, linkedin_id, title, content, status],
-          function (err) {
-            if (err) {
-              console.error('Error saving post:', err.message);
-              return reject(err);
+        if (id) {
+          // Update existing post
+          db.run(
+            `UPDATE posts 
+             SET title = ?, content = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
+             WHERE id = ? AND user_id = ?`,
+            [title, content, status, id, user_id],
+            function (err) {
+              if (err) {
+                console.error('Error updating post:', err.message);
+                return reject(err);
+              }
+              resolve({ success: true, postId: id });
             }
-            resolve({ success: true, postId: this.lastID });
-          }
-        );
+          );
+        } else {
+          // Insert new post
+          db.run(
+            `INSERT INTO posts (user_id, linkedin_id, title, content, status, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [user_id, linkedin_id, title, content, status],
+            function (err) {
+              if (err) {
+                console.error('Error saving post:', err.message);
+                return reject(err);
+              }
+              resolve({ success: true, postId: this.lastID });
+            }
+          );
+        }
       });
     });
-  }
+  }  
 
 module.exports = {
   getPostsByLinkedInId,

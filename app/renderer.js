@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let postIdToDelete = null;
   let lastSuggestionTime = 0;
   let suggestionCooldown = false;
+  let editingPostId = null;
 
     // ======= Sidebar Toggle =======
     const toggleMenuButton = document.getElementById('toggle-menu');
@@ -244,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Set the post title
       postTitleInput.value = post.title || '';
       console.log('Post title set to:', post.title || '');
-
+  
       // Convert HTML to Delta and set the editor content
       try {
         const delta = quill.clipboard.convert(post.content);
@@ -256,18 +257,22 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Failed to load post content.');
         return;
       }
-      
+  
+      // Track the post being edited
+      editingPostId = post.id;
+      console.log('Editing post ID set to:', editingPostId);
+  
       // Close the modal
       closeModal(savedPostsModal);
       console.log('Saved Posts modal closed.');
-
+  
       // Show success toast
       showToast('Loaded post for editing.');
-
+  
       // Focus the editor (optional)
       quill.focus();
       console.log('Editor focused.');
-
+  
       // Optionally, scroll to the editor
       document.getElementById('editor-container').scrollIntoView({ behavior: 'smooth' });
     } else {
@@ -760,14 +765,15 @@ if (editorElement) {
         showToast('Unable to fetch user information. Please log in again.');
         return;
       }
-    
+  
       const post = {
+        id: editingPostId, // Include the editing post ID (null for new posts)
         title: postTitleInput.value.trim(),
         content: quill.root.innerHTML.trim(),
         status: 'draft',
         linkedin_id: user.linkedin_id, // Use linkedin_id to associate the post
       };
-    
+  
       try {
         const result = await window.api.savePost(post);
         if (result.success) {
@@ -775,13 +781,14 @@ if (editorElement) {
           // Clear the editor and inputs
           postTitleInput.value = '';
           quill.setContents([]);
+          editingPostId = null; // Reset editing ID after save
         }
       } catch (error) {
         console.error('Error saving post:', error.message);
         showToast('Failed to save post.');
       }
-    })};
-  
+    });
+  }
 
   // Fetch suggestion and display in suggestion box
   const fetchSuggestion = async (isManual = false) => {
