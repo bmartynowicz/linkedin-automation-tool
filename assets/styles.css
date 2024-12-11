@@ -190,6 +190,38 @@ header h1 {
   transition: margin-left 0.3s ease;
 }
 
+/* Override Quill editor padding */
+.ql-editor {
+  padding: 0; /* Remove default padding */
+}
+
+/* ======= Custom Bullet Styles ======= */
+.ql-editor [data-custom-bullet='◾'] {
+  list-style-type: none; /* Remove default list styling */
+  position: relative; /* Position for custom bullet */
+  margin-left: 2em; /* Space between bullet and container edge */
+  text-indent: -1.5em; /* Align text properly relative to the bullet */
+  padding-left: 2em; /* Space between bullet and text */
+  display: block; /* Block-level element for proper alignment */
+  line-height: 1.5; /* Match text height to bullet height */
+}
+
+.ql-editor [data-custom-bullet='◾']::before {
+  content: '◾'; /* Insert the emoji bullet */
+  position: absolute; /* Position bullet at the start */
+  left: 0; /* Align bullet to the left */
+  top: 50%; /* Start bullet at the middle of the line */
+  transform: translateY(-50%); /* Center bullet vertically */
+  font-size: 1.2em; /* Match bullet size to text size */
+  line-height: 1.5; /* Ensure line height consistency */
+  color: #000; /* Default bullet color */
+  vertical-align: middle; /* Align bullet with the text */
+}
+
+#editor-container .ql-editor [data-custom-bullet='◾'] {
+  margin-bottom: 0.5em; /* Space between list items */
+}
+
 .editor-buttons {
   flex: none;
   display: flex;
@@ -698,13 +730,17 @@ body.sidebar-collapsed #toolbar {
     margin-left: 50px;
   }
 
-  /* Adjust editor container margin accordingly */
-  #editor-container {
-    margin-left: 200px;
+  .ql-editor [data-custom-bullet='◾'] {
+    margin-left: 1em;
+    text-indent: -1em;
   }
 
   #editor-container .ql-editor {
-    padding-bottom: 80px;
+    padding-bottom: 20px;
+  }
+
+  #editor-container .ql-editor [data-custom-bullet='◾'] {
+    margin-bottom: 0.5em; /* Space between list items */
   }
 
   /* Adjust header icons size */
