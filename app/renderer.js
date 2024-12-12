@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ======= Sidebar Toggle =======
   const toggleMenuButton = document.getElementById('toggle-menu');
   const sidebar = document.getElementById('sidebar');
+  const settingsButton = document.getElementById('settings-button');
 
   // ======= Notifications =======
   const notificationsButton = document.getElementById('notifications');
@@ -31,15 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const usernameDisplay = document.getElementById('username');
   const profilePicture = document.getElementById('profile-picture');
   const linkedinLoginButton = document.getElementById('linkedin-login-button');
-
-  // ======= Settings Page =======
-  const settingsButton = document.querySelector('#sidebar .nav-item a[href="#settings"]');
-  const settingsPage = document.getElementById('settings-page');
-  const settingsForm = document.getElementById('settings-form');
-  const themeSelect = document.getElementById('theme-select');
-  const toneSelect = document.getElementById('tone-select');
-  const reauthenticateButton = document.getElementById('reauthenticate-linkedin');
-
 
   // ======= Saved Posts Modal =======
   const savedPostsModal = document.getElementById('saved-posts-modal');
@@ -136,27 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  if (toggleMenuButton && sidebar) {
-    toggleMenuButton.addEventListener('click', () => {
-      // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
-      const collapsed = toggleElement(sidebar, 'collapsed');
-      toggleElement(document.body, 'sidebar-collapsed');
-
-      // Update the toggle button's icon based on the new state
-      const icon = toggleMenuButton.querySelector('i');
-      if (collapsed) {
-        icon.classList.remove('fa-chevron-left');
-        icon.classList.add('fa-chevron-right');
-      } else {
-        icon.classList.remove('fa-chevron-right');
-        icon.classList.add('fa-chevron-left');
-      }
-
-      // Log the current state of the sidebar for debugging purposes
-      console.log(`Sidebar ${collapsed ? 'Collapsed' : 'Expanded'}.`);
-    });
-  }
-
   const fetchNotifications = async () => {
     try {
       const notifications = await window.api.fetchNotifications();
@@ -206,89 +177,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Handle Settings Navigation
-  if (settingsButton && contentEditor && settingsPage) {
-    settingsButton.addEventListener('click', async () => {
-      try {
-        // Hide content editor (including editor-buttons) and show settings page
-        contentEditor.classList.add('hidden');
-        settingsPage.classList.remove('hidden');
-
-        // Fetch user preferences via IPC
-        const user = await window.api.getCurrentUserWithPreferences();
-        if (!user) throw new Error('User not found.');
-
-        // Populate the settings form with user preferences
-        themeSelect.value = user.preferences.theme || 'light';
-        toneSelect.value = user.preferences.tone || 'professional';
-
-        console.log('Settings loaded successfully.');
-      } catch (error) {
-        console.error('Error navigating to settings:', error.message);
-      }
+  if (settingsButton) {
+    settingsButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      // Load the settings.html page into the BrowserView
+      window.api.loadPage('settings.html');
     });
-
-    // Add handler to navigate back to the editor
-    const backToEditorButton = document.getElementById('back-to-editor'); // Ensure this button exists
-    if (backToEditorButton) {
-      backToEditorButton.addEventListener('click', () => {
-        settingsPage.classList.add('hidden');
-        contentEditor.classList.remove('hidden');
-      });
-    }
-  }
-
-  // Attach Event Listener for Form Submission
-  if (settingsForm) {
-    settingsForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-    
-      const theme = themeSelect.value;
-      const tone = toneSelect.value;
-    
-      if (!theme || !tone) {
-        showToast('Please complete all fields before saving.');
-        return;
-      }
-    
-      try {
-        const result = await window.api.saveSettings({ theme, tone });
-        if (result.success) {
-          showToast('Settings saved successfully!');
-          applyTheme(theme);
-        } else {
-          showToast('Failed to save settings.');
-        }
-      } catch (error) {
-        console.error('Error saving settings:', error.message);
-        showToast('An error occurred while saving settings.');
-      }
-    });
-  }
-
-  // Attach Event Listener for LinkedIn Reauthentication
-  if (reauthenticateButton) {
-    reauthenticateButton.addEventListener('click', async () => {
-      try {
-        console.log('Reauthentication button clicked');
-        const result = await window.api.reauthenticateLinkedIn();
-        if (result.success) {
-          showToast('Reauthenticated with LinkedIn successfully.');
-        } else {
-          showToast('Failed to reauthenticate with LinkedIn.');
-        }
-      } catch (error) {
-        console.error('Error during reauthentication:', error.message);
-        showToast('An error occurred during LinkedIn reauthentication.');
-      }
-    });    
   }
 
   // Add a handler for returning to the Content Editor
   if (contentCreationButton) {
     contentCreationButton.addEventListener('click', () => {
-      // Show content editor and hide settings page
-      settingsPage.classList.add('hidden');
-      contentEditor.classList.remove('hidden');
+      window.api.loadPage('editor.html');
     });
   }
 

@@ -1,0 +1,305 @@
+/* editor.css */
+
+/* Reset body to allow full height usage */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Toolbar at the top */
+  #toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px; /* fixed height */
+    background-color: #f0f0f0;
+    z-index: 950;
+    padding: 10px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center; /* Vertically center toolbar items if any */
+  }
+  
+  /* Editor Container:
+    Positioned below toolbar, fills rest of window.
+    Uses flex layout to stack title, buttons, and editor. */
+  #editor-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: 20px; /* Existing padding */
+    margin-top: 50px; /* Space for toolbar */
+    height: calc(100vh - 5px ); /* 50px for bottom padding */
+    width: calc(100% - 20px); /* 20px for right padding */
+    padding-bottom: 40px; /* Explicit padding for bottom space */
+    padding-right: 20px; /* Explicit padding for right space */
+}
+  
+  /* Title input spans full width and remains at the top */
+  .post-title-input {
+    width: 100%;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+  
+  /* Editor buttons row, stays below title but above editor */
+  .editor-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 5px;
+    margin-bottom: 10px; /* space after buttons before editor */
+  }
+  
+  /* Editor action buttons */
+  .editor-action-button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .editor-action-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .editor-action-button:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+  }
+  
+  /* Editor fills the remaining space inside the container */
+    #editor {
+        flex: 1; /* Allows the editor to grow/shrink dynamically */
+        width: 100%;
+        background-color: #ffffff;
+        border: 1px solid #dddddd;
+        border-radius: 5px;
+        padding: 15px;
+        box-sizing: border-box;
+        overflow: auto;
+    }
+  
+  /* Quill Editor Styles */
+  .ql-editor {
+    padding: 0;
+  }
+  
+  /* Custom bullet formatting */
+  .ql-editor [data-custom-bullet='◾'] {
+    list-style-type: none;
+    position: relative;
+    margin-left: 2em;
+    text-indent: -1.5em;
+    padding-left: 2em;
+    display: block;
+    line-height: 1.5;
+  }
+  
+  .ql-editor [data-custom-bullet='◾']::before {
+    content: '◾';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2em;
+    line-height: 1.5;
+    color: #000;
+    vertical-align: middle;
+  }
+  
+  #editor-container .ql-editor [data-custom-bullet='◾'] {
+    margin-bottom: 0.5em;
+  }
+  
+  /* Manual suggest button */
+  #manual-suggest-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  
+  #manual-suggest-button i {
+    font-size: 1rem;
+    color: #555;
+  }
+  
+  #manual-suggest-button:hover i {
+    color: #000;
+  }
+  
+  #manual-suggest-button.loading i {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Suggestion Box */
+  #suggestion-box {
+    position: fixed;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    max-width: 350px;
+    max-height: 200px;
+    z-index: 2000;
+    visibility: hidden;
+    opacity: 0;
+    overflow-y: auto;
+    transition: opacity 0.4s ease-in-out, visibility 0.4s;
+    transform: translateY(10px);
+  }
+  
+  #suggestion-box.show {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .suggestion-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .suggestion-icon {
+    font-size: 1.5rem;
+    color: #f1c40f;
+  }
+  
+  .suggestion-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+  }
+  
+  #suggestion-box p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: #333;
+  }
+  
+  .suggestion-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 10px;
+    margin-top: 15px;
+  }
+  
+  .suggestion-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+  }
+  
+  .suggestion-button:focus {
+    outline: none;
+  }
+  
+  .suggestion-button.accept {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .suggestion-button.accept:hover {
+    background-color: #0056b3;
+  }
+  
+  .suggestion-button.reject {
+    background-color: #6c757d;
+    color: white;
+  }
+  
+  .suggestion-button.reject:hover {
+    background-color: #5a6268;
+  }
+  
+  #suggestion-box .close-button {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 1rem;
+    color: #888;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  
+  #suggestion-box .close-button:hover,
+  #suggestion-box .close-button:focus {
+    color: #333;
+    outline: none;
+  }
+  
+  /* Distraction-Free Mode Styles */
+  .toggle-button {
+    position: fixed;
+    top: 60px; /* Just below toolbar if you want */
+    right: 20px;
+    padding: 8px 12px;
+    background-color: #3498db;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+    z-index: 950;
+  }
+  
+  .toggle-button:hover,
+  .toggle-button:focus {
+    background-color: #2980b9;
+    outline: none;
+  }
+  
+  .distraction-free #toolbar,
+  .distraction-free .toggle-button {
+    display: none;
+  }
+  
+  .distraction-free #editor-container {
+    margin: 0;
+    padding: 20px;
+    height: 100vh;
+  }
+  
+  @media (max-width: 600px) {
+    #suggestion-box {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 20px);
+      max-width: 400px;
+      margin: 0;
+      border-radius: 8px;
+    }
+  }
+  

@@ -1,40 +1,37 @@
 // main.cjs
 
 const dotenv = require('dotenv');
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain } = require('electron');
 const path = require('path');
 const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
 const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 const db = require('../database/database');
-const { postToLinkedIn, scheduleExistingPosts ,performNonAPIFunctionality } = require('../automation/linkedin');
+const { postToLinkedIn, scheduleExistingPosts, performNonAPIFunctionality } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
 const crypto = require('crypto');
 const jwtDecode = require('jwt-decode');
-
+const { startServer } = require('../backend/server.js');
 
 // Load environment variables
 dotenv.config();
 
+let mainWindow;
+let contentView;
+let isSidebarCollapsed = false;
+
 console.log('Index HTML Path:', path.join(__dirname, 'views', 'index.html'));
 console.log('Database Path:', path.resolve(__dirname, 'database', 'app.db'));
-
 console.log('Client ID:', process.env.LINKEDIN_CLIENT_ID);
 console.log('Redirect URI:', process.env.LINKEDIN_REDIRECT_URI);
-console.log('Client Secret:', process.env.LINKEDIN_CLIENT_SECRET);
-
 console.log('jwtDecode:', jwtDecode);
 console.log('Type of jwtDecode:', typeof jwtDecode);
 
-// Import the server's start function
-const { startServer } = require('../backend/server.js'); // Adjust the path as needed
-
-// Create the main application window
 function createWindow() {
-  console.log("Creating BrowserWindow...");
-  const mainWindow = new BrowserWindow({
+  console.log("Creating main application window...");
+  mainWindow = new BrowserWindow({
     width: parseInt(process.env.WINDOW_WIDTH) || 1200,
     height: parseInt(process.env.WINDOW_HEIGHT) || 800,
     minWidth: 800,
@@ -43,7 +40,6 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false,
       spellcheck: true,
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
@@ -53,44 +49,34 @@ function createWindow() {
     console.error('Error loading index.html:', err);
   });
 
-  // Open DevTools in development mode
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
-
-  // ======= Implement Custom Context Menu for Spell Check =======
-  mainWindow.webContents.on('context-menu', (event, params) => {
-    const { selectionText, misspelledWord, dictionarySuggestions } = params;
-
-    if (misspelledWord) {
-      const menu = Menu.buildFromTemplate([
-        ...dictionarySuggestions.map((suggestion) => ({
-          label: suggestion,
-          click: () => mainWindow.webContents.replaceMisspelling(suggestion),
-        })),
-        { type: 'separator' },
-        {
-          label: 'Add to Dictionary',
-          click: () => mainWindow.webContents.session.addWordToSpellCheckerDictionary(misspelledWord),
-        },
-      ]);
-      menu.popup();
-    } else {
-      const menu = Menu.buildFromTemplate([
-        { role: 'undo', enabled: params.editFlags.canUndo },
-        { role: 'redo', enabled: params.editFlags.canRedo },
-        { type: 'separator' },
-        { role: 'cut', enabled: params.editFlags.canCut },
-        { role: 'copy', enabled: params.editFlags.canCopy },
-        { role: 'paste', enabled: params.editFlags.canPaste },
-        { role: 'delete', enabled: params.editFlags.canDelete },
-        { type: 'separator' },
-        { role: 'selectAll', enabled: params.editFlags.canSelectAll },
-      ]);
-      menu.popup();
+  // Create the BrowserView for content area
+  contentView = new BrowserView({
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
     }
   });
-  // ======= End of Custom Context Menu Implementation =======
+
+  // Attach the BrowserView to mainWindow
+  mainWindow.setBrowserView(contentView);
+
+  // Attach resize event
+  mainWindow.on('resize', updateContentBounds);
+
+  // Initial bounds setup
+  updateContentBounds();
+
+  // Example toggle function for sidebar (if needed)
+  const toggleSidebar = () => {
+    isSidebarCollapsed = !isSidebarCollapsed;
+    updateContentBounds();
+  };
+
+  // Load a default page (e.g., editor.html) initially
+  contentView.webContents.loadFile(path.join(__dirname, 'views', 'editor.html')).catch((err) => {
+    console.error('Error loading initial page:', err);
+  });
 }
 
 app.whenReady().then(() => {
@@ -108,6 +94,22 @@ app.whenReady().then(() => {
     }
   });
 });
+
+// Function to dynamically update bounds
+const updateContentBounds = () => {
+  const [windowWidth, windowHeight] = mainWindow.getContentSize();
+  const sidebarWidth = isSidebarCollapsed ? 60 : 250; // Adjust sidebar width
+  const headerHeight = 60; // Fixed header height
+  const rightPadding = 10; // Additional padding for the right
+  const bottomPadding = 20; // Additional padding for the bottom
+
+  contentView.setBounds({
+    x: sidebarWidth, // Adjust for sidebar
+    y: headerHeight, // Adjust for header
+    width: windowWidth - sidebarWidth - rightPadding, // Subtract sidebar and padding
+    height: windowHeight - headerHeight - bottomPadding, // Subtract header and padding
+  });
+};
 
 app.on('window-all-closed', () => {
   console.log("All windows closed.");
@@ -133,6 +135,38 @@ app.on('before-quit', () => {
 
 // ======= IPC Handlers =======
 
+// IPC handler to load a page into the BrowserView
+ipcMain.on('load-page', (event, page) => {
+  const pagePath = path.join(__dirname, 'views', page);
+  console.log(`Loading page into BrowserView: ${pagePath}`);
+  contentView.webContents.loadFile(pagePath).catch((err) => {
+    console.error(`Error loading ${page}:`, err);
+  });
+});
+
+// Listen for sidebar toggle from the renderer process
+// Handle sidebar toggle from the renderer process
+ipcMain.on('toggle-sidebar', (event, collapsed) => {
+  console.log(`Sidebar toggled: ${collapsed ? 'Collapsed' : 'Expanded'}`);
+  isSidebarCollapsed = collapsed; // Update sidebar state
+  updateContentBounds(); // Recalculate bounds
+});
+
+// Start the Electron app
+app.whenReady().then(() => {
+  console.log("App is ready, creating window...");
+  createWindow();
+
+  // Start the backend server
+  startServer();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
 // Get the current user and their preferences
 ipcMain.handle('get-current-user-with-preferences', async () => {
   try {
@@ -147,7 +181,7 @@ ipcMain.handle('get-current-user-with-preferences', async () => {
   }
 });
 
-// Handle AI Suggestion requests from renderer process
+// Handle AI Suggestion requests
 ipcMain.handle('get-ai-suggestions', async (event, prompt, options, userId) => {
   try {
     console.log('Processing AI suggestion for:', prompt);
@@ -197,21 +231,17 @@ ipcMain.on('post-to-linkedin', async (event, content) => {
   }
 });
 
-// Handle status update requests
+// Handle status update requests (placeholder)
 ipcMain.on('post-status-update', (event, status) => {
   console.log("Received status update with status:", status);
-  // Implement status update logic here
-  // After successful update:
-  // event.sender.send('status-success', 'Status updated successfully!');
-  // On error:
-  // event.sender.send('status-error', 'Failed to update status.');
+  // Implement status update logic if needed
 });
 
 // Fetch user data
 ipcMain.handle('fetch-user-data', async () => {
   try {
-    const userData = await getCurrentUser(); // Call getCurrentUser directly
-    global.currentUser = userData; // Keep the global user updated
+    const userData = await getCurrentUser();
+    global.currentUser = userData;
     return userData || { username: 'Guest', profilePicture: '../../assets/default-profile.png' };
   } catch (error) {
     console.error('Error fetching user data:', error.message);
@@ -224,7 +254,7 @@ ipcMain.handle('fetch-current-user', async () => {
   try {
     const userData = await getCurrentUser();
     if (userData) {
-      global.currentUser = userData; // Update the global user state
+      global.currentUser = userData;
       console.log('Current user fetched and set globally:', global.currentUser);
     }
     return userData || { username: 'Guest', profilePicture: '../../assets/default-profile.png' };
@@ -237,10 +267,8 @@ ipcMain.handle('fetch-current-user', async () => {
 // Handler for saving user settings
 ipcMain.handle('save-settings', async (event, settingsData) => {
   try {
-    const user = await getCurrentUser(); // Ensure this fetches the correct user
+    const user = await getCurrentUser();
     if (!user) throw new Error('User not found.');
-
-    // Use updateUserPreferences directly from usersService.js
     await updateUserPreferences(user.id, settingsData);
 
     console.log('Settings saved:', settingsData);
@@ -285,7 +313,7 @@ ipcMain.on('send-feedback', (event, type, suggestion) => {
   stmt.run(
     suggestion,
     type,
-    type === 'accepted' ? 1 : 0,  // Assuming `accepted` is BOOLEAN (0 or 1)
+    type === 'accepted' ? 1 : 0,
     (err) => {
       if (err) {
         console.error('Error inserting feedback into database:', err.message);
@@ -299,7 +327,6 @@ ipcMain.on('send-feedback', (event, type, suggestion) => {
 
 // ======= IPC Handlers for Post Operations =======
 
-// Save a new or updated post
 ipcMain.handle('savePost', async (event, post) => {
   console.log('Saving post:', post);
   try {
@@ -311,7 +338,6 @@ ipcMain.handle('savePost', async (event, post) => {
   }
 });
 
-// Retrieve all posts
 ipcMain.handle('get-posts', async () => {
   if (!global.currentUser || !global.currentUser.linkedin_id) {
     console.error('No user is logged in. Current user:', global.currentUser);
@@ -327,7 +353,6 @@ ipcMain.handle('get-posts', async () => {
   }
 });
 
-// Retrieve a single post by ID
 ipcMain.handle('get-post-by-id', async (event, postId) => {
   console.log(`Fetching post by ID: ${postId}`);
   try {
@@ -342,8 +367,6 @@ ipcMain.handle('get-post-by-id', async (event, postId) => {
   }
 });
 
-
-// Delete a post by ID
 ipcMain.handle('delete-post', async (event, { postId, userId }) => {
   if (!postId || !userId) {
     console.error('Post ID or User ID is missing:', { postId, userId });
@@ -365,25 +388,22 @@ ipcMain.handle('delete-post', async (event, { postId, userId }) => {
   }
 });
 
-// ======= IPC Handler for Scheduling Posts =======
+// Scheduling posts
 ipcMain.handle('schedule-post', async (event, updatedPost) => {
   try {
     const { id, title, content, status, scheduled_time } = updatedPost;
 
-    // Validate required fields
     if (!id || !scheduled_time) {
       console.error('Missing required fields for scheduling:', updatedPost);
       return { success: false, message: 'Missing required fields.' };
     }
 
-    // Validate scheduled_time format
     const scheduledDate = new Date(scheduled_time);
     if (isNaN(scheduledDate.getTime())) {
       console.error('Invalid scheduled_time:', scheduled_time);
       return { success: false, message: 'Invalid scheduled time.' };
     }
 
-    // Update the post in the database
     await new Promise((resolve, reject) => {
       db.run(
         "UPDATE posts SET title = ?, content = ?, status = ?, scheduled_time = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
@@ -399,19 +419,16 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
       );
     });
 
-    // Schedule the post
     schedule.scheduleJob(scheduledDate, async () => {
       console.log(`Executing scheduled post ID ${id} at ${scheduledDate}`);
       try {
         const result = await postToLinkedIn(content);
         if (result.success) {
-          // Update post status to 'posted'
           db.run("UPDATE posts SET status = 'posted', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [id], (err) => {
             if (err) {
               console.error('Error updating post status to posted:', err.message);
             } else {
               console.log('Post successfully posted to LinkedIn.', { id });
-              // Notify renderer about the post being published
               if (mainWindow && mainWindow.webContents) {
                 mainWindow.webContents.send('post-published', id);
               }
@@ -419,7 +436,6 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
           });
         } else {
           console.error('Failed to post to LinkedIn.', { id, error: result.message });
-          // Optionally, handle failed scheduling (e.g., retry, notify user)
         }
       } catch (error) {
         console.error('Error posting to LinkedIn during scheduled job:', { error: error.message, id });
@@ -434,7 +450,6 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
   }
 });
 
-// ======= IPC Handler to Search Posts =======
 ipcMain.handle('search-posts', async (event, { query, linkedin_id }) => {
   console.log(`Searching posts for LinkedIn ID: ${linkedin_id} with query: ${query}`);
   try {
@@ -446,9 +461,7 @@ ipcMain.handle('search-posts', async (event, { query, linkedin_id }) => {
   }
 });
 
-// ======= IPC Handler for LinkedIn Auth Feedback =======
-
-// LinkedIn Authentication and User Login
+// LinkedIn Auth IPC handlers
 ipcMain.on('linkedin-auth-success', async (event, { userID, name, email, accessToken, refreshToken, expiresIn }) => {
   console.log('LinkedIn Authentication Successful:', { userID, name, email });
 
@@ -460,7 +473,7 @@ ipcMain.on('linkedin-auth-success', async (event, { userID, name, email, accessT
       email: user.email,
       accessToken: user.access_token,
     };
-    console.log('User logged in and set globally:', global.currentUser); // Debug log
+    console.log('User logged in and set globally:', global.currentUser);
     event.sender.send('auth-success', { userID, name, email });
   } catch (error) {
     console.error('Error saving user data after LinkedIn auth:', error.message);
@@ -468,13 +481,12 @@ ipcMain.on('linkedin-auth-success', async (event, { userID, name, email, accessT
   }
 });
 
-// Refresh LinkedIn Access Token
 ipcMain.handle('refresh-access-token', async (event, linkedin_id) => {
   console.log('Refreshing access token for LinkedIn ID:', linkedin_id);
   try {
     const newAccessToken = await refreshAccessToken(linkedin_id);
     if (global.currentUser && global.currentUser.linkedin_id === linkedin_id) {
-      global.currentUser.accessToken = newAccessToken; // Update global user state
+      global.currentUser.accessToken = newAccessToken;
     }
     return { success: true, accessToken: newAccessToken };
   } catch (error) {
@@ -485,42 +497,13 @@ ipcMain.handle('refresh-access-token', async (event, linkedin_id) => {
 
 ipcMain.on('linkedin-auth-failure', (event, errorData) => {
   console.error('LinkedIn Authentication Failed:', errorData);
-  // Implement logic to notify the user about the failure
 });
 
 ipcMain.on('linkedin-auth-closed', () => {
   console.warn('LinkedIn Authentication Window was closed by the user.');
-  // Implement logic to handle window closure without authentication
 });
 
-// ======= Handle LinkedIn Auth Window =======
-ipcMain.on('open-linkedin-auth-window', () => {
-  console.log('Received "open-linkedin-auth-window" IPC message');
-
-  const authWindow = createAuthWindow();
-
-  // Generate a unique state parameter for CSRF protection
-  const state = crypto.randomBytes(16).toString('hex');
-  global.oauthState = state; // Store globally for later verification
-
-  const authUrl = generateAuthUrl(state);
-  authWindow.loadURL(authUrl);
-  authWindow.show();
-  console.log('Auth window loaded with URL:', authUrl);
-
-  // Handle redirect to the redirect URI
-  authWindow.webContents.on('will-redirect', async (event, url) => {
-    await handleAuthRedirect(event, url, authWindow);
-  });
-
-  // Handle window closed before completing auth
-  authWindow.on('closed', () => {
-    console.log('Auth window was closed by the user');
-    notifyRenderer('linkedin-auth-closed');
-  });
-});
-
-// Helper: Create LinkedIn Authentication Window
+// Auth window helpers
 function createAuthWindow() {
   return new BrowserWindow({
     width: 600,
@@ -533,23 +516,21 @@ function createAuthWindow() {
   });
 }
 
-// Helper: Generate LinkedIn Auth URL
 function generateAuthUrl(state) {
-  const scope = process.env.LINKEDIN_SCOPES; // 'openid profile email w_member_social'
-  const encodedScope = encodeURIComponent(scope); // 'openid%20profile%20email%20w_member_social'
+  const scope = process.env.LINKEDIN_SCOPES;
+  const encodedScope = encodeURIComponent(scope);
 
   return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(
     process.env.LINKEDIN_REDIRECT_URI
   )}&scope=${encodedScope}&state=${state}`;
 }
 
-// Helper: Handle Redirect and Authentication
 async function handleAuthRedirect(event, url, authWindow) {
   console.log('Auth window redirecting to URL:', url);
 
   if (!url.startsWith(process.env.LINKEDIN_REDIRECT_URI)) return;
 
-  event.preventDefault(); // Prevent the actual navigation
+  event.preventDefault();
 
   const urlObj = new URL(url);
   const authorizationCode = urlObj.searchParams.get('code');
@@ -585,7 +566,6 @@ async function handleAuthRedirect(event, url, authWindow) {
   }
 }
 
-// Helper: Exchange Authorization Code for Access and Refresh Tokens
 async function exchangeAuthorizationCodeForTokens(authorizationCode) {
   const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
     method: 'POST',
@@ -609,11 +589,9 @@ async function exchangeAuthorizationCodeForTokens(authorizationCode) {
   });
 
   if (tokenData.error) throw new Error(tokenData.error_description || 'Failed to obtain access token');
-
   return tokenData;
 }
 
-// Helper: Handle User Authentication and Save to Database
 async function handleUserAuthentication(tokenData) {
   const decodedIdToken = jwtDecode(tokenData.id_token);
   const userID = decodedIdToken.sub;
@@ -634,7 +612,6 @@ async function handleUserAuthentication(tokenData) {
   );
 }
 
-// Helper: Notify Renderer Process
 function notifyRenderer(channel, data = {}) {
   const allWindows = BrowserWindow.getAllWindows();
   if (allWindows.length > 0) {
@@ -643,4 +620,3 @@ function notifyRenderer(channel, data = {}) {
     console.log(`Sent "${channel}" IPC message to renderer`, data);
   }
 }
-

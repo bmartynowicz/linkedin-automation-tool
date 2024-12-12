@@ -1,45 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Updated Content Security Policy to allow external scripts and styles -->
-  <meta http-equiv="Content-Security-Policy" 
-      content="default-src 'self'; 
-              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
-              style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
-              font-src 'self' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
-              img-src 'self' data: https://cdn.jsdelivr.net;
-              connect-src 'self' http://localhost:3000;
-              base-uri 'self';">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+             script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
+             style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
+             font-src 'self' https://cdnjs.cloudflare.com https://cdn.quilljs.com https://cdn.jsdelivr.net;
+             img-src 'self' data: https://cdn.jsdelivr.net;
+             connect-src 'self' http://localhost:3000;
+             base-uri 'self';">
 
   <title>LinkedIn Automation Tool</title>
- 
-  <!-- Quill CSS -->
-  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
   
-  <!-- Quill Emoji CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.css" />
-
-  <!-- Include Font Awesome for Icons -->
-  <link 
-  rel="stylesheet" 
-  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
-  crossorigin="anonymous" 
-  referrerpolicy="no-referrer"/>
-
-  <!-- Flatpickr CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
-  <!-- Custom CSS -->
+  <!-- Global Styles -->
   <link rel="stylesheet" href="../../assets/styles.css">
+
+  <!-- Font Awesome for Icons -->
+  <link 
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
 </head>
 <body>
-  
   <!-- Toast Notifications -->
   <div id="toast-container"></div>
-  
+
   <!-- Header Section -->
   <header>
     <h1>LinkedIn Automation Tool</h1>
@@ -56,42 +45,8 @@
 
   <!-- Notifications Dropdown -->
   <div id="notifications-dropdown" class="dropdown hidden" aria-label="Notifications">
-    <ul id="notifications-list">
-      <!-- Dynamic Notifications Will Be Injected Here -->
-    </ul>
+    <ul id="notifications-list"><!-- Dynamic --></ul>
   </div>
-
-  <!-- Settings Page -->
-  <div id="settings-page" class="hidden">
-    <h2>User Settings</h2>
-    <form id="settings-form">
-      <!-- Theme Settings -->
-      <label for="theme-select">Theme:</label>
-      <select id="theme-select">
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-  
-      <!-- Tone Settings -->
-      <label for="tone-select">Tone Preference:</label>
-      <select id="tone-select">
-        <option value="professional">Professional</option>
-        <option value="casual">Casual</option>
-        <option value="friendly">Friendly</option>
-      </select>
-  
-      <!-- LinkedIn Details -->
-      <div id="linkedin-details">
-        <h3>LinkedIn Integration</h3>
-        <p id="linkedin-status">Status: Not Linked</p>
-        <button type="button" id="reauthenticate-linkedin">Reauthenticate</button>
-      </div>
-  
-      <!-- Save Button -->
-      <button type="submit">Save Settings</button>
-    </form>
-  </div>
-  
 
   <!-- Profile Modal -->
   <div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
@@ -108,9 +63,7 @@
       <button id="logout-button">Logout</button>
     </div>
   </div>
-  
 
-  
   <!-- Saved Posts Modal -->
   <div id="saved-posts-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="saved-posts-title">
     <div class="modal-content">
@@ -127,30 +80,21 @@
       <div id="posts-loader" class="loader hidden" aria-label="Loading posts..."></div>
       
       <!-- Posts List -->
-      <ul id="saved-posts-list" aria-label="List of Saved Posts">
-        <!-- Dynamically populated list of posts -->
-      </ul>
+      <ul id="saved-posts-list" aria-label="List of Saved Posts"><!-- Dynamic --></ul>
       
       <!-- Action Buttons -->
       <div class="modal-actions">
-        <!-- Removed the redundant "Create New Post" button -->
-        
-        <!-- Edit Post Button -->
         <button id="edit-post" class="action-button" disabled aria-label="Edit Post">
           <i class="fas fa-edit"></i> Edit Post
         </button>
-        
-        <!-- Schedule Post Button -->
         <button id="schedule-post" class="action-button" disabled aria-label="Schedule Post">
           <i class="fas fa-calendar-alt"></i> Schedule Post
         </button>
-        
-        <!-- Delete Post Button -->
         <button id="delete-post" class="action-button" disabled aria-label="Delete Post">
           <i class="fas fa-trash-alt"></i> Delete Post
         </button>
       </div>
-      
+
       <!-- Confirmation Modal for Deletion -->
       <div id="delete-confirmation-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="delete-confirmation-title">
         <div class="modal-content">
@@ -165,8 +109,8 @@
       </div>
     </div>
   </div>
-   
-  <!-- Updated Sidebar Navigation -->
+
+  <!-- Sidebar Navigation -->
   <nav id="sidebar" class="sidebar">
     <ul class="nav-list">
       <li class="nav-item">
@@ -176,7 +120,7 @@
         </a>
       </li>
       <li class="nav-item">
-        <a href="#content-creation" aria-label="Content Creation">
+        <a href="#content-creation" aria-label="Content Creation" id="content-creation-button">
           <span class="icon"><i class="fas fa-pencil-alt"></i></span>
           <span class="text">Content Creation</span>
         </a>
@@ -194,7 +138,7 @@
         </a>
       </li>
       <li class="nav-item">
-        <a href="#settings" aria-label="Settings">
+        <a href="#settings" id="settings-button" aria-label="Settings">
           <span class="icon"><i class="fas fa-cog"></i></span>
           <span class="text">Settings</span>
         </a>
@@ -205,123 +149,7 @@
     </button>
   </nav>
 
-  <main id="main-content">
-    <!-- Content Editor -->
-    <div id="content-editor">
-      <!-- Quill Toolbar -->
-      <div id="toolbar" class="q1-toolbar">
-        <!-- Toolbar Buttons -->
-        <span class="ql-formats">
-          <button class="ql-bold" aria-label="Bold"></button>
-          <button class="ql-italic" aria-label="Italic"></button>
-          <button class="ql-underline" aria-label="Underline"></button>
-        </span>
-        <span class="ql-formats">
-          <button class="ql-emoji" aria-label="Insert Emoji"></button>
-        </span>
-        <span class="ql-formats">
-          <button id="ql-custom-bullet" class="q1-custom-bullet" aria-label="Emoji Bullet List">
-            <i class="fas fa-list"></i>
-          </button>
-        </span>
-        <span class="ql-formats">
-          <button id="manual-suggest-button" aria-label="Get Suggestion">
-            <i class="fas fa-lightbulb"></i>
-          </button>
-        </span>
-        <span class="ql-formats">
-          <button class="ql-undo" aria-label="Undo">
-            <i class="fas fa-undo"></i>
-          </button>
-          <button class="ql-redo" aria-label="Redo">
-            <i class="fas fa-redo"></i>
-          </button>
-        </span>
-      </div>
-  
-      <!-- Editor Container -->
-      <div id="editor-container">
-        <input type="text" id="post-title" class="post-title-input" placeholder="Enter Post Title" aria-label="Post Title">
-        <div id="editor" class="q1-container q1-editor"></div>
-        <!-- Editor Buttons -->
-        <div class="editor-buttons">
-          <button id="create-new-post-editor" class="editor-action-button" aria-label="Create New Post">
-            <i class="fas fa-plus"></i> Create New Post
-          </button>
-          <button id="save-post" class="editor-action-button" aria-label="Save Post">
-            <i class="fas fa-save"></i> Save Post
-          </button>
-          <button id="open-saved-posts" class="editor-action-button" aria-label="Saved Posts">
-            <i class="fas fa-folder-open"></i> View Saved Posts
-          </button>
-          <button id="toggle-distraction-free" class="editor-action-button" aria-label="Toggle Distraction-Free Mode">
-            <i class="fas fa-eye-slash"></i> Focus Mode
-          </button>
-        </div>
-    </div>
-      </div>
-  
-    <!-- Settings Page -->
-    <div id="settings-page" class="hidden">
-      <h2>User Settings</h2>
-      <form id="settings-form">
-        <!-- Theme Settings -->
-        <label for="theme-select">Theme:</label>
-        <select id="theme-select">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-  
-        <!-- Tone Settings -->
-        <label for="tone-select">Tone Preference:</label>
-        <select id="tone-select">
-          <option value="professional">Professional</option>
-          <option value="casual">Casual</option>
-          <option value="friendly">Friendly</option>
-        </select>
-  
-        <!-- LinkedIn Details -->
-        <div id="linkedin-details">
-          <h3>LinkedIn Integration</h3>
-          <p id="linkedin-status">Status: Not Linked</p>
-          <button type="button" id="reauthenticate-linkedin">Reauthenticate</button>
-        </div>
-  
-        <!-- Save Button -->
-        <button type="submit">Save Settings</button>
-      </form>
-    </div>
-  </main>  
-
-  <!-- Quill JS -->
-  <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
-
-  <!-- Quill Emoji JS -->
-  <script src="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.min.js"></script>
-
-  <!-- Flatpickr JS -->
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-  <!-- Renderer Script -->
-  <script src="../renderer.js"></script>
-
-  <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
-  <div id="suggestion-box" aria-live="polite">
-    <button id="close-suggestion-box" class="close-button" aria-label="Close Suggestion Box">
-      <i class="fas fa-times"></i>
-    </button>
-    <div class="suggestion-content">
-      <i class="fas fa-lightbulb suggestion-icon"></i>
-      <div>
-        <h3 class="suggestion-title">AI Suggestion</h3>
-        <p id="suggestion-text"></p>
-      </div>
-    </div>
-    <div class="suggestion-buttons">
-      <button id="reject-suggestion" class="suggestion-button reject">Dismiss</button>
-      <button id="accept-suggestion" class="suggestion-button accept">Apply</button>
-    </div>
-  </div>
-
+  <!-- Same renderer.js included here -->
+  <script src="../indexRenderer.js"></script>
 </body>
 </html>

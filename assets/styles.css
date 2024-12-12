@@ -1,4 +1,4 @@
-/* styles/styles.css */
+/* styles.css (Global Styles Only) */
 
 /* ======= Global Reset and Box Sizing ======= */
 html, body {
@@ -31,7 +31,7 @@ header {
   top: 0;
   left: 0;
   width: 100%;
-  height: 60px; /* Consistent header height */
+  height: 60px;
   z-index: 1000;
 }
 
@@ -83,12 +83,12 @@ header h1 {
   top: 60px; /* Below the header */
   left: 0;
   width: 250px;
-  height: calc(100% - 60px); /* Full height minus header */
+  height: calc(100% - 60px);
   background-color: #2c3e50;
   color: #ecf0f1;
   transition: width 0.3s ease;
   overflow-x: hidden;
-  z-index: 900; /* Below header and toolbar */
+  z-index: 900;
 }
 
 #sidebar.collapsed {
@@ -157,333 +157,42 @@ header h1 {
   transform: rotate(180deg);
 }
 
-/* ======= Toolbar Styles ======= */
-#toolbar {
+/* ======= Toast Notifications ======= */
+#toast-container {
   position: fixed;
-  top: 60px; /* Below the header */
-  left: 250px; /* Next to the sidebar */
-  right: 0;
-  background-color: #f0f0f0;
-  z-index: 950; /* Below header, above content */
-  padding: 10px;
-  transition: left 0.3s ease; /* Add transition for smooth movement */
+  bottom: 30px;
+  right: 30px;
+  z-index: 9999;
+  pointer-events: none;
 }
 
-#sidebar.collapsed + #toolbar {
-  left: 60px; /* Adjust when sidebar is collapsed */
-}
-
-.ql-toolbar {
-  position: relative; /* For positioning the emoji picker */
-}
-
-/* ======= Editor Container Styles ======= */
-#editor-container {
-  display: flex;
-  flex-direction: column;
-  margin-left: 250px; /* Width of the sidebar */
-  margin-top: 120px; /* Header (60px) + Toolbar (60px) */
-  padding: 20px;
-  height: calc(100vh - 120px); /* Viewport height minus header and toolbar */
-  background-color: #ffffff;
-  z-index: 800;
-  transition: margin-left 0.3s ease;
-}
-
-/* Override Quill editor padding */
-.ql-editor {
-  padding: 0; /* Remove default padding */
-}
-
-/* ======= Custom Bullet Styles ======= */
-.ql-editor [data-custom-bullet='◾'] {
-  list-style-type: none; /* Remove default list styling */
-  position: relative; /* Position for custom bullet */
-  margin-left: 2em; /* Space between bullet and container edge */
-  text-indent: -1.5em; /* Align text properly relative to the bullet */
-  padding-left: 2em; /* Space between bullet and text */
-  display: block; /* Block-level element for proper alignment */
-  line-height: 1.5; /* Match text height to bullet height */
-}
-
-.ql-editor [data-custom-bullet='◾']::before {
-  content: '◾'; /* Insert the emoji bullet */
-  position: absolute; /* Position bullet at the start */
-  left: 0; /* Align bullet to the left */
-  top: 50%; /* Start bullet at the middle of the line */
-  transform: translateY(-50%); /* Center bullet vertically */
-  font-size: 1.2em; /* Match bullet size to text size */
-  line-height: 1.5; /* Ensure line height consistency */
-  color: #000; /* Default bullet color */
-  vertical-align: middle; /* Align bullet with the text */
-}
-
-#editor-container .ql-editor [data-custom-bullet='◾'] {
-  margin-bottom: 0.5em; /* Space between list items */
-}
-
-.editor-buttons {
-  flex: none;
-  display: flex;
-  position: relative;
-  justify-content: flex-end;
-  z-index: 10;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-/* Style for the editor action buttons */
-.editor-action-button {
-  background-color: #007bff;
+.toast {
+  background-color: #333;
   color: #fff;
-  border: none;
-  padding: 10px 15px;
+  padding: 12px 20px;
   border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: background-color 0.3s ease;
-}
-
-.editor-action-button:hover {
-  background-color: #0056b3;
-}
-
-.editor-action-button:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-/* Style for the post title input */
-.post-title-input {
-  flex: none;
-  width: 100%;
-  padding: 10px 15px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 16px;
-}
-
-/* Adjust when the sidebar is collapsed */
-body.sidebar-collapsed #editor-container {
-  margin-left: 60px;
-}
-
-/* Adjust the toolbar position as well */
-body.sidebar-collapsed #toolbar {
-  left: 60px;
-}
-
-#editor {
-  flex: 1;
-  width: 100%;
-  background-color: #ffffff;
-  border: 1px solid #dddddd;
-  border-radius: 5px;
-  padding: 15px;
-  box-sizing: border-box;
-  overflow: auto;
-}
-
-#content-editor.hidden .editor-buttons {
-  display: none; /* Ensure visibility is tied to the content editor */
-}
-
-/* Adjust settings page layout based on sidebar */
-#settings-page {
-  margin-left: 250px; /* Default width of the sidebar */
-  margin-top: 60px; /* Below the header */
-  padding: 20px;
-  transition: margin-left 0.3s ease; /* Smooth adjustment when sidebar collapses */
-  background-color: #ffffff;
-  height: calc(100vh - 60px); /* Full height minus header */
-  overflow-y: auto; /* Enable scrolling for content overflow */
-}
-
-body.sidebar-collapsed #settings-page {
-  margin-left: 60px; /* Adjust when sidebar is collapsed */
-}
-
-/* Style for the manual suggest button */
-#manual-suggest-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-#manual-suggest-button i {
-  font-size: 1rem;
-  color: #555;
-}
-
-#manual-suggest-button:hover i {
-  color: #000;
-}
-
-#manual-suggest-button.loading i {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* ======= Suggestion Box Styles ======= */
-#suggestion-box {
-  position: fixed;
-  padding: 20px;
-  border-radius: 8px;
-  background-color: #ffffff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  max-width: 350px;
-  max-height: 200px;
-  z-index: 2000; /* Above toolbar */
-  visibility: hidden;
+  margin-top: 10px;
   opacity: 0;
-  overflow-y: auto;
-  transition: opacity 0.4s ease-in-out, visibility 0.4s;
-  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  transform: translateY(20px);
+  z-index: 1400;
+  pointer-events: auto;
 }
 
-#suggestion-box.show {
-  visibility: visible;
+.toast.show {
   opacity: 1;
   transform: translateY(0);
 }
 
-.suggestion-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-}
-
-.suggestion-icon {
-  font-size: 1.5rem;
-  color: #f1c40f;
-}
-
-.suggestion-title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
-}
-
-#suggestion-box p {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  color: #333;
-}
-
-.suggestion-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px solid #e0e0e0;
-  padding-top: 10px;
-  margin-top: 15px;
-}
-
-.suggestion-button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s;
-}
-
-.suggestion-button:focus {
-  outline: none;
-}
-
-.suggestion-button.accept {
-  background-color: #007bff;
-  color: white;
-}
-
-.suggestion-button.accept:hover {
-  background-color: #0056b3;
-}
-
-.suggestion-button.reject {
-  background-color: #6c757d;
-  color: white;
-}
-
-.suggestion-button.reject:hover {
-  background-color: #5a6268;
-}
-
-/* Style for the close button inside the suggestion box */
-#suggestion-box .close-button {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  font-size: 1rem;
-  color: #888;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-#suggestion-box .close-button:hover,
-#suggestion-box .close-button:focus {
-  color: #333;
-  outline: none;
-}
-
-#suggestion-box .close-button i {
-  pointer-events: none;
-}
-
-/* ======= Distraction-Free Mode Button Styles ======= */
-.toggle-button {
-  position: fixed;
-  top: 130px; /* Below header and toolbar */
-  right: 20px;
-  padding: 8px 12px;
-  background-color: #3498db;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s;
-  z-index: 950; /* Above editor container */
-}
-
-.toggle-button:hover,
-.toggle-button:focus {
-  background-color: #2980b9;
-  outline: none;
-}
-
-/* ======= Distraction-Free Mode Styles ======= */
-.distraction-free #sidebar,
-.distraction-free header,
-.distraction-free footer,
-.distraction-free #toolbar,
-.distraction-free .toggle-button {
-  display: none;
-}
-
-.distraction-free #editor-container {
-  margin: 0;
-  padding: 20px;
-  height: 100vh;
+.toast.hide {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 /* ======= Dropdown Styles ======= */
 .dropdown {
   position: absolute;
-  top: 60px; /* Below the header */
+  top: 60px;
   right: 20px;
   background-color: #ffffff;
   border: 1px solid #e0e0e0;
@@ -492,7 +201,7 @@ body.sidebar-collapsed #settings-page {
   max-height: 400px;
   overflow-y: auto;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 1200; /* Below modals, above toolbar */
+  z-index: 1200;
 }
 
 .dropdown ul {
@@ -526,16 +235,16 @@ body.sidebar-collapsed #settings-page {
   display: none;
   justify-content: center;
   align-items: center;
-  z-index: 1300; /* Above dropdowns */
+  z-index: 1300;
 }
 
 .modal-content {
   background-color: #fefefe;
   padding: 20px;
   border-radius: 8px;
-  width: 80%; /* Could be more or less, depending on screen size */
+  width: 80%;
   max-width: 600px;
-  margin: 10% auto; /* 10% from the top and centered */
+  margin: 10% auto;
   position: relative;
   border: 1px solid #888;
 }
@@ -555,14 +264,17 @@ body.sidebar-collapsed #settings-page {
   background: none;
 }
 
-
 .close-button:hover,
 .close-button:focus {
   color: black;
   outline: none;
 }
 
-/* Saved Posts List */
+/* Saved Posts Modal Styles (Global for now) */
+#saved-posts-modal {
+  /* In index scenario, it's global. */
+}
+
 #saved-posts-list {
   list-style: none;
   padding: 0;
@@ -581,27 +293,11 @@ body.sidebar-collapsed #settings-page {
   background-color: #f1f1f1;
 }
 
-/* Buttons within Modal */
-#saved-posts-modal button {
-  margin-right: 10px;
-  padding: 10px 15px;
-  border: none;
-  background-color: #007bff;
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
+#saved-posts-list li.selected {
+  background-color: #d0e7ff;
+  border-left: 4px solid #007bff;
 }
 
-#saved-posts-modal button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-#saved-posts-modal button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-/* Buttons within Modal */
 #saved-posts-modal .modal-actions button {
   margin-right: 10px;
   padding: 10px 15px;
@@ -621,120 +317,21 @@ body.sidebar-collapsed #settings-page {
   background-color: #0056b3;
 }
 
-
-/* Style for selected post item */
-#saved-posts-list li.selected {
-  background-color: #d0e7ff; /* Light blue background */
-  border-left: 4px solid #007bff; /* Blue border to emphasize selection */
+/* ======= Accessibility Focus Styles ======= */
+a:focus,
+button:focus {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
 }
 
-
-/* ======= Toast Notification Styles ======= */
-#toast-container {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  z-index: 9999;
-  pointer-events: none; /* Prevents it from capturing mouse events */
-}
-
-.toast {
-  /* No need for position: fixed here since the container is fixed */
-  background-color: #333;
+/* ======= Dark Theme Modal Content (if applicable) ======= */
+.dark-theme .modal-content {
+  background-color: #3c3c3c;
   color: #fff;
-  padding: 12px 20px;
-  border-radius: 5px;
-  margin-top: 10px; /* Space between multiple toasts */
-  opacity: 0;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-  transform: translateY(20px); /* Start slightly lower */
-  z-index: 1400;
-  pointer-events: auto; /* Allow interactions if needed */
-}
-
-.toast.show {
-  opacity: 1;
-  transform: translateY(0); /* Animate upwards */
-}
-
-.toast.hide {
-  opacity: 0;
-  transform: translateY(20px); /* Animate downwards */
-}
-
-.modal-content form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.modal-content form label {
-  font-weight: bold;
-}
-
-.modal-content form select,
-.modal-content form input {
-  padding: 8px;
-  border: 1px solid #cccccc;
-  border-radius: 4px;
-}
-
-.modal-content form button {
-  padding: 10px;
-  background-color: #2ecc71;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.modal-content form button:hover,
-.modal-content form button:focus {
-  background-color: #27ae60;
-  outline: none;
-}
-
-.profile-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.profile-info img {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-}
-
-.profile-info p {
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-#logout-button {
-  padding: 10px;
-  background-color: #e74c3c;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-#logout-button:hover,
-#logout-button:focus {
-  background-color: #c0392b;
-  outline: none;
-}
-
-/* ======= Hidden Class ======= */
-.hidden {
-  display: none;
 }
 
 /* ======= Responsive Design ======= */
 @media (max-width: 600px) {
-  /* Adjust sidebar for smaller screens */
   #sidebar {
     width: 200px;
   }
@@ -751,19 +348,6 @@ body.sidebar-collapsed #settings-page {
     margin-left: 50px;
   }
 
-  .ql-editor [data-custom-bullet='◾'] {
-    margin-left: 1em;
-    text-indent: -1em;
-  }
-
-  #editor-container .ql-editor {
-    padding-bottom: 20px;
-  }
-
-  #editor-container .ql-editor [data-custom-bullet='◾'] {
-    margin-bottom: 0.5em; /* Space between list items */
-  }
-
   /* Adjust header icons size */
   .header-icons button {
     font-size: 1rem;
@@ -774,32 +358,8 @@ body.sidebar-collapsed #settings-page {
     font-size: 1rem;
   }
 
-  #suggestion-box {
-    position: fixed;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 20px);
-    max-width: 400px;
-    margin: 0;
-    border-radius: 8px;
-  }
-  
   #settings-page {
-    margin-left: 50px; /* Adjust for smaller collapsed sidebar */
-    padding: 10px; /* Reduce padding for smaller screens */
+    margin-left: 50px;
+    padding: 10px;
   }
-}
-
-/* ======= Accessibility Focus Styles ======= */
-a:focus,
-button:focus {
-  outline: 2px solid #3498db;
-  outline-offset: 2px;
-}
-
-/* ======= Dark Theme Modal Content (if applicable) ======= */
-.dark-theme .modal-content {
-  background-color: #3c3c3c;
-  color: #fff;
 }
