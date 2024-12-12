@@ -977,8 +977,14 @@ if (editorElement) {
         manualSuggestButton.classList.add('loading');
       }
 
-      const suggestion = await window.api.getAISuggestions(userInput);
+      // Fetch the user ID and preferences
+      const { user, userPreferences } = await window.api.getCurrentUserWithPreferences();
+      const userId = user.id;
+      const options = { tone: userPreferences.tone, theme: userPreferences.theme };
+
+      const suggestion = await window.api.getAISuggestions(userInput, options, userId);
       console.log('Fetched suggestion:', suggestion);
+
       if (suggestion) {
         suggestionText.innerText = suggestion;
         showSuggestionBox();

@@ -73,9 +73,9 @@ contextBridge.exposeInMainWorld('api', {
       console.warn('Unauthorized attempt to send on channel: open-linkedin-auth-window');
     }
   },
-  getAISuggestions: (prompt) => {
+  getAISuggestions: (prompt, options, userId) => {
     console.log('Invoking "get-ai-suggestions" with prompt:', prompt);
-    return ipcRenderer.invoke('get-ai-suggestions', prompt);
+    return ipcRenderer.invoke('get-ai-suggestions', prompt, options, userId);
   },
   fetchNotifications: () => {
     console.log('Invoking "fetch-notifications"');

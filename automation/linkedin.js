@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 const dotenv = require('dotenv');
-const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../services/usersService.js');
+const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 
 dotenv.config();
 

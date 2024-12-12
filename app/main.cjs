@@ -133,11 +133,25 @@ app.on('before-quit', () => {
 
 // ======= IPC Handlers =======
 
+// Get the current user and their preferences
+ipcMain.handle('get-current-user-with-preferences', async () => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('User not found.');
+    const userPreferences = await getUserPreferences(user.id);
+    if (!userPreferences) throw new Error('User preferences not found.');
+    return { user, userPreferences };
+  } catch (error) {
+    console.error('Error fetching user with preferences:', error);
+    throw error;
+  }
+});
+
 // Handle AI Suggestion requests from renderer process
-ipcMain.handle('get-ai-suggestions', async (event, prompt) => {
+ipcMain.handle('get-ai-suggestions', async (event, prompt, options, userId) => {
   try {
     console.log('Processing AI suggestion for:', prompt);
-    const suggestion = await getAISuggestions(prompt);
+    const suggestion = await getAISuggestions(prompt, options, userId);
     return suggestion;
   } catch (error) {
     console.error('Error fetching AI suggestions:', error);
@@ -216,17 +230,6 @@ ipcMain.handle('fetch-current-user', async () => {
     return userData || { username: 'Guest', profilePicture: '../../assets/default-profile.png' };
   } catch (error) {
     console.error('Error fetching current user:', error.message);
-    throw error;
-  }
-});
-
-// Get the current user and their preferences
-ipcMain.handle('get-current-user-with-preferences', async () => {
-  try {
-    const user = await getCurrentUserWithPreferences();
-    return user;
-  } catch (error) {
-    console.error('Error fetching user with preferences:', error);
     throw error;
   }
 });

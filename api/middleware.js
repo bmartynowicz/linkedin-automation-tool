@@ -1,4 +1,4 @@
-const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../services/usersService.js');
+const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 
 async function validateToken(req, res, next) {
     try {
