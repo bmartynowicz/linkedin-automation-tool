@@ -225,7 +225,9 @@ header h1 {
 .editor-buttons {
   flex: none;
   display: flex;
+  position: relative;
   justify-content: flex-end;
+  z-index: 10;
   gap: 10px;
   margin-top: 10px;
 }
@@ -284,6 +286,10 @@ body.sidebar-collapsed #toolbar {
   padding: 15px;
   box-sizing: border-box;
   overflow: auto;
+}
+
+#content-editor.hidden .editor-buttons {
+  display: none; /* Ensure visibility is tied to the content editor */
 }
 
 /* Adjust settings page layout based on sidebar */

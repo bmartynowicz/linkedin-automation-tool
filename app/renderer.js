@@ -209,24 +209,32 @@ document.addEventListener('DOMContentLoaded', () => {
   if (settingsButton && contentEditor && settingsPage) {
     settingsButton.addEventListener('click', async () => {
       try {
-        // Hide content editor and show settings page
+        // Hide content editor (including editor-buttons) and show settings page
         contentEditor.classList.add('hidden');
         settingsPage.classList.remove('hidden');
-    
+
         // Fetch user preferences via IPC
         const user = await window.api.getCurrentUserWithPreferences();
         if (!user) throw new Error('User not found.');
-    
+
         // Populate the settings form with user preferences
-        themeSelect.value = user.preferences.theme;
-        toneSelect.value = user.preferences.tone;
-    
+        themeSelect.value = user.preferences.theme || 'light';
+        toneSelect.value = user.preferences.tone || 'professional';
+
         console.log('Settings loaded successfully.');
-        
       } catch (error) {
         console.error('Error navigating to settings:', error.message);
       }
     });
+
+    // Add handler to navigate back to the editor
+    const backToEditorButton = document.getElementById('back-to-editor'); // Ensure this button exists
+    if (backToEditorButton) {
+      backToEditorButton.addEventListener('click', () => {
+        settingsPage.classList.add('hidden');
+        contentEditor.classList.remove('hidden');
+      });
+    }
   }
 
   // Attach Event Listener for Form Submission
