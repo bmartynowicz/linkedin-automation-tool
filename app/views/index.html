@@ -63,33 +63,139 @@
 
   <!-- Settings Page -->
   <div id="settings-page" class="hidden">
-    <h2>User Settings</h2>
-    <form id="settings-form">
-      <!-- Theme Settings -->
-      <label for="theme-select">Theme:</label>
-      <select id="theme-select">
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-  
-      <!-- Tone Settings -->
-      <label for="tone-select">Tone Preference:</label>
-      <select id="tone-select">
-        <option value="professional">Professional</option>
-        <option value="casual">Casual</option>
-        <option value="friendly">Friendly</option>
-      </select>
-  
-      <!-- LinkedIn Details -->
-      <div id="linkedin-details">
-        <h3>LinkedIn Integration</h3>
-        <p id="linkedin-status">Status: Not Linked</p>
-        <button type="button" id="reauthenticate-linkedin">Reauthenticate</button>
-      </div>
-  
-      <!-- Save Button -->
-      <button type="submit">Save Settings</button>
-    </form>
+    <h1>Settings</h1>
+
+    <!-- Personal Settings -->
+    <section id="personal-settings">
+        <h2>Personal Settings</h2>
+        <label>
+            Theme:
+            <select id="theme">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">System Default</option>
+            </select>
+        </label>
+
+        <label>
+            Notifications:
+            <input type="checkbox" id="suggestion-readiness"> Suggestion Readiness<br>
+            <input type="checkbox" id="engagement-tips"> LinkedIn Engagement Tips<br>
+            <input type="checkbox" id="system-updates"> System Updates
+        </label>
+        <label>
+            Notification Frequency:
+            <select id="notification-frequency">
+                <option value="realtime">Real-Time</option>
+                <option value="daily">Daily Digest</option>
+                <option value="weekly">Weekly Summary</option>
+            </select>
+        </label>
+
+        <label>
+            Language:
+            <select id="language">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+            </select>
+        </label>
+
+        <label>
+            Privacy Options:
+            <input type="checkbox" id="data-sharing"> Allow Data Sharing for Analytics<br>
+            <button id="manage-accounts">Manage LinkedIn Accounts</button>
+        </label>
+
+        <label>
+            Session Management:
+            <input type="checkbox" id="auto-logout"> Enable Automatic Logout<br>
+            <input type="checkbox" id="save-session"> Save Login Session
+        </label>
+
+        <label>
+            Accessibility:
+            <input type="range" id="font-size" min="12" max="24" value="16"> Font Size<br>
+            <input type="checkbox" id="text-to-speech"> Enable Text-to-Speech for Suggestions
+        </label>
+
+        <label>
+            Account Preferences:
+            <button id="reset-settings">Reset All Settings to Default</button>
+        </label>
+    </section>
+
+    <!-- AI Customization Settings -->
+    <section id="ai-settings">
+        <h2>AI Customization</h2>
+        <label>
+            Tone:
+            <select id="tone">
+                <option value="friendly">Friendly</option>
+                <option value="professional">Professional</option>
+                <option value="casual">Casual</option>
+                <option value="persuasive">Persuasive</option>
+            </select>
+        </label>
+
+        <label>
+            Content Type:
+            <select id="content-type">
+                <option value="linkedin-post">LinkedIn Post</option>
+                <option value="job-application">Job Application Message</option>
+                <option value="connection-request">Connection Request Note</option>
+            </select>
+        </label>
+
+        <label>
+            Writing Style:
+            <select id="writing-style">
+                <option value="brief">Brief and Concise</option>
+                <option value="detailed">Elaborate and Detailed</option>
+                <option value="storytelling">Storytelling</option>
+            </select>
+        </label>
+
+        <label>
+            Engagement Focus:
+            <select id="engagement-focus">
+                <option value="comments">Drive Comments</option>
+                <option value="shares">Encourage Shares</option>
+                <option value="likes">Boost Likes</option>
+            </select>
+        </label>
+
+        <label>
+            Content Perspective:
+            <select id="content-perspective">
+                <option value="first-person">First-Person</option>
+                <option value="third-person">Third-Person</option>
+            </select>
+        </label>
+
+        <label>
+            Vocabulary Level:
+            <select id="vocabulary-level">
+                <option value="simplified">Simplified</option>
+                <option value="technical">Technical</option>
+                <option value="creative">Creative and Expressive</option>
+            </select>
+        </label>
+
+        <label>
+            Emphasis Tags (Comma-Separated Keywords):
+            <input type="text" id="emphasis-tags" placeholder="e.g., innovation, teamwork">
+        </label>
+    </section>
+
+    <!-- Live Prompt Preview -->
+    <section id="prompt-preview-section">
+        <h2>Current AI Prompt</h2>
+        <p id="prompt-preview"></p>
+        <button id="restore-defaults">Restore Defaults</button>
+    </section>
+
+    <button id="save-settings">Save Settings</button>
   </div>
   
 
