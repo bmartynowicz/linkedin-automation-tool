@@ -2,16 +2,14 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Editor Renderer loaded.');
-  
+
     let isModalOpen = false;
     let quill;
-    let selectedPost = null; // If needed for editor context
     let editingPostId = null;
     let lastSuggestionTime = 0;
     let suggestionCooldown = false;
   
     // Editor Elements
-    const contentEditor = document.getElementById('content-editor');
     const toolbar = document.getElementById('toolbar');
     const postTitleInput = document.getElementById('post-title');
     const suggestionBox = document.getElementById('suggestion-box');

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body>
+  <header>
+    <h1>Dashboard</h1>
+    <nav>
+      <a href="/app/views/analytics.html">Analytics</a>
+      <a href="/app/views/content.html">Content</a>
+      <a href="/app/views/settings.html">Settings</a>
+    </nav>
+    <button id="open-profile-modal">Profile</button>
+  </header>
+  
+  <main>
+    <section id="dashboard-summary">
+      <h2>Welcome</h2>
+      <p>Here's a quick summary of your activity.</p>
+      <ul id="dashboard-metrics">
+        <li>Posts Created: <span id="posts-created">0</span></li>
+        <li>Followers: <span id="followers-count">0</span></li>
+      </ul>
+    </section>
+
+    <section id="dashboard-content">
+      <!-- Dashboard-specific content -->
+      <h2>Recent Posts</h2>
+      <ul id="recent-posts">
+        <!-- Dynamic content -->
+      </ul>
+    </section>
+  </main>
+
+  <script src="/scripts/dashboardRenderer.js"></script>
+  <script src="/scripts/modals.js"></script>
+</body>
+</html>

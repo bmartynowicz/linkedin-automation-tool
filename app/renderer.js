@@ -170,12 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  if (profileButton && profileModal && closeProfileButton) {
-    profileButton.addEventListener('click', () => openModal(profileModal));
-    closeProfileButton.addEventListener('click', () => closeModal(profileModal));
-    fetchUserData();
-  }
-
   // Handle Settings Navigation
   if (settingsButton) {
     settingsButton.addEventListener('click', (event) => {

@@ -1,0 +1,32 @@
+<!-- Saved Posts Modal -->
+<div id="saved-posts-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="saved-posts-title">
+    <div class="modal-content">
+      <span class="close-button" id="close-saved-posts">&times;</span>
+      <h2 id="saved-posts-title">Your Saved Posts</h2>
+      
+      <!-- Search Bar -->
+      <div class="search-bar">
+        <input type="text" id="search-posts" placeholder="Search posts..." aria-label="Search Posts">
+        <button id="search-button" aria-label="Search"><i class="fas fa-search"></i></button>
+      </div>
+      
+      <!-- Loader Indicator -->
+      <div id="posts-loader" class="loader hidden" aria-label="Loading posts..."></div>
+      
+      <!-- Posts List -->
+      <ul id="saved-posts-list" aria-label="List of Saved Posts"><!-- Dynamic --></ul>
+      
+      <!-- Action Buttons -->
+      <div class="modal-actions">
+        <button id="edit-post" class="action-button" disabled aria-label="Edit Post">
+          <i class="fas fa-edit"></i> Edit Post
+        </button>
+        <button id="schedule-post" class="action-button" disabled aria-label="Schedule Post">
+          <i class="fas fa-calendar-alt"></i> Schedule Post
+        </button>
+        <button id="delete-post" class="action-button" disabled aria-label="Delete Post">
+          <i class="fas fa-trash-alt"></i> Delete Post
+        </button>
+      </div>
+    </div>
+  </div>

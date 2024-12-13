@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
     // ======= Settings Button =======
     const settingsButton = document.getElementById('settings-button');
+
+    // ======= Modal Container =======
+    const modalContainer = document.getElementById('modal-container');
   
     // ======= Notifications =======
     const notificationsButton = document.getElementById('notifications');
@@ -67,23 +70,31 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 3000);
     }
   
-    function openModal(modal) {
-      if (modal) {
-        modal.style.display = 'flex';
-        document.body.classList.add('modal-open');
-        isModalOpen = true;
-        console.log(`Modal opened: ${modal.id}`);
-      }
+    // Function to open a modal
+    function openModal(modalId) {
+            // Hide all modals first
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+            modal.style.display = 'hidden';
+            modal.classList.remove('active');
+            });
+    
+            // Show the selected modal
+            const modal = document.getElementById(modalId);
+            if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+            }
     }
-  
-    function closeModal(modal) {
-      if (modal) {
-        modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-        isModalOpen = false;
-        console.log(`Modal closed: ${modal.id}`);
-      }
-    }
+
+    // Function to close a modal
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+        modal.style.display = 'hidden';
+        modal.classList.remove('active');
+        }
+    }    
   
     // ======= Sidebar Toggle Logic =======
     if (toggleMenuButton && sidebar) {
@@ -165,11 +176,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
   
-    if (profileButton && profileModal && closeProfileButton) {
-      profileButton.addEventListener('click', () => openModal(profileModal));
-      closeProfileButton.addEventListener('click', () => closeModal(profileModal));
-      fetchUserData();
-    }
+    profileButton.addEventListener('click', async () => {
+        try {
+          const response = await fetch('../modals/profile-modal.html');
+          const modalHTML = await response.text();
+          modalContainer.innerHTML = modalHTML;
+      
+          const profileModal = document.getElementById('profile-modal');
+          const closeButton = document.getElementById('close-profile');
+      
+          profileModal.style.display = 'flex';
+      
+          // Close the modal on button click
+          closeButton.addEventListener('click', () => {
+            profileModal.style.display = 'none';
+          });
+      
+          // Close the modal on Escape key
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              profileModal.style.display = 'none';
+            }
+          });
+        } catch (error) {
+          console.error('Error loading modal:', error);
+        }
+      });
   
     // ======= Saved Posts Modal and Related Logic (Global for now) =======
     const showLoader = () => {

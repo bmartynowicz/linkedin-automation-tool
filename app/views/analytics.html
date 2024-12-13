@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics</title>
+
+  <!-- Global Styles -->
+  <link rel="stylesheet" href="/assets/styles.css">
+  <!-- Analytics Specific Styles -->
+  <link rel="stylesheet" href="/assets/analytics.css">
+
+  <!-- Chart.js Library for Analytics Graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Analytics Dashboard</h1>
+    <nav>
+      <a href="/app/views/dashboard.html">Dashboard</a>
+      <a href="/app/views/content.html">Content</a>
+      <a href="/app/views/settings.html">Settings</a>
+    </nav>
+  </header>
+  
+  <main>
+    <section id="analytics-overview">
+      <h2>Overview</h2>
+      <p>Track the performance of your posts and engagements over time.</p>
+    </section>
+    
+    <section id="analytics-graph">
+      <h2>Engagement Metrics</h2>
+      <canvas id="engagementChart" aria-label="Engagement Chart" role="img"></canvas>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 LinkedIn Automation Tool</p>
+  </footer>
+
+  <!-- Page-Specific JavaScript -->
+  <script src="/scripts/analyticsRenderer.js"></script>
+</body>
+</html>

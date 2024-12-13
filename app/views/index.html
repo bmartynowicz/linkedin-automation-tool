@@ -16,6 +16,7 @@
   
   <!-- Global Styles -->
   <link rel="stylesheet" href="../../assets/styles.css">
+  <link rel="stylesheet" href="../../assets/settings.css">
 
   <!-- Font Awesome for Icons -->
   <link 
@@ -46,68 +47,6 @@
   <!-- Notifications Dropdown -->
   <div id="notifications-dropdown" class="dropdown hidden" aria-label="Notifications">
     <ul id="notifications-list"><!-- Dynamic --></ul>
-  </div>
-
-  <!-- Profile Modal -->
-  <div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
-    <div class="modal-content">
-      <span class="close-button" id="close-profile">&times;</span>
-      <h2 id="profile-title">Your Profile</h2>
-      <div class="profile-info">
-        <img id="profile-picture" src="../../assets/default-profile.png" alt="Profile Picture">
-        <p id="username">Username</p>
-      </div>
-      <button id="linkedin-login-button" class="editor-action-button" aria-label="Login with LinkedIn">
-        <i class="fab fa-linkedin"></i> Login with LinkedIn
-      </button>
-      <button id="logout-button">Logout</button>
-    </div>
-  </div>
-
-  <!-- Saved Posts Modal -->
-  <div id="saved-posts-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="saved-posts-title">
-    <div class="modal-content">
-      <span class="close-button" id="close-saved-posts">&times;</span>
-      <h2 id="saved-posts-title">Your Saved Posts</h2>
-      
-      <!-- Search Bar -->
-      <div class="search-bar">
-        <input type="text" id="search-posts" placeholder="Search posts..." aria-label="Search Posts">
-        <button id="search-button" aria-label="Search"><i class="fas fa-search"></i></button>
-      </div>
-      
-      <!-- Loader Indicator -->
-      <div id="posts-loader" class="loader hidden" aria-label="Loading posts..."></div>
-      
-      <!-- Posts List -->
-      <ul id="saved-posts-list" aria-label="List of Saved Posts"><!-- Dynamic --></ul>
-      
-      <!-- Action Buttons -->
-      <div class="modal-actions">
-        <button id="edit-post" class="action-button" disabled aria-label="Edit Post">
-          <i class="fas fa-edit"></i> Edit Post
-        </button>
-        <button id="schedule-post" class="action-button" disabled aria-label="Schedule Post">
-          <i class="fas fa-calendar-alt"></i> Schedule Post
-        </button>
-        <button id="delete-post" class="action-button" disabled aria-label="Delete Post">
-          <i class="fas fa-trash-alt"></i> Delete Post
-        </button>
-      </div>
-
-      <!-- Confirmation Modal for Deletion -->
-      <div id="delete-confirmation-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="delete-confirmation-title">
-        <div class="modal-content">
-          <span class="close-button" id="close-delete-confirmation">&times;</span>
-          <h2 id="delete-confirmation-title">Confirm Deletion</h2>
-          <p>Are you sure you want to delete this post?</p>
-          <div class="modal-actions">
-            <button id="confirm-delete" class="action-button confirm" aria-label="Confirm Delete">Yes, Delete</button>
-            <button id="cancel-delete" class="action-button cancel" aria-label="Cancel Delete">Cancel</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Sidebar Navigation -->
@@ -148,6 +87,9 @@
       <i class="fas fa-chevron-left"></i>
     </button>
   </nav>
+
+  <!-- Placeholder for dynamic modals -->
+  <div id="modal-container"></div>
 
   <!-- Same renderer.js included here -->
   <script src="../indexRenderer.js"></script>

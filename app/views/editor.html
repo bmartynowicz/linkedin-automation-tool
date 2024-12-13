@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Editor</title>
 
-  <!-- Styles for Editor -->
+  <!-- Global and Editor Styles -->
   <link rel="stylesheet" href="../../assets/styles.css">
   <link rel="stylesheet" href="../../assets/editor.css">
 
-  <!-- Quill CSS -->
-  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
+  <!-- Quill Editor and Emoji Plugin -->
+  <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.css" />
 
   <!-- Font Awesome -->
@@ -21,12 +21,15 @@
     referrerpolicy="no-referrer"
   />
 
-  <!-- Flatpickr CSS -->
+  <!-- Flatpickr for Date/Time Selection -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body>
+  <header>
+    <h1>Content Editor</h1>
+  </header>
 
-  <div id="content-editor">
+  <main id="content-editor">
     <!-- Quill Toolbar -->
     <div id="toolbar" class="q1-toolbar">
       <span class="ql-formats">
@@ -59,8 +62,9 @@
 
     <!-- Editor Container -->
     <div id="editor-container">
-      <input type="text" id="post-title" class="post-title-input" placeholder="Enter Post Title" aria-label="Post Title">
-      <div id="editor" class="q1-container q1-editor"></div>
+      <input type="text" id="post-title" class="post-title-input" placeholder="Enter Post Title" aria-label="Post Title" />
+      <div id="editor" class="q1-container q1-editor" aria-label="Content Editor"></div>
+
       <!-- Editor Buttons -->
       <div class="editor-buttons">
         <button id="create-new-post-editor" class="editor-action-button" aria-label="Create New Post">
@@ -77,17 +81,17 @@
         </button>
       </div>
     </div>
-  </div>
+  </main>
 
-  <!-- Suggestion Box for AI-Enhanced Writing Assistance -->
-  <div id="suggestion-box" aria-live="polite">
+  <!-- Suggestion Box -->
+  <div id="suggestion-box" class="hidden" aria-live="polite" role="dialog" aria-labelledby="suggestion-title">
     <button id="close-suggestion-box" class="close-button" aria-label="Close Suggestion Box">
       <i class="fas fa-times"></i>
     </button>
     <div class="suggestion-content">
       <i class="fas fa-lightbulb suggestion-icon"></i>
       <div>
-        <h3 class="suggestion-title">AI Suggestion</h3>
+        <h3 id="suggestion-title" class="suggestion-title">AI Suggestion</h3>
         <p id="suggestion-text"></p>
       </div>
     </div>
@@ -97,14 +101,12 @@
     </div>
   </div>
 
-  <!-- Quill JS -->
+  <!-- External Scripts -->
   <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
-  <!-- Quill Emoji JS -->
   <script src="https://cdn.jsdelivr.net/npm/quill-emoji@0.1.7/dist/quill-emoji.min.js"></script>
-  <!-- Flatpickr JS -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-  <!-- Load the same renderer.js used by index.html -->
+  <!-- Renderer Script -->
   <script src="../editorRenderer.js"></script>
 </body>
 </html>

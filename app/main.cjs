@@ -49,6 +49,8 @@ function createWindow() {
     console.error('Error loading index.html:', err);
   });
 
+  mainWindow.webContents.openDevTools({ mode: 'detach' });
+
   // Create the BrowserView for content area
   contentView = new BrowserView({
     webPreferences: {
@@ -150,21 +152,6 @@ ipcMain.on('toggle-sidebar', (event, collapsed) => {
   console.log(`Sidebar toggled: ${collapsed ? 'Collapsed' : 'Expanded'}`);
   isSidebarCollapsed = collapsed; // Update sidebar state
   updateContentBounds(); // Recalculate bounds
-});
-
-// Start the Electron app
-app.whenReady().then(() => {
-  console.log("App is ready, creating window...");
-  createWindow();
-
-  // Start the backend server
-  startServer();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
 });
 
 // Get the current user and their preferences

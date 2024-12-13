@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Modal</title>
+  <!-- Include Modal Styles -->
+  <link rel="stylesheet" href="../../assets/editor.css">
+  <link rel="stylesheet" href="../../assets/styles.css">
+  <link rel="stylesheet" href="../../assets/analytics.css">
+  <link rel="stylesheet" href="../../assets/dashboard.css">
+  <link rel="stylesheet" href="../../assets/settings.css">
+</head>
+<body>
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+    <div class="modal-content">
+      <span class="close-button" id="close-profile">&times;</span>
+      <h2 id="profile-title">Your Profile</h2>
+      <div class="profile-info">
+        <img id="profile-picture" src="../../assets/default-profile.png" alt="Profile Picture">
+        <p id="username">Username</p>
+      </div>
+      <button id="linkedin-login-button" class="editor-action-button" aria-label="Login with LinkedIn">
+        <i class="fab fa-linkedin"></i> Login with LinkedIn
+      </button>
+      <button id="logout-button">Logout</button>
+    </div>
+  </div>
+</body>
+</html>
