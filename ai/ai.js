@@ -1,14 +1,8 @@
 const { OpenAI } = require('openai'); // Use require for CommonJS
 const dotenv = require('dotenv');
+const { getUserPreferences } = require('../services/usersService'); // Import preferences service
 
 dotenv.config(); // Load environment variables
-
-/**
- * AI Module for fetching suggestions using OpenAI's API.
- * 
- * This module interfaces with OpenAI's API to generate AI-powered suggestions
- * for LinkedIn posts, enhancing clarity, engagement, and professionalism.
- */
 
 // Create a new OpenAI client instance
 const openai = new OpenAI({
@@ -16,38 +10,57 @@ const openai = new OpenAI({
 });
 
 /**
- * Fetches AI suggestions based on the provided prompt and options.
+ * Fetches AI suggestions based on the provided prompt and user preferences.
  * 
  * @param {string} prompt - The text input from the user.
- * @param {Object} options - Additional options such as tone, max_tokens, etc.
+ * @param {number} userId - The ID of the user making the request.
+ * @param {Object} options - Additional options such as max_tokens, temperature, etc.
  * @returns {Promise<string>} - The AI-generated suggestion or an empty string if an error occurs.
  */
-async function getAISuggestions(prompt, options = {}) {
+async function getAISuggestions(prompt, userId, options = {}) {
   // Validate the prompt
   if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
     console.error('Invalid prompt provided to getAISuggestions.');
     return '';
   }
 
-  // Destructure options with defaults
-  const {
-    max_tokens = 150,
-    temperature = 0.7,
-    tone = 'professional',
-  } = options;
-
-  // Enhance the prompt with more context for better AI suggestions
-  const enhancedPrompt = `
-  You are assisting a LinkedIn user in ${userContext.industry} who focuses on ${userContext.content_focus}.
-  They prefer posts with a ${userContext.tone} tone. Based on their recent activity, posts about ${userContext.topics} perform best.
-  Optimize the following post for maximum engagement:
-
-  "${prompt}"
-
-  Provide a professional and engaging revision with tailored hashtags and a concise CTA.
-  `;
-
   try {
+    // Fetch user preferences
+    const userPreferences = await getUserPreferences(userId);
+    console.log('Processing AI suggestion for userId:', userId);
+
+    // Destructure preferences with fallback defaults
+    const {
+      tone = 'professional',
+      writing_style = 'brief',
+      engagement_focus = 'comments',
+      vocabulary_level = 'simplified',
+      content_type = 'linkedin-post',
+      content_perspective = 'first-person',
+      emphasis_tags = '',
+    } = userPreferences;
+
+    // Build the enhanced prompt using user preferences
+    const enhancedPrompt = `
+    You are assisting a LinkedIn user who focuses on ${content_type}.
+    They prefer a ${tone} tone with a ${writing_style} style.
+    Their engagement goal is ${engagement_focus}, using a ${vocabulary_level} vocabulary and ${content_perspective} perspective.
+    Emphasize the following tags where relevant: ${emphasis_tags}.
+    Optimize the following post for maximum engagement:
+
+    "${prompt}"
+
+    Provide a professional and engaging revision with tailored hashtags and a concise CTA.
+    `;
+
+    console.log('Enhanced Prompt:', enhancedPrompt); // Debugging log
+
+    // Destructure options with defaults
+    const {
+      max_tokens = 150,
+      temperature = 0.7,
+    } = options;
+
     // Make a request to OpenAI's Chat Completion API
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL,

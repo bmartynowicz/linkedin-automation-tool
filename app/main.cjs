@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
-const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../services/usersService.js');
+const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 const db = require('../database/database');
 const { postToLinkedIn, scheduleExistingPosts ,performNonAPIFunctionality } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
@@ -134,14 +134,36 @@ app.on('before-quit', () => {
 // ======= IPC Handlers =======
 
 // Handle AI Suggestion requests from renderer process
-ipcMain.handle('get-ai-suggestions', async (event, prompt) => {
+ipcMain.handle('get-ai-suggestions', async (event, { prompt, userId }) => {
   try {
-    console.log('Processing AI suggestion for:', prompt);
-    const suggestion = await getAISuggestions(prompt);
+    console.log(`Processing AI suggestion for userId: ${userId}, prompt: ${prompt}`);
+    const suggestion = await getAISuggestions(prompt, userId);
     return suggestion;
   } catch (error) {
     console.error('Error fetching AI suggestions:', error);
     throw error;
+  }
+});
+
+// Handle Save Settings on Settings Page
+ipcMain.handle('saveSettings', async (event, settingsData) => {
+  try {
+    await Database.saveSettings(settingsData); // Save to your database
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save settings:', error);
+    return { success: false, message: error.message };
+  }
+});
+
+// Handle fetching the current settings
+ipcMain.handle('fetchSettings', async () => {
+  try {
+    const settings = await Database.getSettings(); // Retrieve from your database
+    return { success: true, data: settings };
+  } catch (error) {
+    console.error('Failed to fetch settings:', error);
+    return { success: false, message: error.message };
   }
 });
 
@@ -195,6 +217,38 @@ ipcMain.handle('fetch-current-user', async () => {
   } catch (error) {
     console.error('Error fetching current user:', error.message);
     throw error;
+  }
+});
+
+// Get the current user and their preferences
+ipcMain.handle('get-current-user-with-preferences', async () => {
+  try {
+    const user = await getCurrentUserWithPreferences();
+    console.log('Fetched user with preferences:', user); // Debug log
+    return user;
+  } catch (error) {
+    console.error('Error fetching user with preferences:', error);
+    throw error;
+  }
+});
+
+// Handler for saving user settings
+ipcMain.handle('save-settings', async (event, settingsData) => {
+  console.log('Received save-settings IPC with:', settingsData); // Log 6
+
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('User not found.');
+
+    console.log('Saving settings for user:', user); // Log 7
+
+    await updateUserPreferences(user.id, settingsData);
+
+    console.log('Settings saved successfully:', settingsData); // Log 8
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    return { success: false, error: error.message };
   }
 });
 

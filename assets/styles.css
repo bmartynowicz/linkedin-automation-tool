@@ -77,6 +77,14 @@ header h1 {
   font-size: 0.7rem;
 }
 
+#main-content {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px); /* Full height minus header */
+  margin-top: 60px; /* Allow for fixed header */
+  overflow: hidden; /* Prevent extra scrolling */
+}
+
 /* ======= Sidebar Styles ======= */
 #sidebar {
   position: fixed;
@@ -159,14 +167,12 @@ header h1 {
 
 /* ======= Toolbar Styles ======= */
 #toolbar {
-  position: fixed;
-  top: 60px; /* Below the header */
-  left: 250px; /* Next to the sidebar */
-  right: 0;
-  background-color: #f0f0f0;
-  z-index: 950; /* Below header, above content */
+  position: sticky; /* Sticks within the content editor */
+  top: 0; /* Adjust to avoid overlap with the header */
+  z-index: 950; /* Keep it above other elements */
+  background-color: #f0f0f0; /* Ensure it remains visible */
   padding: 10px;
-  transition: left 0.3s ease; /* Add transition for smooth movement */
+  border-bottom: 1px solid #e0e0e0; /* Add a separator */
 }
 
 #sidebar.collapsed + #toolbar {
@@ -177,17 +183,163 @@ header h1 {
   position: relative; /* For positioning the emoji picker */
 }
 
-/* ======= Editor Container Styles ======= */
-#editor-container {
+/* ======= Settings Page Styles ======= */
+#settings-page {
+  margin-left: 250px; /* Default width of the sidebar */
+  margin-top: 60px; /* Below the header */
+  padding: 20px;
+  transition: margin-left 0.3s ease; /* Smooth adjustment when sidebar collapses */
+  background-color: #ffffff;
+  height: calc(100vh - 60px); /* Full height minus header */
+  overflow-y: auto; /* Enable scrolling for content overflow */
+}
+
+body.sidebar-collapsed #settings-page {
+  margin-left: 60px; /* Adjust when sidebar is collapsed */
+}
+
+#settings-container {
+  width: 80%;
+  max-width: 900px;
+  background: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 20px 30px;
+  border-radius: 10px;
+  overflow-y: auto;
+  margin: 20px auto;
+  text-align: left;
+}
+
+section {
   display: flex;
   flex-direction: column;
-  margin-left: 250px; /* Width of the sidebar */
-  margin-top: 120px; /* Header (60px) + Toolbar (60px) */
-  padding: 20px;
-  height: calc(100vh - 120px); /* Viewport height minus header and toolbar */
+  gap: 10px;
+  margin-bottom: 20px; /* Increase space between sections */
+  padding: 10px; /* Add padding for separation */
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px #ddd;
+}
+
+section:last-of-type {
+  border-bottom: none;
+}
+
+h2 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  text-align: left;
+  color: #444;
+}
+
+label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+label input,
+label select,
+label button,
+label input[type="range"],
+label input[type="checkbox"] {
+  margin-top: 10px;
+  font-size: 1em;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: auto;
+  max-width: 80%;
+  margin-bottom: 10px;
+  margin-right: 10px;
+}
+
+/* Button Styles */
+button {
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+#save-settings,
+#restore-defaults {
+  width: auto; /* Adjust width to fit content */
+  margin: 10px 5px; /* Reduced margins for better alignment */
+  font-size: 0.9rem; /* Adjust button font size */
+}
+
+/* Improve Button Alignment */
+#settings-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px; /* Consistent gap between elements */
+}
+
+button[type="submit"] {
+  align-self: flex-start; /* Align submit button to the start */
+}
+
+input[type="checkbox"] {
+  margin: 0 5px;
+  width: auto;
+}
+
+input[type="text"] {
+  width: 100%; /* Full width for text inputs */
+  margin-top: 10px; /* Add spacing */
+}
+
+#save-settings,
+#restore-defaults {
+  width: 40%;
+  margin: 15px 5%;
+  font-size: 1em;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+  display: inline-block;
+}
+
+#save-settings:hover,
+#restore-defaults:hover {
+  background-color: #218838;
+}
+
+#content-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Take full available height of #main-content */
+  margin-left: 250px; /* Account for sidebar width */
   background-color: #ffffff;
-  z-index: 800;
-  transition: margin-left 0.3s ease;
+  overflow: hidden; /* Prevent unnecessary scrolling */
+  box-sizing: border-box;
+}
+
+body.sidebar-collapsed #content-editor {
+  margin-left: 60px; /* Adjust for collapsed sidebar */
+}
+
+/* ======= Editor Container Styles ======= */
+#editor-container {
+  flex: 1; /* Take up all remaining space in #content-editor */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* Scroll content if it overflows */
+  background-color: #ffffff;
+  padding: 10px; /* Add padding for better appearance */
 }
 
 /* Override Quill editor padding */
@@ -223,11 +375,21 @@ header h1 {
 }
 
 .editor-buttons {
-  flex: none;
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  padding: 10px;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 10px;
+  z-index: 10;
+  border-top: 1px solid #e0e0e0; /* Add a separator */
+}
+
+.editor-buttons button {
+  flex: 1 0 auto; /* Ensure buttons shrink and grow properly */
+  max-width: 200px; /* Limit the button size to avoid oversized buttons */
+  padding: 10px 15px; /* Add padding for a better appearance */
 }
 
 /* Style for the editor action buttons */
@@ -284,6 +446,10 @@ body.sidebar-collapsed #toolbar {
   padding: 15px;
   box-sizing: border-box;
   overflow: auto;
+}
+
+body.sidebar-collapsed #settings-page {
+  margin-left: 60px; /* Adjust when sidebar is collapsed */
 }
 
 /* Style for the manual suggest button */
@@ -496,25 +662,27 @@ body.sidebar-collapsed #toolbar {
 
 /* ======= Modal Styles ======= */
 .modal {
-  position: fixed;
+  position: fixed; /* Ensure modals are fixed to the viewport */
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: none;
+  background-color: rgba(0, 0, 0, 0.5); /* Add a translucent backdrop */
+  display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1300; /* Above dropdowns */
+  z-index: 1300; /* Ensure modals are above all other content */
+  overflow: hidden; /* Prevent scrolling within the modal */
 }
 
 .modal-content {
   background-color: #fefefe;
   padding: 20px;
   border-radius: 8px;
-  width: 80%; /* Could be more or less, depending on screen size */
+  width: 80%;
   max-width: 600px;
-  margin: 10% auto; /* 10% from the top and centered */
+  max-height: 80%; /* Limit modal content height */
+  overflow-y: auto; /* Enable scrolling within the modal content */
   position: relative;
   border: 1px solid #888;
 }
@@ -762,6 +930,39 @@ body.sidebar-collapsed #toolbar {
     max-width: 400px;
     margin: 0;
     border-radius: 8px;
+  }
+  
+  #settings-container {
+    width: 90%;
+    padding: 10px;
+  }
+  
+  section {
+    margin-bottom: 20px; /* Reduce section spacing */
+  }
+
+  label input,
+  label select,
+  label button,
+  input[type="range"] {
+    font-size: 0.9em;
+  }
+
+  h1 {
+    font-size: 1.2em;
+  }
+
+  h2 {
+    font-size: 1.4em; /* Slightly smaller headings */
+  }
+
+  #settings-page {
+    margin-left: 50px;
+  }
+
+  #settings-page {
+    margin-left: 50px; /* Adjust for smaller collapsed sidebar */
+    padding: 10px; /* Reduce padding for smaller screens */
   }
 }
 

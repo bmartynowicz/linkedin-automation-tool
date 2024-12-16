@@ -118,9 +118,24 @@ function initializeDatabase() {
     db.run(`
       CREATE TABLE IF NOT EXISTS user_preferences (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
+        user_id INTEGER NOT NULL,
         theme TEXT DEFAULT 'light',
-        notification_settings TEXT,
+        notification_settings TEXT DEFAULT '{}', -- JSON string for notification settings
+        language TEXT DEFAULT 'en',
+        data_sharing BOOLEAN DEFAULT 0,
+        auto_logout BOOLEAN DEFAULT 0,
+        save_session BOOLEAN DEFAULT 0,
+        font_size INTEGER DEFAULT 16,
+        text_to_speech BOOLEAN DEFAULT 0,
+        tone TEXT DEFAULT 'professional',
+        writing_style TEXT DEFAULT 'brief',
+        engagement_focus TEXT DEFAULT 'comments',
+        vocabulary_level TEXT DEFAULT 'simplified',
+        content_type TEXT DEFAULT 'linkedin-post',
+        content_perspective TEXT DEFAULT 'first-person',
+        emphasis_tags TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);

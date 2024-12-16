@@ -12,7 +12,7 @@ async function findUserByLinkedInId(linkedin_id) {
         resolve(row);
       });
     });
-  }
+}
 
 /**
  * Finds or creates a user based on LinkedIn authentication data.
@@ -34,7 +34,7 @@ async function findOrCreateUser(userID, name, email, accessToken, refreshToken, 
       // Create new user
       return createUser(userID, name, email, accessToken, refreshToken, expiresIn);
     }
-  }
+}
 
 // Create a new user
 async function createUser(userID, name, email, accessToken, refreshToken, expiresIn) {
@@ -56,7 +56,7 @@ async function createUser(userID, name, email, accessToken, refreshToken, expire
         }
       );
     });
-  }
+}
 
 /**
  * Fetches the current user based on the session or single-user setup.
@@ -72,7 +72,57 @@ async function getCurrentUser() {
         resolve(row || null);
       });
     });
+}
+
+async function getCurrentUserWithPreferences() {
+  try {
+    // Fetch the current user
+    const user = await getCurrentUser();
+    if (!user) throw new Error('No user found.');
+
+    // Fetch user preferences
+    const preferences = await getUserPreferences(user.id);
+
+    // Apply fallback defaults for missing preferences
+    const defaultPreferences = {
+      theme: 'light',
+      tone: 'professional',
+      writing_style: 'brief',
+      engagement_focus: 'comments',
+      vocabulary_level: 'simplified',
+      content_type: 'linkedin-post',
+      content_perspective: 'first-person',
+      emphasis_tags: '',
+      notification_settings: {
+        suggestion_readiness: false,
+        engagement_tips: false,
+        system_updates: false,
+        frequency: 'realtime',
+      },
+    };
+
+    // Combine preferences with defaults (deep merge for notification_settings)
+    const combinedPreferences = {
+      ...defaultPreferences,
+      ...preferences,
+      notification_settings: {
+        ...defaultPreferences.notification_settings,
+        ...preferences.notification_settings,
+      },
+    };
+
+    console.log('Combined preferences:', combinedPreferences);
+
+    return {
+      ...user,
+      preferences: combinedPreferences,
+    };
+  } catch (error) {
+    console.error('Error in getCurrentUserWithPreferences:', error.message);
+    throw error;
   }
+}
+
 
 // Update user data
 async function updateUser(userID, name, email, accessToken, refreshToken, expiresIn) {
@@ -89,7 +139,115 @@ async function updateUser(userID, name, email, accessToken, refreshToken, expire
         }
       );
     });
-  }
+}
+
+/**
+ * Fetches user preferences for the current user.
+ * @param {number} userId - The user's database ID.
+ * @returns {Promise<Object>} - The user's preferences.
+ */
+async function getUserPreferences(userId) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT 
+        theme, notification_settings, tone, writing_style, engagement_focus, vocabulary_level, 
+        content_type, content_perspective, emphasis_tags 
+       FROM user_preferences WHERE user_id = ?`,
+      [userId],
+      (err, row) => {
+        if (err) {
+          console.error('Error fetching user preferences:', err.message);
+          return reject(err);
+        }
+
+        if (!row) {
+          console.warn('No preferences found for userId:', userId);
+          resolve(null);
+        } else {
+          // Parse JSON fields for notification_settings
+          try {
+            row.notification_settings = JSON.parse(row.notification_settings || '{}');
+          } catch (error) {
+            console.error('Error parsing notification_settings JSON:', error.message);
+            row.notification_settings = {};
+          }
+          resolve(row);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * Updates user preferences for the current user.
+ * @param {number} userId - The user's database ID.
+ * @param {Object} preferences - The preferences object to update.
+ * @returns {Promise<void>}
+ */
+async function updateUserPreferences(userId, preferences) {
+  const defaults = {
+    theme: 'light',
+    notification_settings: {
+      suggestion_readiness: false,
+      engagement_tips: false,
+      system_updates: false,
+      frequency: 'realtime',
+    },
+    language: 'en',
+    data_sharing: false,
+    auto_logout: false,
+    save_session: false,
+    font_size: 16,
+    text_to_speech: false,
+    tone: 'professional',
+    writing_style: 'brief',
+    engagement_focus: 'comments',
+    vocabulary_level: 'simplified',
+    content_type: 'linkedin-post',
+    content_perspective: 'first-person',
+    emphasis_tags: '',
+  };
+
+  // Merge defaults with provided preferences
+  const mergedPreferences = { ...defaults, ...preferences };
+  const notificationSettings = JSON.stringify(mergedPreferences.notification_settings); // Serialize notifications to JSON
+
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE user_preferences
+       SET theme = ?, notification_settings = ?, language = ?, data_sharing = ?, auto_logout = ?, save_session = ?, 
+           font_size = ?, text_to_speech = ?, tone = ?, writing_style = ?, engagement_focus = ?, vocabulary_level = ?, 
+           content_type = ?, content_perspective = ?, emphasis_tags = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = ?`,
+      [
+        mergedPreferences.theme,
+        notificationSettings, // Save JSON string
+        mergedPreferences.language,
+        mergedPreferences.data_sharing,
+        mergedPreferences.auto_logout,
+        mergedPreferences.save_session,
+        mergedPreferences.font_size,
+        mergedPreferences.text_to_speech,
+        mergedPreferences.tone,
+        mergedPreferences.writing_style,
+        mergedPreferences.engagement_focus,
+        mergedPreferences.vocabulary_level,
+        mergedPreferences.content_type,
+        mergedPreferences.content_perspective,
+        mergedPreferences.emphasis_tags,
+        userId,
+      ],
+      function (err) {
+        if (err) {
+          console.error('Error updating user preferences:', err.message);
+          return reject(err);
+        }
+        console.log('Preferences updated successfully for user ID:', userId);
+        resolve();
+      }
+    );
+  });
+}
 
 /**
  * Logic for refreshing tokens. LinkedIn's API provides an endpoint to refresh tokens.
@@ -122,10 +280,13 @@ async function refreshAccessToken(linkedin_id) {
     const { access_token, expires_in: newExpiresIn } = response.data;
     await updateUser(linkedin_id, user.name, user.email, access_token, refresh_token, newExpiresIn);
     return access_token;
-  }
+}
 
 module.exports = {
   findOrCreateUser,
   getCurrentUser,
+  getCurrentUserWithPreferences,
   refreshAccessToken,
+  getUserPreferences,
+  updateUserPreferences,
 };

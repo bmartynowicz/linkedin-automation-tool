@@ -11,7 +11,8 @@ const allowedChannels = [
   'linkedin-auth-failure',
   'linkedin-auth-closed',
   'update-user-data',
-  'savePost'
+  'savePost',
+  'saveSettings',
   // Add any other event channels you intend to expose
 ];
 
@@ -73,9 +74,9 @@ contextBridge.exposeInMainWorld('api', {
       console.warn('Unauthorized attempt to send on channel: open-linkedin-auth-window');
     }
   },
-  getAISuggestions: (prompt) => {
-    console.log('Invoking "get-ai-suggestions" with prompt:', prompt);
-    return ipcRenderer.invoke('get-ai-suggestions', prompt);
+  getAISuggestions: ({ prompt, userId }) => {
+    console.log('Invoking "get-ai-suggestions" with prompt and userId:', prompt, userId);
+    return ipcRenderer.invoke('get-ai-suggestions', { prompt, userId });
   },
   fetchNotifications: () => {
     console.log('Invoking "fetch-notifications"');
@@ -84,6 +85,11 @@ contextBridge.exposeInMainWorld('api', {
   fetchUserData: () => {
     console.log('Invoking "fetch-user-data"');
     return ipcRenderer.invoke('fetch-user-data');
+  },
+  // Expose IPC invoke and send methods securely
+  getCurrentUserWithPreferences: () => {
+    console.log('Invoking "get-current-user-with-preferences"');
+    return ipcRenderer.invoke('get-current-user-with-preferences');
   },
   searchPosts: (query) => {
     console.log('Invoking "search-posts" with query:', query);
@@ -116,5 +122,9 @@ contextBridge.exposeInMainWorld('api', {
   sendTestMessage: () => {
     console.log('Sending "test-message" to main process');
     ipcRenderer.send('test-message');
+  },
+  saveSettings: (settingsData) => {
+    console.log('Invoking saveSettings with data:', settingsData);
+    return ipcRenderer.invoke('save-settings', settingsData);
   },
 });

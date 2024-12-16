@@ -10,65 +10,72 @@ document.addEventListener('DOMContentLoaded', () => {
   let suggestionCooldown = false;
   let editingPostId = null;
 
-    // ======= Sidebar Toggle =======
-    const toggleMenuButton = document.getElementById('toggle-menu');
-    const sidebar = document.getElementById('sidebar');
+  // ======= Content Editor =======
+  const contentEditor = document.getElementById('content-editor');
+  const contentCreationButton = document.querySelector('#sidebar .nav-item a[href="#content-creation"]');
 
-    // ======= Notifications =======
-    const notificationsButton = document.getElementById('notifications');
-    const notificationsDropdown = document.getElementById('notifications-dropdown');
-    const notificationCount = document.getElementById('notification-count');
-    const notificationsList = document.getElementById('notifications-list');
+  // ======= Sidebar Toggle =======
+  const toggleMenuButton = document.getElementById('toggle-menu');
+  const sidebar = document.getElementById('sidebar');
 
-    // ======= Profile Modal =======
-    const profileButton = document.getElementById('profile');
-    const profileModal = document.getElementById('profile-modal');
-    const closeProfileButton = document.getElementById('close-profile');
-    const usernameDisplay = document.getElementById('username');
-    const profilePicture = document.getElementById('profile-picture');
-    const linkedinLoginButton = document.getElementById('linkedin-login-button');
+  // ======= Notifications =======
+  const notificationsButton = document.getElementById('notifications');
+  const notificationsDropdown = document.getElementById('notifications-dropdown');
+  const notificationCount = document.getElementById('notification-count');
+  const notificationsList = document.getElementById('notifications-list');
 
-    // ======= Settings Modal =======
-    const settingsButton = document.getElementById('settings');
-    const settingsModal = document.getElementById('settings-modal');
-    const closeSettingsButton = document.getElementById('close-settings');
-    const settingsForm = document.getElementById('settings-form');
+  // ======= Profile Modal =======
+  const profileButton = document.getElementById('profile');
+  const profileModal = document.getElementById('profile-modal');
+  const closeProfileButton = document.getElementById('close-profile');
+  const usernameDisplay = document.getElementById('username');
+  const profilePicture = document.getElementById('profile-picture');
+  const linkedinLoginButton = document.getElementById('linkedin-login-button');
 
-    // ======= Saved Posts Modal =======
-    const savedPostsModal = document.getElementById('saved-posts-modal');
-    const openSavedPostsButton = document.getElementById('open-saved-posts');
-    const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
-    const savedPostsList = document.getElementById('saved-posts-list');
-    const searchPostsInput = document.getElementById('search-posts');
-    const searchButton = document.getElementById('search-button');
-    const editPostButton = document.getElementById('edit-post');
-    const schedulePostButton = document.getElementById('schedule-post');
-    const deletePostButton = document.getElementById('delete-post');
-    const deleteConfirmationModal = document.getElementById('delete-confirmation-modal');
-    const confirmDeleteButton = document.getElementById('confirm-delete');
-    const cancelDeleteButton = document.getElementById('cancel-delete');
-    const closeDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
+  // ======= Settings Page =======
+  const settingsButton = document.querySelector('#sidebar .nav-item a[href="#settings"]');
+  const settingsPage = document.getElementById('settings-page');
+  const saveSettingsButton = document.getElementById('save-settings');
+  const settingsForm = document.getElementById('settings-form');
+  const themeSelect = document.getElementById('theme-select');
+  const toneSelect = document.getElementById('tone-select');
+  const reauthenticateButton = document.getElementById('reauthenticate-linkedin');
 
-    // ======= Save Post Button Functionality =======
-    const savePostButton = document.getElementById('save-post');
-    const postTitleInput = document.getElementById('post-title');
 
-    // ======== Suggestion Box Button Functionality =========
-    // Keywords or phrases to trigger suggestions
-    const suggestionKeywords = ['help', 'need', 'assist', 'improve', 'suggest', 'idea'];
-    //Delays to prevent overwhelming the user with suggestions
-    const TYPING_PAUSE_DURATION = 3000; // 3 seconds
-    const SUGGESTION_COOLDOWN_DURATION = 10000; // 10 seconds cooldown between suggestions
+  // ======= Saved Posts Modal =======
+  const savedPostsModal = document.getElementById('saved-posts-modal');
+  const openSavedPostsButton = document.getElementById('open-saved-posts');
+  const closeSavedPostsButton = savedPostsModal.querySelector('.close-button');
+  const savedPostsList = document.getElementById('saved-posts-list');
+  const searchPostsInput = document.getElementById('search-posts');
+  const searchButton = document.getElementById('search-button');
+  const editPostButton = document.getElementById('edit-post');
+  const schedulePostButton = document.getElementById('schedule-post');
+  const deletePostButton = document.getElementById('delete-post');
+  const deleteConfirmationModal = document.getElementById('delete-confirmation-modal');
+  const confirmDeleteButton = document.getElementById('confirm-delete');
+  const cancelDeleteButton = document.getElementById('cancel-delete');
+  const closeDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
 
-    const manualSuggestButton = document.getElementById('manual-suggest-button');
-    const suggestionBox = document.getElementById('suggestion-box');
-    const suggestionText = document.getElementById('suggestion-text');
-    const acceptButton = document.getElementById('accept-suggestion');
-    const rejectButton = document.getElementById('reject-suggestion');
-    const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
+  // ======= Save Post Button Functionality =======
+  const savePostButton = document.getElementById('save-post');
+  const postTitleInput = document.getElementById('post-title');
 
-    // ======= Emoji Bullet Button =======
-    const emojiBulletButton = document.getElementById('ql-custom-bullet');
+  // ======== Suggestion Box Button Functionality =========
+  // Keywords or phrases to trigger suggestions
+  const suggestionKeywords = ['help', 'need', 'assist', 'improve', 'suggest', 'idea'];
+  //Delays to prevent overwhelming the user with suggestions
+  const TYPING_PAUSE_DURATION = 3000; // 3 seconds
+  const SUGGESTION_COOLDOWN_DURATION = 10000; // 10 seconds cooldown between suggestions
+  const manualSuggestButton = document.getElementById('manual-suggest-button');
+  const suggestionBox = document.getElementById('suggestion-box');
+  const suggestionText = document.getElementById('suggestion-text');
+  const acceptButton = document.getElementById('accept-suggestion');
+  const rejectButton = document.getElementById('reject-suggestion');
+  const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
+
+  // ======= Emoji Bullet Button =======
+  const emojiBulletButton = document.getElementById('ql-custom-bullet');
 
   const debounce = (func, delay) => {
     let timeout;
@@ -83,10 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return element.classList.contains(className);
   }
 
-  const applyTheme = (theme) => {
+  // Apply Theme Dynamically
+  function applyTheme(theme) {
     document.body.classList.toggle('dark-theme', theme === 'dark');
-    console.log(`${theme.charAt(0).toUpperCase() + theme.slice(1)} theme applied.`);
-  };
+    console.log(`Applied ${theme} theme.`);
+  }
 
   function showToast(message) {
     const toastContainer = document.getElementById('toast-container');
@@ -198,18 +206,121 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchUserData();
   }
 
-  if (settingsButton && settingsModal && closeSettingsButton && settingsForm) {
-    settingsButton.addEventListener('click', () => openModal(settingsModal));
-    closeSettingsButton.addEventListener('click', () => closeModal(settingsModal));
-
-    settingsForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const theme = document.getElementById('theme-select').value;
-      applyTheme(theme);
-      closeModal(settingsModal);
+  // Handle Settings Navigation
+  if (settingsButton && contentEditor && settingsPage) {
+    settingsButton.addEventListener('click', () => {
+      try {
+        // Switch to the settings page
+        contentEditor.classList.add('hidden');
+        settingsPage.classList.remove('hidden');
+  
+        // Call loadSettings to populate the settings form
+        loadSettings();
+  
+        console.log('Settings page displayed.');
+      } catch (error) {
+        console.error('Error showing settings page:', error.message);
+      }
     });
   }
 
+  console.log('Settings Form:', settingsForm);
+
+  // Attach Event Listener for Form Submission
+  if (saveSettingsButton) {
+    saveSettingsButton.addEventListener('click', async (e) => {
+      e.preventDefault();
+      console.log('Save Settings button clicked.');
+  
+      // Map of field IDs to preference keys
+      const fieldMapping = {
+        'theme-select': 'theme',
+        'tone-select': 'tone',
+        'suggestion-readiness': 'notification_settings.suggestion_readiness',
+        'engagement-tips': 'notification_settings.engagement_tips',
+        'system-updates': 'notification_settings.system_updates',
+        'notification-frequency': 'notification_settings.frequency',
+        'language': 'language',
+        'data-sharing': 'data_sharing',
+        'auto-logout': 'auto_logout',
+        'save-session': 'save_session',
+        'font-size': 'font_size',
+        'text-to-speech': 'text_to_speech',
+        'writing-style': 'writing_style',
+        'engagement-focus': 'engagement_focus',
+        'vocabulary-level': 'vocabulary_level',
+        'content-type': 'content_type',
+        'content-perspective': 'content_perspective',
+        'emphasis-tags': 'emphasis_tags',
+      };
+  
+      // Collect preferences dynamically
+      const preferences = {};
+      Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
+        const element = document.getElementById(fieldId);
+        if (!element) {
+          console.warn(`Element with ID "${fieldId}" not found.`);
+          return;
+        }
+  
+        const keys = prefKey.split('.');
+        let target = preferences;
+        keys.forEach((key, index) => {
+          if (index === keys.length - 1) {
+            target[key] = element.type === 'checkbox' ? element.checked : element.value.trim();
+          } else {
+            target[key] = target[key] || {};
+            target = target[key];
+          }
+        });
+      });
+  
+      console.log('Preferences to save:', preferences);
+  
+      try {
+        const result = await window.api.saveSettings(preferences);
+        console.log('Result from saveSettings IPC:', result);
+  
+        if (result.success) {
+          showToast('Settings saved successfully!');
+        } else {
+          showToast('Failed to save settings.');
+        }
+      } catch (error) {
+        console.error('Error saving settings:', error.message);
+        showToast('An error occurred while saving settings.');
+      }
+    });
+  }  
+      
+  // Attach Event Listener for LinkedIn Reauthentication
+  if (reauthenticateButton) {
+    reauthenticateButton.addEventListener('click', async () => {
+      try {
+        console.log('Reauthentication button clicked');
+        const result = await window.api.reauthenticateLinkedIn();
+        if (result.success) {
+          showToast('Reauthenticated with LinkedIn successfully.');
+        } else {
+          showToast('Failed to reauthenticate with LinkedIn.');
+        }
+      } catch (error) {
+        console.error('Error during reauthentication:', error.message);
+        showToast('An error occurred during LinkedIn reauthentication.');
+      }
+    });    
+  }
+
+  // Add a handler for returning to the Content Editor
+  if (contentCreationButton) {
+    contentCreationButton.addEventListener('click', () => {
+      // Show content editor and hide settings page
+      settingsPage.classList.add('hidden');
+      contentEditor.classList.remove('hidden');
+    });
+  }
+
+  // Add a handler for managing the save post functionality
   if (openSavedPostsButton && savedPostsModal && closeSavedPostsButton) {
     openSavedPostsButton.addEventListener('click', () => {
       openModal(savedPostsModal);
@@ -665,6 +776,64 @@ if (linkedinLoginButton) {
   console.error('LinkedIn login button not found.');
 }
 
+// Load settings into the UI
+const loadSettings = async () => {
+  try {
+    const user = await window.api.getCurrentUserWithPreferences();
+    console.log('Loaded user with preferences:', user);
+
+    if (!user || !user.preferences) {
+      console.warn('No preferences found for the current user.');
+      return;
+    }
+
+    const { preferences } = user;
+
+    // Map of field IDs to preference keys
+    const fieldMapping = {
+      'theme-select': 'theme',
+      'tone-select': 'tone',
+      'suggestion-readiness': 'notification_settings.suggestion_readiness',
+      'engagement-tips': 'notification_settings.engagement_tips',
+      'system-updates': 'notification_settings.system_updates',
+      'notification-frequency': 'notification_settings.frequency',
+      'language': 'language',
+      'data-sharing': 'data_sharing',
+      'auto-logout': 'auto_logout',
+      'save-session': 'save_session',
+      'font-size': 'font_size',
+      'text-to-speech': 'text_to_speech',
+      'writing-style': 'writing_style',
+      'engagement-focus': 'engagement_focus',
+      'vocabulary-level': 'vocabulary_level',
+      'content-type': 'content_type',
+      'content-perspective': 'content_perspective',
+      'emphasis-tags': 'emphasis_tags',
+    };
+
+    // Populate fields dynamically
+    Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
+      const element = document.getElementById(fieldId);
+      if (!element) {
+        console.warn(`Element with ID "${fieldId}" not found.`);
+        return;
+      }
+
+      const value = prefKey.split('.').reduce((acc, key) => acc?.[key], preferences);
+      if (element.type === 'checkbox') {
+        element.checked = !!value;
+      } else {
+        element.value = value || '';
+      }
+    });
+  } catch (error) {
+    console.error('Error loading settings into UI:', error.message);
+  }
+};
+
+// Ensure settings load when the page is ready
+document.addEventListener('DOMContentLoaded', loadSettings);
+
 // ======= Register the Custom Bullet Format =======
 const Block = Quill.import('blots/block');
 
@@ -696,7 +865,6 @@ CustomBullet.blotName = 'custom-bullet';
 CustomBullet.tagName = 'LI'; // Use list item tag
 Quill.register(CustomBullet, true);
 
-// ======= Initialize the Quill Editor =======
 // ======= Initialize the Quill Editor =======
 if (typeof Quill !== 'undefined') {
   console.log('Quill is available.');
@@ -871,115 +1039,126 @@ if (editorElement) {
   }
 
   // Fetch suggestion and display in suggestion box
-  const fetchSuggestion = async (isManual = false) => {
-    if (isModalOpen) return;
+const fetchSuggestion = async (isManual = false) => {
+  if (isModalOpen) return;
 
-    const userInput = quill.getText().trim();
+  const userInput = quill.getText().trim();
 
-    // If manual request but editor is empty, show a toast and exit
-    if (isManual && userInput.length === 0) {
-      showToast('Please enter some text in the editor.');
-      return;
+  // If manual request but editor is empty, show a toast and exit
+  if (isManual && userInput.length === 0) {
+    showToast('Please enter some text in the editor.');
+    return;
+  }
+
+  // Check if in cooldown period
+  const now = Date.now();
+  if (!isManual && (suggestionCooldown || now - lastSuggestionTime < SUGGESTION_COOLDOWN_DURATION)) {
+    return;
+  }
+
+  try {
+    if (isManual) {
+      // Show loading indicator on the button (optional)
+      manualSuggestButton.disabled = true;
+      manualSuggestButton.classList.add('loading');
     }
 
-    // Check if in cooldown period
-    const now = Date.now();
-    if (!isManual && (suggestionCooldown || now - lastSuggestionTime < SUGGESTION_COOLDOWN_DURATION)) {
-      return;
+    // Get user ID (fetch dynamically if needed)
+    const userId = await window.api.fetchUserData().then((user) => user.id); // Replace with correct user-fetching logic
+
+    if (!userId) {
+      throw new Error('User ID is not available.');
     }
 
-    try {
-      if (isManual) {
-        // Show loading indicator on the button (optional)
-        manualSuggestButton.disabled = true;
-        manualSuggestButton.classList.add('loading');
-      }
+    console.log('Fetching AI suggestions for user ID:', userId);
 
-      const suggestion = await window.api.getAISuggestions(userInput);
-      console.log('Fetched suggestion:', suggestion);
-      if (suggestion) {
-        suggestionText.innerText = suggestion;
-        showSuggestionBox();
-        lastSuggestionTime = now;
-        suggestionCooldown = true;
-        // Reset cooldown after duration
-        setTimeout(() => {
-          suggestionCooldown = false;
-        }, SUGGESTION_COOLDOWN_DURATION);
-      } else {
-        suggestionBox.classList.remove('show');
-        if (isManual) showToast('No suggestion available at this time.');
-      }
-    } catch (error) {
-      console.error('Error fetching AI suggestion:', error);
-      suggestionBox.classList.remove('show');
-      if (isManual) showToast('An error occurred while fetching the suggestion.');
-    } finally {
-      if (isManual) {
-        manualSuggestButton.disabled = false;
-        manualSuggestButton.classList.remove('loading');
-      }
-    }
-  };
+    // Fetch the suggestion
+    const suggestion = await window.api.getAISuggestions({ prompt: userInput, userId });
+    console.log('Fetched suggestion:', suggestion);
 
-  const showSuggestionBox = () => {
-    const range = quill.getSelection();
-    if (!range) return;
-
-    const bounds = quill.getBounds(range.index);
-    const containerRect = quill.container.getBoundingClientRect();
-
-    // Temporarily make the suggestion box visible to get accurate dimensions
-    suggestionBox.style.visibility = 'hidden';
-    suggestionBox.style.display = 'block';
-    const suggestionBoxRect = suggestionBox.getBoundingClientRect();
-    suggestionBox.style.visibility = '';
-    suggestionBox.style.display = '';
-
-    let top, left;
-    const fixedHeaderHeight = 60; // Adjust based on header height
-    const fixedFooterHeight = 0;  // Adjust if footer exists
-
-    const cursorTop = containerRect.top + bounds.bottom;
-    const cursorLeft = containerRect.left + bounds.left;
-
-    const availableSpaceBelow = window.innerHeight - cursorTop - fixedFooterHeight - 10;
-    const availableSpaceAbove = cursorTop - fixedHeaderHeight - 10;
-
-    if (window.innerWidth <= 600) {
-        // Mobile: Use fixed positioning
-        suggestionBox.style.top = null;
-        suggestionBox.style.left = null;
-        suggestionBox.style.transform = null;
-        suggestionBox.style.maxHeight = `${window.innerHeight - fixedHeaderHeight - fixedFooterHeight - 20}px`;
-        suggestionBox.style.overflowY = 'auto';
+    if (suggestion) {
+      suggestionText.innerText = suggestion;
+      showSuggestionBox();
+      lastSuggestionTime = now;
+      suggestionCooldown = true;
+      // Reset cooldown after duration
+      setTimeout(() => {
+        suggestionCooldown = false;
+      }, SUGGESTION_COOLDOWN_DURATION);
     } else {
-        // Calculate dynamic positioning for larger screens
-        if (availableSpaceBelow >= suggestionBoxRect.height || availableSpaceBelow >= availableSpaceAbove) {
-            // Position below the cursor
-            top = cursorTop + 5;
-            suggestionBox.style.maxHeight = `${availableSpaceBelow}px`;
-        } else {
-            // Position above the cursor
-            top = cursorTop - suggestionBoxRect.height - bounds.height - 5;
-            suggestionBox.style.maxHeight = `${availableSpaceAbove}px`;
-        }
+      suggestionBox.classList.remove('show');
+      if (isManual) showToast('No suggestion available at this time.');
+    }
+  } catch (error) {
+    console.error('Error fetching AI suggestion:', error);
+    suggestionBox.classList.remove('show');
+    if (isManual) showToast('An error occurred while fetching the suggestion.');
+  } finally {
+    if (isManual) {
+      manualSuggestButton.disabled = false;
+      manualSuggestButton.classList.remove('loading');
+    }
+  }
+};
 
-        left = cursorLeft + 5;
+const showSuggestionBox = () => {
+  const range = quill.getSelection();
+  if (!range) return;
 
-        // Adjust if suggestion box goes beyond the viewport width
-        if (left + suggestionBoxRect.width > window.innerWidth) {
-            left = window.innerWidth - suggestionBoxRect.width - 10;
-        }
+  const bounds = quill.getBounds(range.index);
+  const containerRect = quill.container.getBoundingClientRect();
 
-        suggestionBox.style.top = `${top}px`;
-        suggestionBox.style.left = `${left}px`;
-        suggestionBox.style.overflowY = 'auto';
+  // Temporarily make the suggestion box visible to get accurate dimensions
+  suggestionBox.style.visibility = 'hidden';
+  suggestionBox.style.display = 'block';
+  const suggestionBoxRect = suggestionBox.getBoundingClientRect();
+  suggestionBox.style.visibility = '';
+  suggestionBox.style.display = '';
+
+  let top, left;
+  const fixedHeaderHeight = 60; // Adjust based on header height
+  const fixedFooterHeight = 0; // Adjust if footer exists
+
+  const cursorTop = containerRect.top + bounds.bottom;
+  const cursorLeft = containerRect.left + bounds.left;
+
+  const availableSpaceBelow = window.innerHeight - cursorTop - fixedFooterHeight - 10;
+  const availableSpaceAbove = cursorTop - fixedHeaderHeight - 10;
+
+  if (window.innerWidth <= 600) {
+    // Mobile: Use fixed positioning
+    suggestionBox.style.top = null;
+    suggestionBox.style.left = null;
+    suggestionBox.style.transform = null;
+    suggestionBox.style.maxHeight = `${window.innerHeight - fixedHeaderHeight - fixedFooterHeight - 20}px`;
+    suggestionBox.style.overflowY = 'auto';
+  } else {
+    // Calculate dynamic positioning for larger screens
+    if (availableSpaceBelow >= suggestionBoxRect.height || availableSpaceBelow >= availableSpaceAbove) {
+      // Position below the cursor
+      top = cursorTop + 5;
+      suggestionBox.style.maxHeight = `${availableSpaceBelow}px`;
+    } else {
+      // Position above the cursor
+      top = cursorTop - suggestionBoxRect.height - bounds.height - 5;
+      suggestionBox.style.maxHeight = `${availableSpaceAbove}px`;
     }
 
-    suggestionBox.classList.add('show');
-  };     
-  
+    left = cursorLeft + 5;
+
+    // Adjust if suggestion box goes beyond the viewport width
+    if (left + suggestionBoxRect.width > window.innerWidth) {
+      left = window.innerWidth - suggestionBoxRect.width - 10;
+    }
+
+    suggestionBox.style.top = `${top}px`;
+    suggestionBox.style.left = `${left}px`;
+    suggestionBox.style.overflowY = 'auto';
+  }
+
+  suggestionBox.classList.add('show');
+};
+
 // Event listener for the manual suggest button
 if (manualSuggestButton) {
   manualSuggestButton.addEventListener('click', () => {

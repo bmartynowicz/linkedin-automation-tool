@@ -78,7 +78,64 @@ function updateUserAccessToken(id, accessToken) {
   });
 }
 
+/**
+ * Updates user preferences in the database.
+ * @param {number} userId - The user's database ID.
+ * @param {Object} preferences - The user's preferences (e.g., theme, notifications).
+ * @returns {Promise<void>}
+ */
+function updateUserPreferences(userId, preferences) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      INSERT INTO user_preferences (user_id, theme, tone, notification_settings)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(user_id)
+      DO UPDATE SET
+        theme = excluded.theme,
+        tone = excluded.tone,
+        notification_settings = excluded.notification_settings
+    `;
+    db.run(
+      query,
+      [userId, preferences.theme, preferences.tone, JSON.stringify(preferences.notifications || {})],
+      function (err) {
+        if (err) {
+          console.error('Error updating user preferences:', err.message);
+          return reject(err);
+        }
+        resolve();
+      }
+    );
+  });
+}
+
+/**
+ * Retrieves user preferences by user ID.
+ * @param {number} userId - The user's database ID.
+ * @returns {Promise<Object>} - The user's preferences.
+ */
+function getUserPreferences(userId) {
+  return new Promise((resolve, reject) => {
+    const query = `SELECT theme, notification_settings, tone FROM user_preferences WHERE user_id = ?`; // Correct column names
+    console.log('Executing query:', query, 'with userId:', userId); // Debugging log
+    db.get(query, [userId], (err, row) => {
+      if (err) {
+        console.error('Error fetching user preferences:', err.message);
+        return reject(err);
+      }
+      if (row) {
+        row.notification_settings = JSON.parse(row.notification_settings || '{}');
+      }
+      resolve(row);
+    });
+  });
+}
+
 module.exports = {
   findUserByLinkedInId,
   createUser,
+  findUserById,
+  updateUserAccessToken,
+  updateUserPreferences,
+  getUserPreferences
 };
