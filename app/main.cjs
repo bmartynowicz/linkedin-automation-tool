@@ -7,7 +7,7 @@ const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
 const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 const db = require('../database/database');
-const { postToLinkedIn, scheduleExistingPosts ,performNonAPIFunctionality } = require('../automation/linkedin');
+const { postToLinkedIn } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
@@ -169,17 +169,30 @@ ipcMain.handle('fetchSettings', async () => {
 
 // Handle LinkedIn post requests
 ipcMain.on('post-to-linkedin', async (event, content) => {
-  console.log("Received LinkedIn post request with content:", content);
+  console.log('Received LinkedIn post request with content:', content);
+
   try {
-    const result = await postToLinkedIn(content);
+    // Fetch user credentials from the database
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !currentUser.access_token || !currentUser.linkedin_id) {
+      throw new Error('LinkedIn user is not authenticated.');
+    }
+
+    // Pass content, access token, and LinkedIn ID
+    const result = await postToLinkedIn(
+      { title: content.title, body: content.body },
+      currentUser.access_token,
+      currentUser.linkedin_id
+    );
+
     if (result.success) {
       event.sender.send('post-success', 'Post was successful!');
     } else {
       event.sender.send('post-error', `Failed to post: ${result.message}`);
     }
   } catch (error) {
-    console.error('Error in post-to-linkedin handler:', error);
-    event.sender.send('post-error', 'An unexpected error occurred while posting.');
+    console.error('Error in post-to-linkedin handler:', error.message);
+    event.sender.send('post-error', `An error occurred: ${error.message}`);
   }
 });
 

@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmDeleteButton = document.getElementById('confirm-delete');
   const cancelDeleteButton = document.getElementById('cancel-delete');
   const closeDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
+  const postToLinkedInButton = document.getElementById('post-to-linkedin');
 
   // ======= Save Post Button Functionality =======
   const savePostButton = document.getElementById('save-post');
@@ -1140,6 +1141,34 @@ if (editorElement) {
       }
     });
   }
+
+  postToLinkedInButton.addEventListener('click', async () => {
+    const title = postTitleInput.value.trim();
+    const content = quill.root.innerHTML.trim();
+  
+    if (!title || !content) {
+      showToast('Please provide a title and content before posting to LinkedIn.');
+      return;
+    }
+  
+    try {
+      console.log('Sending content to LinkedIn:', { title, content });
+      // Send the content to the main process via IPC
+      window.api.postToLinkedIn({ title, body: content });
+    } catch (error) {
+      console.error('Error posting to LinkedIn:', error);
+      showToast('Failed to post to LinkedIn.');
+    }
+  });
+  
+  // Listen for success or error feedback from main process
+  window.api.on('post-success', (message) => {
+    showToast(`Success: ${message}`);
+  });
+  
+  window.api.on('post-error', (message) => {
+    showToast(`Error: ${message}`);
+  });
 
   // Fetch suggestion and display in suggestion box
 const fetchSuggestion = async (isManual = false) => {

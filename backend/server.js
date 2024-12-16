@@ -4,7 +4,7 @@ const express = require('express');
 const db = require('../database/database.js');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const linkedinAuth = require('../automation/linkedin.js');
+const { router: linkedinAuth } = require('../automation/linkedin.js');
 const cron = require('node-cron');
 const { refreshAccessToken } = require('../services/usersService.js');
 

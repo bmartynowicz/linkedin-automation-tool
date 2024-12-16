@@ -6,6 +6,58 @@ const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../ser
 
 dotenv.config();
 
+/**
+ * Function: postToLinkedIn
+ * Handles posting content to LinkedIn via UGC API.
+ * @param {Object} content - { title: string, body: string }
+ * @param {string} accessToken - User's LinkedIn access token
+ * @param {string} userId - LinkedIn user ID
+ * @returns {Promise<Object>} API Response
+ */
+async function postToLinkedIn(content, accessToken, userId) {
+  const { title, body } = content;
+
+  try {
+    // Validate parameters
+    if (!userId) throw new Error('LinkedIn User ID is missing.');
+    if (!accessToken) throw new Error('Access token is missing.');
+
+    // Make UGC API call to LinkedIn
+    const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+      },
+      body: JSON.stringify({
+        author: `urn:li:person:${userId}`,
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: { text: `${title}\n\n${body}` },
+            shareMediaCategory: 'NONE',
+          },
+        },
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+      }),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('LinkedIn UGC API Error:', responseData);
+      throw new Error(responseData.message || 'Failed to post to LinkedIn.');
+    }
+
+    console.log('LinkedIn Post Successful:', responseData);
+    return { success: true, data: responseData };
+  } catch (error) {
+    console.error('Error posting to LinkedIn:', error.message);
+    return { success: false, message: error.message };
+  }
+}
+
 // Route to handle LinkedIn OAuth callback
 router.get('/auth/linkedin/callback', async (req, res) => {
   console.log('--- LinkedIn OAuth Callback Received ---');
@@ -78,4 +130,31 @@ router.get('/auth/linkedin/callback', async (req, res) => {
   }
 });
 
-module.exports = router;
+router.post('/post-to-linkedin', async (req, res) => {
+  const { title, body } = req.body;
+
+  try {
+    // Fetch the current user's LinkedIn ID and access token from the database
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !currentUser.linkedin_id || !currentUser.access_token) {
+      return res.status(400).json({ error: 'LinkedIn user is not authenticated.' });
+    }
+
+    // Call postToLinkedIn function
+    const result = await postToLinkedIn({ title, body }, currentUser.access_token, currentUser.linkedin_id);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Post successful!', data: result.data });
+    } else {
+      res.status(500).json({ error: result.message });
+    }
+  } catch (error) {
+    console.error('Error in /post-to-linkedin route:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+module.exports = {
+  router,
+  postToLinkedIn,
+};
