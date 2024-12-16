@@ -40,7 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeSelect = document.getElementById('theme-select');
   const toneSelect = document.getElementById('tone-select');
   const reauthenticateButton = document.getElementById('reauthenticate-linkedin');
-
+  const restoreDefaultsButton = document.getElementById('restore-defaults');
+  const promptPreviewElement = document.getElementById('prompt-preview');
 
   // ======= Saved Posts Modal =======
   const savedPostsModal = document.getElementById('saved-posts-modal');
@@ -256,6 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
       // Collect preferences dynamically
       const preferences = {};
+      console.log('Language:', preferences.language);
+      console.log('Data Sharing:', preferences.data_sharing);
+
       Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
         const element = document.getElementById(fieldId);
         if (!element) {
@@ -292,7 +296,75 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }  
-      
+
+  if (restoreDefaultsButton) {
+    restoreDefaultsButton.addEventListener('click', () => {
+      console.log('Restoring default preferences.');
+  
+      // Default preferences
+      const defaultPreferences = {
+        theme: 'light',
+        tone: 'professional',
+        writing_style: 'brief',
+        engagement_focus: 'comments',
+        vocabulary_level: 'simplified',
+        content_type: 'linkedin-post',
+        content_perspective: 'first-person',
+        emphasis_tags: '',
+        notification_settings: {
+          suggestion_readiness: false,
+          engagement_tips: false,
+          system_updates: false,
+          frequency: 'realtime',
+        },
+      };
+  
+      // Update the settings UI
+      const fieldMapping = {
+        'theme-select': 'theme',
+        'tone-select': 'tone',
+        'suggestion-readiness': 'notification_settings.suggestion_readiness',
+        'engagement-tips': 'notification_settings.engagement_tips',
+        'system-updates': 'notification_settings.system_updates',
+        'notification-frequency': 'notification_settings.frequency',
+        'language': 'language',
+        'data-sharing': 'data_sharing',
+        'auto-logout': 'auto_logout',
+        'save-session': 'save_session',
+        'font-size': 'font_size',
+        'text-to-speech': 'text_to_speech',
+        'writing-style': 'writing_style',
+        'engagement-focus': 'engagement_focus',
+        'vocabulary-level': 'vocabulary_level',
+        'content-type': 'content_type',
+        'content-perspective': 'content_perspective',
+        'emphasis-tags': 'emphasis_tags',
+      };
+  
+      Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
+        const element = document.getElementById(fieldId);
+        if (!element) return;
+  
+        const keys = prefKey.split('.');
+        const value = keys.reduce((acc, key) => acc[key], defaultPreferences);
+  
+        if (element.type === 'checkbox') {
+          element.checked = !!value;
+        } else {
+          element.value = value || '';
+        }
+      });
+  
+      // Regenerate the AI prompt
+      const promptPreviewElement = document.getElementById('prompt-preview');
+      if (promptPreviewElement) {
+        const aiPrompt = generateAIPrompt(defaultPreferences);
+        promptPreviewElement.textContent = aiPrompt;
+        console.log('Defaults restored. AI Prompt generated:', aiPrompt);
+      }
+    });
+  }
+
   // Attach Event Listener for LinkedIn Reauthentication
   if (reauthenticateButton) {
     reauthenticateButton.addEventListener('click', async () => {
@@ -776,6 +848,27 @@ if (linkedinLoginButton) {
   console.error('LinkedIn login button not found.');
 }
 
+// Generate AI Prompt based on preferences
+const generateAIPrompt = (preferences) => {
+  const {
+    tone = 'professional',
+    writing_style = 'brief',
+    engagement_focus = 'comments',
+    vocabulary_level = 'simplified',
+    content_type = 'linkedin-post',
+    content_perspective = 'first-person',
+    emphasis_tags = '',
+  } = preferences;
+
+  return `
+    You are assisting a LinkedIn user who focuses on ${content_type}.
+    They prefer a ${tone} tone with a ${writing_style} style.
+    Their engagement goal is ${engagement_focus}, using a ${vocabulary_level} vocabulary and ${content_perspective} perspective.
+    Emphasize the following tags where relevant: ${emphasis_tags}.
+    Provide a professional and engaging revision with tailored hashtags and a concise call-to-action.
+  `.trim();
+};
+
 // Load settings into the UI
 const loadSettings = async () => {
   try {
@@ -826,6 +919,16 @@ const loadSettings = async () => {
         element.value = value || '';
       }
     });
+
+    // Generate and display the AI prompt in the preview section
+    const promptPreviewElement = document.getElementById('prompt-preview');
+    if (promptPreviewElement) {
+      const aiPrompt = generateAIPrompt(preferences);
+      promptPreviewElement.textContent = aiPrompt; // Display the prompt
+      console.log('AI Prompt displayed:', aiPrompt);
+    } else {
+      console.warn('Prompt preview element not found.');
+    }
   } catch (error) {
     console.error('Error loading settings into UI:', error.message);
   }
