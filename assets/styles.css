@@ -318,6 +318,19 @@ input[type="text"] {
   background-color: #218838;
 }
 
+.prompt-display {
+  font-family: "Arial", sans-serif;
+  font-size: 14px;
+  color: #333;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin: 10px 0;
+  white-space: pre-wrap; /* Preserve newlines and spacing */
+  word-wrap: break-word; /* Prevent overflow */
+  border-radius: 5px;
+}
+
 #content-editor {
   display: flex;
   flex-direction: column;

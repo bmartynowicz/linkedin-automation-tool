@@ -99,6 +99,8 @@ async function getCurrentUserWithPreferences() {
         system_updates: false,
         frequency: 'realtime',
       },
+      language: 'en',
+      data_sharing: false,
     };
 
     // Combine preferences with defaults (deep merge for notification_settings)
@@ -109,9 +111,9 @@ async function getCurrentUserWithPreferences() {
         ...defaultPreferences.notification_settings,
         ...preferences.notification_settings,
       },
+      language: preferences.language || defaultPreferences.language,
+      data_sharing: preferences.data_sharing !== undefined ? preferences.data_sharing : defaultPreferences.data_sharing,
     };
-
-    console.log('Combined preferences:', combinedPreferences);
 
     return {
       ...user,
@@ -122,7 +124,6 @@ async function getCurrentUserWithPreferences() {
     throw error;
   }
 }
-
 
 // Update user data
 async function updateUser(userID, name, email, accessToken, refreshToken, expiresIn) {
@@ -151,7 +152,7 @@ async function getUserPreferences(userId) {
     db.get(
       `SELECT 
         theme, notification_settings, tone, writing_style, engagement_focus, vocabulary_level, 
-        content_type, content_perspective, emphasis_tags 
+        content_type, content_perspective, emphasis_tags, language, data_sharing
        FROM user_preferences WHERE user_id = ?`,
       [userId],
       (err, row) => {
@@ -171,6 +172,10 @@ async function getUserPreferences(userId) {
             console.error('Error parsing notification_settings JSON:', error.message);
             row.notification_settings = {};
           }
+
+          // Ensure data_sharing is converted to boolean and defaults to false
+          row.data_sharing = !!row.data_sharing;
+
           resolve(row);
         }
       }
