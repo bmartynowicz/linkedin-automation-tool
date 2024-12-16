@@ -183,6 +183,104 @@ header h1 {
   position: relative; /* For positioning the emoji picker */
 }
 
+/* ======= Settings Page Styles ======= */
+#settings-page {
+  margin-left: 250px; /* Default width of the sidebar */
+  margin-top: 60px; /* Below the header */
+  padding: 20px;
+  transition: margin-left 0.3s ease; /* Smooth adjustment when sidebar collapses */
+  background-color: #ffffff;
+  height: calc(100vh - 60px); /* Full height minus header */
+  overflow-y: auto; /* Enable scrolling for content overflow */
+}
+
+body.sidebar-collapsed #settings-page {
+  margin-left: 60px; /* Adjust when sidebar is collapsed */
+}
+
+#settings-container {
+  width: 80%;
+  max-width: 900px;
+  background: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 20px 30px;
+  border-radius: 10px;
+  overflow-y: auto;
+  margin: 20px auto;
+  text-align: left;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 25px; /* Increase space between sections */
+  padding-bottom: 10px; /* Add padding for separation */
+}
+
+section:last-of-type {
+  border-bottom: none;
+}
+
+h2 {
+  font-size: 1.8em;
+  margin-bottom: 15px;
+  text-align: center;
+  color: #444;
+}
+
+label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+label input,
+label select,
+label button,
+label input[type="range"],
+label input[type="checkbox"] {
+  margin-top: 10px;
+  font-size: 1em;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: auto;
+  max-width: 80%;
+  margin-bottom: 10px;
+  margin-right: 10px;
+}
+
+input[type="checkbox"] {
+  margin: 0 5px;
+  width: auto;
+}
+
+input[type="text"] {
+  width: 100%; /* Full width for text inputs */
+  margin-top: 10px; /* Add spacing */
+}
+
+#save-settings,
+#restore-defaults {
+  width: 40%;
+  margin: 15px 5%;
+  font-size: 1em;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+  display: inline-block;
+}
+
+#save-settings:hover,
+#restore-defaults:hover {
+  background-color: #218838;
+}
+
 #content-editor {
   display: flex;
   flex-direction: column;
@@ -191,7 +289,6 @@ header h1 {
   background-color: #ffffff;
   overflow: hidden; /* Prevent unnecessary scrolling */
   box-sizing: border-box;
-  padding: 20px;
 }
 
 body.sidebar-collapsed #content-editor {
@@ -809,6 +906,34 @@ body.sidebar-collapsed #settings-page {
     border-radius: 8px;
   }
   
+  #settings-container {
+    width: 90%;
+    padding: 10px;
+  }
+  
+  section {
+    margin-bottom: 20px; /* Reduce section spacing */
+  }
+
+  label input,
+  label select,
+  label button,
+  input[type="range"] {
+    font-size: 0.9em;
+  }
+
+  h1 {
+    font-size: 1.2em;
+  }
+
+  h2 {
+    font-size: 1.4em; /* Slightly smaller headings */
+  }
+
+  #settings-page {
+    margin-left: 50px;
+  }
+
   #settings-page {
     margin-left: 50px; /* Adjust for smaller collapsed sidebar */
     padding: 10px; /* Reduce padding for smaller screens */
