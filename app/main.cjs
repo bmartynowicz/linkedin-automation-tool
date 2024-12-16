@@ -134,10 +134,10 @@ app.on('before-quit', () => {
 // ======= IPC Handlers =======
 
 // Handle AI Suggestion requests from renderer process
-ipcMain.handle('get-ai-suggestions', async (event, prompt) => {
+ipcMain.handle('get-ai-suggestions', async (event, { prompt, userId }) => {
   try {
-    console.log('Processing AI suggestion for:', prompt);
-    const suggestion = await getAISuggestions(prompt);
+    console.log(`Processing AI suggestion for userId: ${userId}, prompt: ${prompt}`);
+    const suggestion = await getAISuggestions(prompt, userId);
     return suggestion;
   } catch (error) {
     console.error('Error fetching AI suggestions:', error);
@@ -224,6 +224,7 @@ ipcMain.handle('fetch-current-user', async () => {
 ipcMain.handle('get-current-user-with-preferences', async () => {
   try {
     const user = await getCurrentUserWithPreferences();
+    console.log('Fetched user with preferences:', user); // Debug log
     return user;
   } catch (error) {
     console.error('Error fetching user with preferences:', error);
@@ -233,14 +234,17 @@ ipcMain.handle('get-current-user-with-preferences', async () => {
 
 // Handler for saving user settings
 ipcMain.handle('save-settings', async (event, settingsData) => {
+  console.log('Received save-settings IPC with:', settingsData); // Log 6
+
   try {
-    const user = await getCurrentUser(); // Ensure this fetches the correct user
+    const user = await getCurrentUser();
     if (!user) throw new Error('User not found.');
 
-    // Use updateUserPreferences directly from usersService.js
+    console.log('Saving settings for user:', user); // Log 7
+
     await updateUserPreferences(user.id, settingsData);
 
-    console.log('Settings saved:', settingsData);
+    console.log('Settings saved successfully:', settingsData); // Log 8
     return { success: true };
   } catch (error) {
     console.error('Error saving settings:', error);

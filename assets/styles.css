@@ -213,9 +213,12 @@ body.sidebar-collapsed #settings-page {
 section {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin-bottom: 25px; /* Increase space between sections */
-  padding-bottom: 10px; /* Add padding for separation */
+  gap: 10px;
+  margin-bottom: 20px; /* Increase space between sections */
+  padding: 10px; /* Add padding for separation */
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px #ddd;
 }
 
 section:last-of-type {
@@ -223,9 +226,9 @@ section:last-of-type {
 }
 
 h2 {
-  font-size: 1.8em;
-  margin-bottom: 15px;
-  text-align: center;
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  text-align: left;
   color: #444;
 }
 
@@ -250,6 +253,40 @@ label input[type="checkbox"] {
   max-width: 80%;
   margin-bottom: 10px;
   margin-right: 10px;
+}
+
+/* Button Styles */
+button {
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+#save-settings,
+#restore-defaults {
+  width: auto; /* Adjust width to fit content */
+  margin: 10px 5px; /* Reduced margins for better alignment */
+  font-size: 0.9rem; /* Adjust button font size */
+}
+
+/* Improve Button Alignment */
+#settings-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px; /* Consistent gap between elements */
+}
+
+button[type="submit"] {
+  align-self: flex-start; /* Align submit button to the start */
 }
 
 input[type="checkbox"] {
@@ -409,17 +446,6 @@ body.sidebar-collapsed #toolbar {
   padding: 15px;
   box-sizing: border-box;
   overflow: auto;
-}
-
-/* Adjust settings page layout based on sidebar */
-#settings-page {
-  margin-left: 250px; /* Default width of the sidebar */
-  margin-top: 60px; /* Below the header */
-  padding: 20px;
-  transition: margin-left 0.3s ease; /* Smooth adjustment when sidebar collapses */
-  background-color: #ffffff;
-  height: calc(100vh - 60px); /* Full height minus header */
-  overflow-y: auto; /* Enable scrolling for content overflow */
 }
 
 body.sidebar-collapsed #settings-page {

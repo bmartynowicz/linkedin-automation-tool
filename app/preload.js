@@ -11,7 +11,8 @@ const allowedChannels = [
   'linkedin-auth-failure',
   'linkedin-auth-closed',
   'update-user-data',
-  'savePost'
+  'savePost',
+  'saveSettings',
   // Add any other event channels you intend to expose
 ];
 
@@ -73,9 +74,9 @@ contextBridge.exposeInMainWorld('api', {
       console.warn('Unauthorized attempt to send on channel: open-linkedin-auth-window');
     }
   },
-  getAISuggestions: (prompt) => {
-    console.log('Invoking "get-ai-suggestions" with prompt:', prompt);
-    return ipcRenderer.invoke('get-ai-suggestions', prompt);
+  getAISuggestions: ({ prompt, userId }) => {
+    console.log('Invoking "get-ai-suggestions" with prompt and userId:', prompt, userId);
+    return ipcRenderer.invoke('get-ai-suggestions', { prompt, userId });
   },
   fetchNotifications: () => {
     console.log('Invoking "fetch-notifications"');
