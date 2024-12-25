@@ -19,7 +19,7 @@ async function getPostsByLinkedInId(linkedin_id) {
         }
       );
     });
-  }
+}
   
 
 /**
@@ -29,49 +29,65 @@ async function getPostsByLinkedInId(linkedin_id) {
  * @returns {Promise<Object>} - The result of the save operation.
  */
 async function savePost(post) {
-    const { id, title, content, status, user_id, linkedin_id } = post;
-  
-    return new Promise((resolve, reject) => {
-      // Determine ownership context
-      const identifier = linkedin_id || user_id;
-      const identifierColumn = linkedin_id ? 'linkedin_id' : 'user_id';
-  
-      if (!identifier) {
-        return reject(new Error('No identifier provided for saving the post.'));
-      }
-  
-      if (id) {
-        // Update existing post
-        db.run(
-          `UPDATE posts 
-           SET title = ?, content = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
-           WHERE id = ? AND ${identifierColumn} = ?`,
-          [title, content, status, id, identifier],
-          function (err) {
-            if (err) {
-              console.error('Error updating post:', err.message);
-              return reject(err);
-            }
-            resolve({ success: true, postId: id });
+  const { id, title, content, status, user_id, linkedin_id } = post;
+
+  return new Promise((resolve, reject) => {
+    // Determine ownership context
+    const identifier = linkedin_id || user_id;
+    const identifierColumn = linkedin_id ? 'linkedin_id' : 'user_id';
+
+    if (!identifier) {
+      return reject(new Error('No identifier provided for saving the post.'));
+    }
+
+    // Transform content to Unicode-compatible format
+    const transformedContent = transformToUnicode(content);
+
+    if (id) {
+      // Update existing post
+      db.run(
+        `UPDATE posts 
+         SET title = ?, content = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ? AND ${identifierColumn} = ?`,
+        [title, transformedContent, status, id, identifier],
+        function (err) {
+          if (err) {
+            console.error('Error updating post:', err.message);
+            return reject(err);
           }
-        );
-      } else {
-        // Insert new post
-        db.run(
-          `INSERT INTO posts (${identifierColumn}, title, content, status, created_at, updated_at) 
-           VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [identifier, title, content, status],
-          function (err) {
-            if (err) {
-              console.error('Error saving post:', err.message);
-              return reject(err);
-            }
-            resolve({ success: true, postId: this.lastID });
+          resolve({ success: true, postId: id });
+        }
+      );
+    } else {
+      // Insert new post
+      db.run(
+        `INSERT INTO posts (${identifierColumn}, title, content, status, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [identifier, title, transformedContent, status],
+        function (err) {
+          if (err) {
+            console.error('Error saving post:', err.message);
+            return reject(err);
           }
-        );
-      }
-    });
-  }
+          resolve({ success: true, postId: this.lastID });
+        }
+      );
+    }
+  });
+}
+
+/**
+ * Transforms plain content to Unicode-compatible formatted text.
+ * @param {string} content - The original content.
+ * @returns {string} - Unicode-transformed content.
+ */
+function transformToUnicode(content) {
+  // Replace placeholder logic with desired Unicode transformations
+  return content
+    .replace(/<strong>(.*?)<\/strong>/g, (match, p1) => textFormat.bold(p1))
+    .replace(/<em>(.*?)<\/em>/g, (match, p1) => textFormat.italic(p1))
+    .replace(/<u>(.*?)<\/u>/g, (match, p1) => textFormat.underline(p1));
+}
 
 /**
  * Deletes a post by ID.
@@ -100,7 +116,7 @@ async function deletePost(postId, identifier) {
         }
       );
     });
-  }  
+}  
 
 /**
  * Searches for posts matching a query.
@@ -119,7 +135,7 @@ async function searchPosts(query, linkedin_id) {
         }
       );
     });
-  }
+}
 
 /**
  * Gets a single post by ID.
@@ -157,7 +173,7 @@ async function getPostsByUserId(user_id) {
         }
       );
     });
-  }
+}
 
 module.exports = {
   getPostsByLinkedInId,

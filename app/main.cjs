@@ -7,6 +7,7 @@ const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
 const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 const db = require('../database/database');
+const { formatLinkedInText } = require('../utils/formatLinkedInText.js');
 const { postToLinkedIn } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
 const schedule = require('node-schedule');
@@ -165,6 +166,12 @@ ipcMain.handle('fetchSettings', async () => {
     console.error('Failed to fetch settings:', error);
     return { success: false, message: error.message };
   }
+});
+
+ipcMain.handle('format-linkedin-text', async (event, delta) => {
+  // Perform the formatting in the main process
+  const formattedText = formatLinkedInText(delta);
+  return formattedText;
 });
 
 // Handle LinkedIn post requests

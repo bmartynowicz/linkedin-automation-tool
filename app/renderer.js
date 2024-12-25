@@ -969,6 +969,20 @@ CustomBullet.blotName = 'custom-bullet';
 CustomBullet.tagName = 'LI'; // Use list item tag
 Quill.register(CustomBullet, true);
 
+// Function to apply custom formatting
+function applyCustomFormat(format) {
+  const range = quill.getSelection();
+  if (range) {
+    const selectedText = quill.getText(range.index, range.length);
+    const formattedText = textFormat[format](selectedText);
+
+    // Replace the selected text with formatted text
+    quill.deleteText(range.index, range.length);
+    quill.insertText(range.index, formattedText);
+    quill.setSelection(range.index + formattedText.length, 0);
+  }
+}
+
 // ======= Initialize the Quill Editor =======
 if (typeof Quill !== 'undefined') {
   console.log('Quill is available.');
@@ -1015,6 +1029,22 @@ if (typeof Quill !== 'undefined') {
   // ======= Add Toolbar Handler for Custom Bullet =======
   const toolbar = quill.getModule('toolbar');
 
+  const applyCustomFormat = (format) => {
+    const range = quill.getSelection();
+    if (range) {
+      const currentFormat = quill.getFormat(range.index, range.length);
+      quill.format(format, !currentFormat[format]); // Toggle the format
+      console.log(`${format} format toggled.`);
+    } else {
+      console.error('No text selected.');
+    }
+  };
+
+  toolbar.addHandler('bold', () => applyCustomFormat('bold'));
+  toolbar.addHandler('italic', () => applyCustomFormat('italic'));
+  toolbar.addHandler('underline', () => applyCustomFormat('underline'));
+
+
   toolbar.addHandler('custom-bullet', function () {
     const range = this.quill.getSelection();
     if (range) {
@@ -1057,14 +1087,14 @@ if (emojiBulletButton) {
 
 console.log('Custom bullet list initialized.');
 
-  // ======= Add Event Listener for Toolbar Undo/Redo Buttons =======
-  document.getElementById('toolbar').addEventListener('click', (e) => {
+// ======= Add Event Listener for Toolbar Undo/Redo Buttons =======
+document.getElementById('toolbar').addEventListener('click', (e) => {
     if (e.target.closest('.ql-undo')) {
       quill.history.undo();
     } else if (e.target.closest('.ql-redo')) {
       quill.history.redo();
     }
-  });
+});
 
   // Set spellcheck attribute to true on the editable area
 quill.on('editor-change', () => {
@@ -1144,21 +1174,18 @@ if (editorElement) {
 
   postToLinkedInButton.addEventListener('click', async () => {
     const title = postTitleInput.value.trim();
-    const content = quill.root.innerHTML.trim();
+    const delta = quill.getContents();
   
-    if (!title || !content) {
+    if (!title || !delta) {
       showToast('Please provide a title and content before posting to LinkedIn.');
       return;
     }
   
-    try {
-      console.log('Sending content to LinkedIn:', { title, content });
-      // Send the content to the main process via IPC
-      window.api.postToLinkedIn({ title, body: content });
-    } catch (error) {
-      console.error('Error posting to LinkedIn:', error);
-      showToast('Failed to post to LinkedIn.');
-    }
+    // Ask main process to format the Delta
+    const formattedContent = await window.api.formatLinkedInText(delta);
+  
+    // Now send formatted content to LinkedIn via the existing IPC route
+    window.api.postToLinkedIn({ title, body: formattedContent });
   });
   
   // Listen for success or error feedback from main process
