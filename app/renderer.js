@@ -1173,20 +1173,70 @@ if (editorElement) {
   }
 
   postToLinkedInButton.addEventListener('click', async () => {
-    const title = postTitleInput.value.trim();
-    const delta = quill.getContents();
-  
-    if (!title || !delta) {
-      showToast('Please provide a title and content before posting to LinkedIn.');
+  // 1) Validate inputs
+  const title = postTitleInput.value.trim();
+  const delta = quill.getContents();
+
+  if (!title || !delta) {
+    showToast('Please provide a title and content before posting to LinkedIn.');
+    return;
+  }
+
+  // 2) Format the content
+  const formattedContent = await window.api.formatLinkedInText(delta);
+
+  // 3) Fetch the current user (to get linkedin_id, etc.)
+  const user = await window.api.fetchUserData();
+  if (!user || !user.linkedin_id) {
+    showToast('User not authenticated. Please log in with LinkedIn.');
+    return;
+  }
+
+  // 4) If we have no 'editingPostId', then we create a new local post. 
+  //    Otherwise, we update the existing one.
+  let localPostId = editingPostId; // from your renderer code
+  let savePostResult;
+
+  try {
+    // Build the post object we’ll send to the DB
+    const postData = {
+      id: localPostId, // null or undefined => new record
+      title,
+      content: formattedContent,
+      status: 'draft',           // for now
+      linkedin_id: user.linkedin_id
+    };
+
+    // Call the "savePost" IPC
+    savePostResult = await window.api.savePost(postData);
+
+    if (savePostResult.success) {
+      // If it's a new post, set localPostId to the newly created record
+      localPostId = savePostResult.postId;
+      // If we had no editingPostId, now we store it in the renderer so we can keep track
+      if (!editingPostId) {
+        editingPostId = localPostId;
+      }
+    } else {
+      showToast('Failed to save post in the database.');
       return;
     }
-  
-    // Ask main process to format the Delta
-    const formattedContent = await window.api.formatLinkedInText(delta);
-  
-    // Now send formatted content to LinkedIn via the existing IPC route
-    window.api.postToLinkedIn({ title, body: formattedContent });
+  } catch (error) {
+    console.error('Error saving post before LinkedIn posting:', error);
+    showToast('An error occurred while saving the post.');
+    return;
+  }
+
+  // 5) Now that the local DB record is saved, call postToLinkedIn 
+  //    with the local ID as well
+  console.log('Saved post in DB. Now posting to LinkedIn with local ID:', localPostId);
+  window.api.postToLinkedIn({
+    postId: localPostId,         // <--- The local post ID
+    title, 
+    body: formattedContent
   });
+});
+
   
   // Listen for success or error feedback from main process
   window.api.on('post-success', (message) => {

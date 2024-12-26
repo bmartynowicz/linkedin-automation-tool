@@ -21,15 +21,31 @@ async function getPostsByLinkedInId(linkedin_id) {
     });
 }
   
-
 /**
  * Saves a post to the database (insert or update).
- * Handles both logged-in (LinkedIn-authenticated) and non-logged-in users.
- * @param {Object} post - The post object.
- * @returns {Promise<Object>} - The result of the save operation.
+ * Handles both LinkedIn-authenticated (linkedin_id) and local (user_id) contexts.
+ * @param {Object} post
+ * @param {number} [post.id] - The ID for an existing post (if updating).
+ * @param {string} [post.title] - Title of the post.
+ * @param {string} post.content - Content of the post.
+ * @param {string} [post.status] - 'draft', 'scheduled', 'posted', or 'closed'.
+ * @param {number} [post.user_id] - Local user ID if not LinkedIn.
+ * @param {string} [post.linkedin_id] - LinkedIn user ID if LinkedIn-authenticated.
+ * @param {string} [post.linkedin_post_id] - The post ID returned by LinkedIn (urn:li:share:xxx).
+ * @param {string} [post.scheduled_time] - If scheduling a post, store the scheduled time.
+ * @returns {Promise<Object>} - { success: boolean, postId: number }
  */
 async function savePost(post) {
-  const { id, title, content, status, user_id, linkedin_id } = post;
+  const {
+    id,
+    title,
+    content,
+    status,
+    user_id,
+    linkedin_id,
+    linkedin_post_id,
+    scheduled_time
+  } = post;
 
   return new Promise((resolve, reject) => {
     // Determine ownership context
@@ -40,53 +56,67 @@ async function savePost(post) {
       return reject(new Error('No identifier provided for saving the post.'));
     }
 
-    // Transform content to Unicode-compatible format
-    const transformedContent = transformToUnicode(content);
-
     if (id) {
       // Update existing post
-      db.run(
-        `UPDATE posts 
-         SET title = ?, content = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
-         WHERE id = ? AND ${identifierColumn} = ?`,
-        [title, transformedContent, status, id, identifier],
-        function (err) {
-          if (err) {
-            console.error('Error updating post:', err.message);
-            return reject(err);
-          }
-          resolve({ success: true, postId: id });
+      const sql = `
+        UPDATE posts
+        SET title = ?,
+            content = ?,
+            status = ?,
+            linkedin_post_id = ?,
+            ${scheduled_time ? 'scheduled_time = ?,' : ''}
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND ${identifierColumn} = ?
+      `;
+
+      // If scheduling time is provided, we include it in the placeholders
+      // otherwise we skip it
+      const placeholders = scheduled_time
+        ? [title, content, status, linkedin_post_id, scheduled_time, id, identifier]
+        : [title, content, status, linkedin_post_id, id, identifier];
+
+      db.run(sql, placeholders, function (err) {
+        if (err) {
+          console.error('Error updating post:', err.message);
+          return reject(err);
         }
-      );
+        resolve({ success: true, postId: id });
+      });
     } else {
       // Insert new post
-      db.run(
-        `INSERT INTO posts (${identifierColumn}, title, content, status, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        [identifier, title, transformedContent, status],
-        function (err) {
-          if (err) {
-            console.error('Error saving post:', err.message);
-            return reject(err);
-          }
-          resolve({ success: true, postId: this.lastID });
+      const sql = `
+        INSERT INTO posts (
+          ${identifierColumn}, 
+          title, 
+          content, 
+          status, 
+          linkedin_post_id,
+          ${scheduled_time ? 'scheduled_time,' : ''}
+          created_at, 
+          updated_at
+        )
+        VALUES (
+          ?, ?, ?, ?, ?,
+          ${scheduled_time ? '?,' : ''}
+          CURRENT_TIMESTAMP, 
+          CURRENT_TIMESTAMP
+        )
+      `;
+
+      const placeholders = scheduled_time
+        ? [identifier, title, content, status, linkedin_post_id, scheduled_time]
+        : [identifier, title, content, status, linkedin_post_id];
+
+      db.run(sql, placeholders, function (err) {
+        if (err) {
+          console.error('Error saving post:', err.message);
+          return reject(err);
         }
-      );
+        resolve({ success: true, postId: this.lastID });
+      });
     }
   });
-}
-
-/**
- * Transforms plain content to Unicode-compatible formatted text.
- * @param {string} content - The original content.
- * @returns {string} - Unicode-transformed content.
- */
-function transformToUnicode(content) {
-  // Replace placeholder logic with desired Unicode transformations
-  return content
-    .replace(/<strong>(.*?)<\/strong>/g, (match, p1) => textFormat.bold(p1))
-    .replace(/<em>(.*?)<\/em>/g, (match, p1) => textFormat.italic(p1))
-    .replace(/<u>(.*?)<\/u>/g, (match, p1) => textFormat.underline(p1));
 }
 
 /**

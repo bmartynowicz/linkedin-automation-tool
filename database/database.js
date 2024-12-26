@@ -58,7 +58,8 @@ function initializeDatabase() {
         scheduled_time DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        edited_at DATETIME,  -- New column for last edited timestamp
+        edited_at DATETIME,  -- For last edited timestamp
+        linkedin_post_id TEXT, -- <--- NEW: to store LinkedIn's returned ID
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY(linkedin_id) REFERENCES users(linkedin_id) ON DELETE CASCADE
       )

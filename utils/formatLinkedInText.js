@@ -22,11 +22,16 @@ const textFormat = {
             ? String.fromCodePoint(code + 0x1D44E - 0x61)
             : char; // Leave other characters unaltered
         }),          
-    underline: (text) =>
-      text
-        .split('')
-        .map((char) => `${char}\u0332`) // Combine each character with underline
-        .join(''),
+        underline: (text) =>
+            text
+              .split('')
+              .map((char) => {
+                if (char === ' ') {
+                  return '\u00A0\u0332'; // Non-breaking space with underline
+                }
+                return `${char}\u0332`; // Underline all other characters
+              })
+              .join(''),                   
   };
 
 function formatLinkedInText(delta) {

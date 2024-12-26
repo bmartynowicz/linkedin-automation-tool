@@ -177,15 +177,16 @@ ipcMain.handle('format-linkedin-text', async (event, delta) => {
 // Handle LinkedIn post requests
 ipcMain.on('post-to-linkedin', async (event, content) => {
   console.log('Received LinkedIn post request with content:', content);
-
+  // content might be { postId, title, body }
+  
   try {
-    // Fetch user credentials from the database
+    // 1) Get current user from DB
     const currentUser = await getCurrentUser();
     if (!currentUser || !currentUser.access_token || !currentUser.linkedin_id) {
       throw new Error('LinkedIn user is not authenticated.');
     }
 
-    // Pass content, access token, and LinkedIn ID
+    // 2) Post to LinkedIn
     const result = await postToLinkedIn(
       { title: content.title, body: content.body },
       currentUser.access_token,
@@ -193,6 +194,21 @@ ipcMain.on('post-to-linkedin', async (event, content) => {
     );
 
     if (result.success) {
+      // 3) We have result.data.id => e.g. "urn:li:share:7278100664688209921"
+      const linkedinShareId = result.data.id || null;
+
+      // 4) Update the local DB record with the LinkedIn post ID, status='posted'
+      if (content.postId) {
+        await savePost({
+          id: content.postId,
+          title: content.title,
+          content: content.body,
+          status: 'posted',
+          linkedin_id: currentUser.linkedin_id,
+          linkedin_post_id: linkedinShareId
+        });
+      }
+
       event.sender.send('post-success', 'Post was successful!');
     } else {
       event.sender.send('post-error', `Failed to post: ${result.message}`);
@@ -362,7 +378,6 @@ ipcMain.handle('get-post-by-id', async (event, postId) => {
     return { success: false, message: error.message };
   }
 });
-
 
 // Delete a post by ID
 ipcMain.handle('delete-post', async (event, { postId, userId }) => {
