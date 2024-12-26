@@ -121,6 +121,8 @@
             Account Preferences:
             <button id="reset-settings">Reset All Settings to Default</button>
         </label>
+        
+        <button id="reauthenticate-linkedin">Reauthenticate LinkedIn</button>
     </section>
 
     <!-- AI Customization Settings -->
@@ -195,7 +197,6 @@
 
     <button id="save-settings">Save Settings</button>
   </div>
-  
 
   <!-- Profile Modal -->
   <div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
@@ -210,6 +211,38 @@
         <i class="fab fa-linkedin"></i> Login with LinkedIn
       </button>
       <button id="logout-button">Logout</button>
+    </div>
+  </div>
+     
+  <!-- Scheduler Page -->
+  <div id="scheduler-page" class="hidden">
+    <h2>LinkedIn Content Scheduler</h2>
+    <div class="scheduler-container">
+      <!-- Left Sidebar -->
+      <div class="scheduler-sidebar">
+        <h3>Unscheduled Posts</h3>
+        <ul id="unscheduled-posts">
+          <!-- Dynamically populated list of unscheduled posts -->
+        </ul>
+        <h3>Upcoming Posts</h3>
+        <ul id="upcoming-posts">
+          <!-- Dynamically populated list of upcoming scheduled posts -->
+        </ul>
+      </div>
+      <!-- Right Calendar Section -->
+      <div class="scheduler-main">
+        <div id="calendar-container">
+          <!-- Calendar will be initialized here -->
+          <div id="calendar"></div>
+        </div>
+        <div id="day-schedule">
+          <h3>Posts Scheduled for <span id="selected-date"></span></h3>
+          <ul id="day-posts">
+            <!-- Dynamically populated posts for the selected day -->
+          </ul>
+          <button id="add-schedule" class="action-button">Add Post</button>
+        </div>
+      </div>
     </div>
   </div>
   
@@ -267,6 +300,35 @@
       </div>
     </div>
   </div>
+
+        <!--
+          Single Schedule-Form Modal for both the "Add Post" button
+          and the "Schedule Post" action from the Saved Posts Modal.
+        -->
+        <div
+          id="schedule-form-modal"
+          class="hidden modal"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div class="modal-content">
+            <span
+              class="close-button"
+              id="close-scheduler-modal"
+              aria-label="Close Scheduler"
+              >&times;</span
+            >
+            <h2>Schedule Post</h2>
+
+            <label for="post-select">Select Post:</label>
+            <select id="post-select"></select>
+
+            <label for="schedule-datetime">Select Date & Time:</label>
+            <input type="text" id="schedule-datetime" placeholder="YYYY-MM-DD HH:MM" />
+
+            <button id="save-schedule" class="action-button">Schedule</button>
+          </div>
+        </div>
    
   <!-- Updated Sidebar Navigation -->
   <nav id="sidebar" class="sidebar">
@@ -368,36 +430,6 @@
       </div>      
     </div>
   
-    <!-- Settings Page -->
-    <div id="settings-page" class="hidden">
-      <h2>User Settings</h2>
-      <form id="settings-form">
-        <!-- Theme Settings -->
-        <label for="theme-select">Theme:</label>
-        <select id="theme-select">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-  
-        <!-- Tone Settings -->
-        <label for="tone-select">Tone Preference:</label>
-        <select id="tone-select">
-          <option value="professional">Professional</option>
-          <option value="casual">Casual</option>
-          <option value="friendly">Friendly</option>
-        </select>
-  
-        <!-- LinkedIn Details -->
-        <div id="linkedin-details">
-          <h3>LinkedIn Integration</h3>
-          <p id="linkedin-status">Status: Not Linked</p>
-          <button type="button" id="reauthenticate-linkedin">Reauthenticate</button>
-        </div>
-  
-        <!-- Save Button -->
-        <button type="submit">Save Settings</button>
-      </form>
-    </div>
   </main>  
 
   <!-- Quill JS -->

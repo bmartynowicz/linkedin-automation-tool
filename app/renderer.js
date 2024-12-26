@@ -12,11 +12,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ======= Content Editor =======
   const contentEditor = document.getElementById('content-editor');
-  const contentCreationButton = document.querySelector('#sidebar .nav-item a[href="#content-creation"]');
 
-  // ======= Sidebar Toggle =======
+  // ======= Sidebar =======
   const toggleMenuButton = document.getElementById('toggle-menu');
   const sidebar = document.getElementById('sidebar');
+  const settingsButton = document.querySelector('#sidebar .nav-item a[href="#settings"]');
+  const contentCreationButton = document.querySelector('#sidebar .nav-item a[href="#content-creation"]');
+  const dashboardButton = document.querySelector('#sidebar .nav-item a[href="#dashboard"]');
+  const analyticsButton = document.querySelector('#sidebar .nav-item a[href="#analytics"]');
+  const schedulerButton = document.querySelector('#sidebar .nav-item a[href="#scheduler"]');
 
   // ======= Notifications =======
   const notificationsButton = document.getElementById('notifications');
@@ -33,15 +37,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const linkedinLoginButton = document.getElementById('linkedin-login-button');
 
   // ======= Settings Page =======
-  const settingsButton = document.querySelector('#sidebar .nav-item a[href="#settings"]');
   const settingsPage = document.getElementById('settings-page');
   const saveSettingsButton = document.getElementById('save-settings');
-  const settingsForm = document.getElementById('settings-form');
-  const themeSelect = document.getElementById('theme-select');
-  const toneSelect = document.getElementById('tone-select');
   const reauthenticateButton = document.getElementById('reauthenticate-linkedin');
   const restoreDefaultsButton = document.getElementById('restore-defaults');
   const promptPreviewElement = document.getElementById('prompt-preview');
+
+  // ======= Scheduler Page =======
+  const schedulerPage = document.getElementById('scheduler-page');
+  const schedulePostButton = document.getElementById('schedule-post');
+  const addSchedule = document.getElementById('add-schedule');
+  const saveSchedule = document.getElementById('save-schedule')
 
   // ======= Saved Posts Modal =======
   const savedPostsModal = document.getElementById('saved-posts-modal');
@@ -51,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchPostsInput = document.getElementById('search-posts');
   const searchButton = document.getElementById('search-button');
   const editPostButton = document.getElementById('edit-post');
-  const schedulePostButton = document.getElementById('schedule-post');
   const deletePostButton = document.getElementById('delete-post');
   const deleteConfirmationModal = document.getElementById('delete-confirmation-modal');
   const confirmDeleteButton = document.getElementById('confirm-delete');
@@ -226,7 +231,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  console.log('Settings Form:', settingsForm);
+  // Handle Scheduler Navigation
+  if (schedulerButton && contentEditor && schedulerPage) {
+    schedulerButton.addEventListener('click', async () => {
+      try {
+        console.log('Navigating to Scheduler Page...');
+        
+        // Hide all other pages
+        contentEditor.classList.add('hidden');
+        settingsPage.classList.add('hidden');
+        
+        // Show the scheduler page
+        schedulerPage.classList.remove('hidden');
+
+        console.log('Scheduler Page Classes:', schedulerPage.classList);
+        console.log('Content Editor Classes:', contentEditor.classList);
+  
+        // Initialize the scheduler
+        await initializeScheduler();
+      } catch (error) {
+        console.error('Error navigating to Scheduler Page:', error.message);
+      }
+    });
+  }    
 
   // Attach Event Listener for Form Submission
   if (saveSettingsButton) {
@@ -389,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     contentCreationButton.addEventListener('click', () => {
       // Show content editor and hide settings page
       settingsPage.classList.add('hidden');
+      schedulerPage.classList.add('hidden');
       contentEditor.classList.remove('hidden');
     });
   }
@@ -461,96 +489,99 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ======= Function to Schedule a Post =======
-  const schedulePost = (post) => {
-    // Create a modal for scheduling
-    const schedulerModal = document.createElement('div');
-    schedulerModal.classList.add('modal', 'hidden');
-    schedulerModal.setAttribute('role', 'dialog');
-    schedulerModal.setAttribute('aria-modal', 'true');
-    schedulerModal.setAttribute('aria-labelledby', 'scheduler-title');
-    schedulerModal.innerHTML = `
-    <div class="modal-content">
-      <span class="close-button" id="close-scheduler">&times;</span>
-      <h2 id="scheduler-title">Schedule Post</h2>
-      <form id="schedule-form">
-        <label for="schedule-date">Select Date and Time:</label>
-        <input type="text" id="schedule-date" name="schedule-date" placeholder="Select Date and Time" required>
-        <button type="submit">Schedule</button>
-      </form>
-    </div>
-  `;
-    document.body.appendChild(schedulerModal);
-
-    const closeSchedulerButton = schedulerModal.querySelector('#close-scheduler');
-    const scheduleForm = schedulerModal.querySelector('#schedule-form');
-    const scheduleDateInput = schedulerModal.querySelector('#schedule-date');
-
-    // Initialize Flatpickr
-    if (typeof flatpickr !== 'undefined') {
-      flatpickr(scheduleDateInput, {
-        enableTime: true,
-        dateFormat: "Y-m-d H:i",
-        minDate: "today",
-      });
-    } else {
-      console.error('Flatpickr is not available.');
-    }
-
-    // Open the Scheduler Modal
-    openModal(schedulerModal);
-
-    // Event Listener to Close Scheduler Modal
-    closeSchedulerButton.addEventListener('click', () => {
-      closeModal(schedulerModal);
-      schedulerModal.remove();
-    });
-
-    /// Handle Schedule Form Submission
-  scheduleForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const scheduledTime = scheduleDateInput.value;
-
-    if (!scheduledTime) {
-      showToast('Please select a date and time.');
-      return;
-    }
-
-    // Basic validation for the scheduled time
-    const isValid = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(scheduledTime);
-    if (!isValid) {
-      showToast('Invalid date format. Please use YYYY-MM-DD HH:MM.');
-      return;
-    }
-
-    // Update the post status and scheduled_time in the database via IPC
-    const updatedPost = {
-      id: post.id,
-      title: post.title, // Include title if available
-      content: quill.root.innerHTML.trim(),
-      status: 'scheduled',
-      scheduled_time: scheduledTime,
-    };
-
-    showLoader(); // Show loader during the async operation
+  // ======= Initialize the Scheduler =======
+  async function initializeScheduler() {
     try {
-      const result = await window.api.schedulePost(updatedPost);
-      if (result.success) {
-        showToast('Post scheduled successfully!');
-        loadSavedPosts(); // Refresh the saved posts list
-      } else {
-        showToast(`Failed to schedule the post: ${result.message}`);
-      }
+      console.log('Initializing Scheduler...');
+      await loadSchedulerData();
+      initializeCalendar();
     } catch (error) {
-      console.error('Error scheduling post:', error);
-      showToast('An error occurred while scheduling the post.');
-    } finally {
-      hideLoader(); // Hide loader after the operation
-      closeModal(schedulerModal);
-      schedulerModal.remove();
+      console.error('Error initializing Scheduler:', error.message);
     }
+  }  
+  
+  // ======= Load Scheduler Data =======
+  async function loadSchedulerData() {
+    try {
+      const posts = await window.api.getPosts(); // Fetch all posts
+      const unscheduledPosts = posts.filter(post => post.status === 'draft');
+      const scheduledPosts = posts.filter(post => post.status === 'scheduled');
+  
+      displayPosts('#unscheduled-posts', unscheduledPosts);
+      displayPosts('#upcoming-posts', scheduledPosts);
+  
+      updateCalendarHighlights(scheduledPosts); // Highlight calendar dates
+    } catch (error) {
+      console.error('Error loading Scheduler data:', error.message);
+    }
+  }  
+
+  // ======= Initialize the Calendar =======
+  function initializeCalendar() {
+    const calendarElement = document.getElementById('calendar');
+    if (!calendarElement) {
+      console.error('Calendar element not found.');
+      return;
+    }
+  
+    flatpickr(calendarElement, {
+      inline: true,
+      enableTime: false,
+      onChange: ([selectedDate]) => loadPostsForDay(selectedDate),
     });
-  };
+  }
+  
+  // Update calendar highlights with scheduled posts
+  function updateCalendarHighlights(scheduledPosts) {
+    const datesWithPosts = scheduledPosts.map(post =>
+      post.scheduled_time.split('T')[0] // Extract date in YYYY-MM-DD
+    );
+  
+    const calendarElement = document.getElementById('calendar');
+    if (calendarElement._flatpickr) {
+      calendarElement._flatpickr.redraw();
+      calendarElement._flatpickr.config.events = datesWithPosts;
+    }
+  }  
+  
+  // Load posts for a selected date
+  async function loadPostsForDay(selectedDate) {
+    try {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      const posts = await window.api.getPosts(); // Fetch all posts
+  
+      const dayPosts = posts.filter(post =>
+        post.scheduled_time.startsWith(formattedDate)
+      );
+  
+      displayPosts('#day-posts', dayPosts);
+      document.getElementById('selected-date').textContent = formattedDate;
+    } catch (error) {
+      console.error('Error loading posts for the day:', error.message);
+    }
+  }   
+  
+  // Function to display posts in a given list
+  function displayPosts(listId, posts) {
+    const listElement = document.querySelector(listId);
+    listElement.innerHTML = ''; // Clear existing content
+  
+    if (posts.length === 0) {
+      listElement.innerHTML = '<li>No posts found.</li>';
+      return;
+    }
+  
+    posts.forEach(post => {
+      const li = document.createElement('li');
+      li.textContent = post.title;
+      li.dataset.postId = post.id;
+  
+      // Click event to interact with the post (e.g., view, edit, delete)
+      li.addEventListener('click', () => handlePostClick(post));
+  
+      listElement.appendChild(li);
+    });
+  }  
 
   // ======= Load Saved Posts Function =======
   const loadSavedPosts = async () => {
@@ -687,15 +718,71 @@ document.addEventListener('DOMContentLoaded', () => {
 // Schedule Post Button Click Event
 schedulePostButton.addEventListener('click', () => {
   if (selectedPost) {
-    schedulePost(selectedPost);
-    // Optionally keep the modal open or close it based on your preference
+    // 1) Open the static modal
+    openModal(document.getElementById('schedule-form-modal'));
 
-    // Reset selection and disable buttons
+    // 2) Optionally, populate the <select id="post-select"> with just the selected post
+    const postSelectEl = document.getElementById('post-select');
+    if (postSelectEl) {
+      postSelectEl.innerHTML = ''; // Clear existing options
+      const option = document.createElement('option');
+      option.value = selectedPost.id;
+      option.textContent = selectedPost.title || `Post #${selectedPost.id}`;
+      postSelectEl.appendChild(option);
+      postSelectEl.value = selectedPost.id; // Pre-select it
+    }
+
+    // 3) Optionally keep the Saved Posts modal open or close it
+    closeModal(savedPostsModal);
+
+    // 4) Reset selection so you can’t schedule the same post again without re-selecting
     resetSelection();
   } else {
     showToast('Please select a post to schedule.');
   }
 });
+
+if (addSchedule) {
+  addSchedule.addEventListener('click', () => {
+    const selectedDate = document.getElementById('selected-date').textContent;
+    if (!selectedDate) {
+      showToast('Please select a date first.');
+      return;
+    }
+    openModal(document.getElementById('schedule-form-modal'));
+  });
+}
+
+if (saveSchedule) {
+  saveSchedule.addEventListener('click', async () => {
+    const postId = document.getElementById('post-select').value;
+    const scheduleDateTime = document.getElementById('schedule-datetime').value;
+
+    if (!postId || !scheduleDateTime) {
+      showToast('Please fill out all fields.');
+      return;
+    }
+
+    try {
+      const result = await window.api.schedulePost({
+        id: postId,
+        scheduled_time: scheduleDateTime,
+        status: 'scheduled',
+      });
+
+      if (result.success) {
+        showToast('Post scheduled successfully!');
+        closeModal(document.getElementById('schedule-form-modal'));
+        await loadSchedulerData();
+      } else {
+        showToast(`Failed to schedule the post: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error scheduling the post:', error.message);
+      showToast('An error occurred while scheduling the post.');
+    }
+  });
+}
 
 // Delete Post Button Click Event
 deletePostButton.addEventListener('click', () => {
