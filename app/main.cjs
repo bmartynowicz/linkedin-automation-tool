@@ -7,7 +7,8 @@ const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
 const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 const db = require('../database/database');
-const { postToLinkedIn, scheduleExistingPosts ,performNonAPIFunctionality } = require('../automation/linkedin');
+const { formatLinkedInText } = require('../utils/formatLinkedInText.js');
+const { postToLinkedIn } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
@@ -167,19 +168,54 @@ ipcMain.handle('fetchSettings', async () => {
   }
 });
 
+ipcMain.handle('format-linkedin-text', async (event, delta) => {
+  // Perform the formatting in the main process
+  const formattedText = formatLinkedInText(delta);
+  return formattedText;
+});
+
 // Handle LinkedIn post requests
 ipcMain.on('post-to-linkedin', async (event, content) => {
-  console.log("Received LinkedIn post request with content:", content);
+  console.log('Received LinkedIn post request with content:', content);
+  // content might be { postId, title, body }
+  
   try {
-    const result = await postToLinkedIn(content);
+    // 1) Get current user from DB
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !currentUser.access_token || !currentUser.linkedin_id) {
+      throw new Error('LinkedIn user is not authenticated.');
+    }
+
+    // 2) Post to LinkedIn
+    const result = await postToLinkedIn(
+      { title: content.title, body: content.body },
+      currentUser.access_token,
+      currentUser.linkedin_id
+    );
+
     if (result.success) {
+      // 3) We have result.data.id => e.g. "urn:li:share:7278100664688209921"
+      const linkedinShareId = result.data.id || null;
+
+      // 4) Update the local DB record with the LinkedIn post ID, status='posted'
+      if (content.postId) {
+        await savePost({
+          id: content.postId,
+          title: content.title,
+          content: content.body,
+          status: 'posted',
+          linkedin_id: currentUser.linkedin_id,
+          linkedin_post_id: linkedinShareId
+        });
+      }
+
       event.sender.send('post-success', 'Post was successful!');
     } else {
       event.sender.send('post-error', `Failed to post: ${result.message}`);
     }
   } catch (error) {
-    console.error('Error in post-to-linkedin handler:', error);
-    event.sender.send('post-error', 'An unexpected error occurred while posting.');
+    console.error('Error in post-to-linkedin handler:', error.message);
+    event.sender.send('post-error', `An error occurred: ${error.message}`);
   }
 });
 
@@ -342,7 +378,6 @@ ipcMain.handle('get-post-by-id', async (event, postId) => {
     return { success: false, message: error.message };
   }
 });
-
 
 // Delete a post by ID
 ipcMain.handle('delete-post', async (event, { postId, userId }) => {

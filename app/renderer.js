@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmDeleteButton = document.getElementById('confirm-delete');
   const cancelDeleteButton = document.getElementById('cancel-delete');
   const closeDeleteConfirmationButton = document.getElementById('close-delete-confirmation');
+  const postToLinkedInButton = document.getElementById('post-to-linkedin');
 
   // ======= Save Post Button Functionality =======
   const savePostButton = document.getElementById('save-post');
@@ -968,6 +969,20 @@ CustomBullet.blotName = 'custom-bullet';
 CustomBullet.tagName = 'LI'; // Use list item tag
 Quill.register(CustomBullet, true);
 
+// Function to apply custom formatting
+function applyCustomFormat(format) {
+  const range = quill.getSelection();
+  if (range) {
+    const selectedText = quill.getText(range.index, range.length);
+    const formattedText = textFormat[format](selectedText);
+
+    // Replace the selected text with formatted text
+    quill.deleteText(range.index, range.length);
+    quill.insertText(range.index, formattedText);
+    quill.setSelection(range.index + formattedText.length, 0);
+  }
+}
+
 // ======= Initialize the Quill Editor =======
 if (typeof Quill !== 'undefined') {
   console.log('Quill is available.');
@@ -1014,6 +1029,22 @@ if (typeof Quill !== 'undefined') {
   // ======= Add Toolbar Handler for Custom Bullet =======
   const toolbar = quill.getModule('toolbar');
 
+  const applyCustomFormat = (format) => {
+    const range = quill.getSelection();
+    if (range) {
+      const currentFormat = quill.getFormat(range.index, range.length);
+      quill.format(format, !currentFormat[format]); // Toggle the format
+      console.log(`${format} format toggled.`);
+    } else {
+      console.error('No text selected.');
+    }
+  };
+
+  toolbar.addHandler('bold', () => applyCustomFormat('bold'));
+  toolbar.addHandler('italic', () => applyCustomFormat('italic'));
+  toolbar.addHandler('underline', () => applyCustomFormat('underline'));
+
+
   toolbar.addHandler('custom-bullet', function () {
     const range = this.quill.getSelection();
     if (range) {
@@ -1056,14 +1087,14 @@ if (emojiBulletButton) {
 
 console.log('Custom bullet list initialized.');
 
-  // ======= Add Event Listener for Toolbar Undo/Redo Buttons =======
-  document.getElementById('toolbar').addEventListener('click', (e) => {
+// ======= Add Event Listener for Toolbar Undo/Redo Buttons =======
+document.getElementById('toolbar').addEventListener('click', (e) => {
     if (e.target.closest('.ql-undo')) {
       quill.history.undo();
     } else if (e.target.closest('.ql-redo')) {
       quill.history.redo();
     }
-  });
+});
 
   // Set spellcheck attribute to true on the editable area
 quill.on('editor-change', () => {
@@ -1140,6 +1171,81 @@ if (editorElement) {
       }
     });
   }
+
+  postToLinkedInButton.addEventListener('click', async () => {
+  // 1) Validate inputs
+  const title = postTitleInput.value.trim();
+  const delta = quill.getContents();
+
+  if (!title || !delta) {
+    showToast('Please provide a title and content before posting to LinkedIn.');
+    return;
+  }
+
+  // 2) Format the content
+  const formattedContent = await window.api.formatLinkedInText(delta);
+
+  // 3) Fetch the current user (to get linkedin_id, etc.)
+  const user = await window.api.fetchUserData();
+  if (!user || !user.linkedin_id) {
+    showToast('User not authenticated. Please log in with LinkedIn.');
+    return;
+  }
+
+  // 4) If we have no 'editingPostId', then we create a new local post. 
+  //    Otherwise, we update the existing one.
+  let localPostId = editingPostId; // from your renderer code
+  let savePostResult;
+
+  try {
+    // Build the post object we’ll send to the DB
+    const postData = {
+      id: localPostId, // null or undefined => new record
+      title,
+      content: formattedContent,
+      status: 'draft',           // for now
+      linkedin_id: user.linkedin_id
+    };
+
+    // Call the "savePost" IPC
+    savePostResult = await window.api.savePost(postData);
+
+    if (savePostResult.success) {
+      // If it's a new post, set localPostId to the newly created record
+      localPostId = savePostResult.postId;
+      // If we had no editingPostId, now we store it in the renderer so we can keep track
+      if (!editingPostId) {
+        editingPostId = localPostId;
+      }
+    } else {
+      showToast('Failed to save post in the database.');
+      return;
+    }
+  } catch (error) {
+    console.error('Error saving post before LinkedIn posting:', error);
+    showToast('An error occurred while saving the post.');
+    return;
+  }
+
+  // 5) Now that the local DB record is saved, call postToLinkedIn 
+  //    with the local ID as well
+  console.log('Saved post in DB. Now posting to LinkedIn with local ID:', localPostId);
+  window.api.postToLinkedIn({
+    postId: localPostId,         // <--- The local post ID
+    title, 
+    body: formattedContent
+  });
+});
+
+  
+  // Listen for success or error feedback from main process
+  window.api.on('post-success', (message) => {
+    showToast(`Success: ${message}`);
+  });
+  
+  window.api.on('post-error', (message) => {
+    showToast(`Error: ${message}`);
+  });
 
   // Fetch suggestion and display in suggestion box
 const fetchSuggestion = async (isManual = false) => {

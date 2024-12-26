@@ -26,7 +26,6 @@ const allowedSendChannels = [
 ];
 
 contextBridge.exposeInMainWorld('api', {
-  // Generic method to listen to events
   on: (channel, callback) => {
     if (allowedChannels.includes(channel)) {
       ipcRenderer.on(channel, (event, ...args) => callback(...args));
@@ -34,8 +33,6 @@ contextBridge.exposeInMainWorld('api', {
       console.warn(`Attempted to listen to unauthorized channel: ${channel}`);
     }
   },
-
-  // Generic method to remove event listeners
   off: (channel, callback) => {
     if (allowedChannels.includes(channel)) {
       ipcRenderer.removeListener(channel, callback);
@@ -43,8 +40,10 @@ contextBridge.exposeInMainWorld('api', {
       console.warn(`Attempted to remove listener from unauthorized channel: ${channel}`);
     }
   },
-
-  // Existing methods with channel validation
+  formatLinkedInText: (delta) => {
+    console.log('Invoking "format-linkedin-text" with delta:', delta);
+    return ipcRenderer.invoke('format-linkedin-text', delta);
+  },
   postToLinkedIn: (content) => {
     if (allowedSendChannels.includes('post-to-linkedin')) {
       ipcRenderer.send('post-to-linkedin', content);
@@ -86,7 +85,6 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Invoking "fetch-user-data"');
     return ipcRenderer.invoke('fetch-user-data');
   },
-  // Expose IPC invoke and send methods securely
   getCurrentUserWithPreferences: () => {
     console.log('Invoking "get-current-user-with-preferences"');
     return ipcRenderer.invoke('get-current-user-with-preferences');
