@@ -245,6 +245,26 @@
       </div>
     </div>
   </div>
+
+  <!-- Edit Posts Modal -->
+  <div id="edit-post-modal" class="hidden modal">
+    <div class="modal-content">
+      <h2>Edit Post</h2>
+      <label for="edit-post-title">Post Title</label>
+      <input type="text" id="edit-post-title" placeholder="Enter title" />
+  
+      <label for="edit-post-content">Content</label>
+      <textarea id="edit-post-content" placeholder="Enter content"></textarea>
+  
+      <label for="edit-post-date">Scheduled Date & Time</label>
+      <input type="datetime-local" id="edit-post-date" />
+  
+      <div class="modal-actions">
+        <button id="save-post-button" class="action-button">Save</button>
+        <button id="close-edit-modal" class="action-button cancel">Cancel</button>
+      </div>
+    </div>
+  </div>  
   
   <!-- Saved Posts Modal -->
   <div id="saved-posts-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="saved-posts-title">

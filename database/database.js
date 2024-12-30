@@ -55,7 +55,6 @@ function initializeDatabase() {
         title TEXT, 
         content TEXT NOT NULL,
         status TEXT CHECK(status IN ('draft', 'scheduled', 'posted', 'closed')) NOT NULL DEFAULT 'draft',
-        scheduled_time DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         edited_at DATETIME,  -- For last edited timestamp

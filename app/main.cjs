@@ -401,6 +401,27 @@ ipcMain.handle('delete-post', async (event, { postId, userId }) => {
   }
 });
 
+// Get post schedules
+ipcMain.handle('get-schedules', async () => {
+  try {
+    const query = 'SELECT * FROM schedules';
+    return new Promise((resolve, reject) => {
+      db.all(query, [], (err, rows) => {
+        if (err) {
+          console.error('Error fetching schedules:', err.message);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error in get-schedules handler:', error.message);
+    throw error;
+  }
+});
+
+
 // ======= IPC Handler for Scheduling Posts =======
 ipcMain.handle('schedule-post', async (event, updatedPost) => {
   try {
@@ -435,22 +456,6 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
             return reject(err);
           }
           console.log('Schedule updated successfully:', { postId, scheduledTime, recurrence });
-          resolve();
-        }
-      );
-    });
-
-    // Update the post in the posts table
-    await new Promise((resolve, reject) => {
-      db.run(
-        `UPDATE posts SET status = 'scheduled', scheduled_time = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [scheduledTime, postId],
-        function (err) {
-          if (err) {
-            console.error('Error updating post status to scheduled:', err.message);
-            return reject(err);
-          }
-          console.log('Post status updated to scheduled:', postId);
           resolve();
         }
       );

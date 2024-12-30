@@ -491,8 +491,92 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ======= Initialize the Scheduler =======
-  async function initializeScheduler() {
+  // ======= Initialize the Calendar =======
+async function initializeCalendar() {
+  const calendarElement = document.getElementById('calendar');
+  if (!calendarElement) {
+    console.error('Calendar element not found.');
+    return;
+  }
+
+  const posts = await window.api.getPosts(); // Fetch posts
+  const datesWithPosts = posts.map(post => post.scheduled_time?.split('T')[0]);
+
+  flatpickr(calendarElement, {
+    inline: true,
+    enableTime: false,
+    onChange: ([selectedDate]) => loadPostsForDay(selectedDate),
+    onReady: () => updateCalendarWithPostCounts(posts), // Highlight dates
+  });
+} 
+
+// Update calendar highlights with scheduled posts
+function updateCalendarHighlights(scheduledPosts) {
+  const calendarElement = document.getElementById('calendar');
+  if (!calendarElement || !calendarElement._flatpickr) return;
+
+  // Extract dates with scheduled posts
+  const datesWithPosts = scheduledPosts.map(post => post.scheduled_time.split('T')[0]);
+
+  calendarElement._flatpickr.redraw();
+  calendarElement._flatpickr.days.forEach(dayElement => {
+    const date = dayElement.dateObj.toISOString().split('T')[0];
+    if (datesWithPosts.includes(date)) {
+      dayElement.classList.add('has-posts');
+    } else {
+      dayElement.classList.remove('has-posts');
+    }
+  });
+}
+
+function updateCalendarWithPostCounts(posts) {
+  const calendarElement = document.getElementById('calendar');
+  const datesWithPosts = posts
+    .filter(post => post.scheduled_time) // Ensure scheduled_time exists
+    .map(post => post.scheduled_time.split('T')[0]);
+
+  if (calendarElement._flatpickr) {
+    const fp = calendarElement._flatpickr;
+    fp.redraw();
+    fp.days.forEach(dayElement => {
+      const date = dayElement.dateObj.toISOString().split('T')[0];
+      if (datesWithPosts.includes(date)) {
+        dayElement.setAttribute('data-has-posts', 'true');
+      } else {
+        dayElement.removeAttribute('data-has-posts');
+      }
+    });
+  }
+}
+
+// ======= Load Scheduler Data =======
+async function loadSchedulerData() {
+  try {
+    // Fetch posts and schedules separately
+    const posts = await window.api.getPosts();
+    const schedules = await window.api.getSchedules(); // New IPC endpoint
+
+    // Merge schedules with their corresponding posts
+    const scheduledPosts = schedules.map(schedule => {
+      const post = posts.find(p => p.id === schedule.post_id);
+      return { ...post, scheduled_time: schedule.scheduled_time, schedule_status: schedule.status };
+    });
+
+    const unscheduledPosts = posts.filter(post => !scheduledPosts.some(s => s.id === post.id));
+
+    // Display posts in their respective sections
+    displayPosts('#unscheduled-posts', unscheduledPosts);
+    displayPosts('#upcoming-posts', scheduledPosts);
+
+    // Update the calendar with highlights
+    updateCalendarHighlights(scheduledPosts);
+  } catch (error) {
+    console.error('Error loading scheduler data:', error.message);
+  }
+}
+
+// ======= Initialize the Scheduler =======
+async function initializeScheduler() {
     try {
       console.log('Initializing Scheduler...');
       await loadSchedulerData();
@@ -500,53 +584,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error('Error initializing Scheduler:', error.message);
     }
-  }  
+}  
   
-  // ======= Load Scheduler Data =======
-  async function loadSchedulerData() {
-    try {
-      const posts = await window.api.getPosts(); // Fetch all posts
-      const unscheduledPosts = posts.filter(post => post.status === 'draft');
-      const scheduledPosts = posts.filter(post => post.status === 'scheduled');
-  
-      displayPosts('#unscheduled-posts', unscheduledPosts);
-      displayPosts('#upcoming-posts', scheduledPosts);
-  
-      updateCalendarHighlights(scheduledPosts); // Highlight calendar dates
-    } catch (error) {
-      console.error('Error loading Scheduler data:', error.message);
-    }
-  }  
-
-  // ======= Initialize the Calendar =======
-  function initializeCalendar() {
-    const calendarElement = document.getElementById('calendar');
-    if (!calendarElement) {
-      console.error('Calendar element not found.');
-      return;
-    }
-  
-    flatpickr(calendarElement, {
-      inline: true,
-      enableTime: false,
-      onChange: ([selectedDate]) => loadPostsForDay(selectedDate),
-    });
-  }
-  
-  // Update calendar highlights with scheduled posts
-  function updateCalendarHighlights(scheduledPosts) {
-    const datesWithPosts = scheduledPosts.map(post =>
-      post.scheduled_time.split('T')[0] // Extract date in YYYY-MM-DD
-    );
-  
-    const calendarElement = document.getElementById('calendar');
-    if (calendarElement._flatpickr) {
-      calendarElement._flatpickr.redraw();
-      calendarElement._flatpickr.config.events = datesWithPosts;
-    }
-  }  
-  
-  async function populatePostSelect() {
+async function populatePostSelect() {
     const postSelectEl = document.getElementById('post-select');
     if (!postSelectEl) return;
   
@@ -573,49 +613,128 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error populating post select:', error.message);
       showToast('Failed to load unscheduled posts.');
     }
-  }  
+}  
 
-  // Load posts for a selected date
-  async function loadPostsForDay(selectedDate) {
-    try {
-      const formattedDate = selectedDate.toISOString().split('T')[0];
-      const posts = await window.api.getPosts(); // Fetch all posts
-      document.getElementById('selected-date').textContent = formattedDate;
-      populatePostSelect();
+// Load posts for a selected date
+function loadPostsForDay(selectedDate) {
+  const formattedDate = selectedDate.toISOString().split('T')[0];
+  document.getElementById('selected-date').textContent = formattedDate;
 
-      const dayPosts = posts.filter(post =>
-        post.scheduled_time.startsWith(formattedDate)
-      );
-  
+  window.api.getSchedules() // Fetch schedules
+    .then(schedules => {
+      return schedules.filter(schedule => schedule.scheduled_time.startsWith(formattedDate));
+    })
+    .then(daySchedules => {
+      return Promise.all(daySchedules.map(schedule => window.api.getPostById(schedule.post_id)));
+    })
+    .then(dayPosts => {
       displayPosts('#day-posts', dayPosts);
-    } catch (error) {
-      console.error('Error loading posts for the day:', error.message);
-    }
-  }   
+    })
+    .catch(error => console.error('Failed to load posts for the day:', error));
+}
 
-
-  
   // Function to display posts in a given list
   function displayPosts(listId, posts) {
     const listElement = document.querySelector(listId);
     listElement.innerHTML = ''; // Clear existing content
   
     if (posts.length === 0) {
-      listElement.innerHTML = '<li>No posts found.</li>';
+      listElement.innerHTML = '<div>No posts found.</div>';
       return;
     }
   
     posts.forEach(post => {
-      const li = document.createElement('li');
-      li.textContent = post.title;
-      li.dataset.postId = post.id;
+      const postCard = document.createElement('div');
+      postCard.className = 'post-card';
   
-      // Click event to interact with the post (e.g., view, edit, delete)
-      li.addEventListener('click', () => handlePostClick(post));
+      const postDetails = document.createElement('div');
+      postDetails.className = 'post-details';
   
-      listElement.appendChild(li);
+      const postTitle = document.createElement('h4');
+      postTitle.className = 'post-title';
+      postTitle.textContent = post.title || `Post #${post.id}`;
+  
+      const postDate = document.createElement('p');
+      postDate.className = 'post-date';
+      postDate.textContent = post.scheduled_time
+        ? `Scheduled: ${new Date(post.scheduled_time).toLocaleString()}`
+        : 'Not Scheduled';
+  
+      postDetails.appendChild(postTitle);
+      postDetails.appendChild(postDate);
+  
+      const postActions = document.createElement('div');
+      postActions.className = 'post-actions';
+  
+      const editButton = document.createElement('button');
+      editButton.className = 'btn-edit';
+      editButton.innerHTML = '<i class="fas fa-edit"></i>';
+      editButton.title = 'Edit';
+      editButton.addEventListener('click', () => handleEditPost(post));
+  
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'btn-delete';
+      deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+      deleteButton.title = 'Delete';
+      deleteButton.addEventListener('click', () => handleDeletePost(post.id));
+  
+      postActions.appendChild(editButton);
+      postActions.appendChild(deleteButton);
+  
+      postCard.appendChild(postDetails);
+      postCard.appendChild(postActions);
+  
+      listElement.appendChild(postCard);
     });
-  }  
+  }
+  
+function handleEditPost(post) {
+    window.api.getPostById(post.id)
+      .then(post => {
+        if (!post) {
+          showToast('Post not found!');
+          return;
+        }
+        // Populate editor fields
+        document.getElementById('post-title').value = post.title || '';
+        const quillEditor = document.querySelector('.ql-editor');
+        if (quillEditor) {
+          quillEditor.innerHTML = post.content || '';
+        }
+  
+        // Switch views
+        document.getElementById('scheduler-page').classList.add('hidden');
+        document.getElementById('content-editor').classList.remove('hidden');
+        showToast('Post loaded into editor!');
+      })
+      .catch(error => console.error('Failed to load post:', error));
+}
+  
+function handleDeletePost(postId) {
+  if (!confirm('Are you sure you want to delete this post?')) return;
+
+  window.api.deletePost(postId)
+    .then(result => {
+      if (result.success) {
+        showToast('Post deleted successfully!');
+        loadSchedulerData(); // Refresh scheduler
+      } else {
+        showToast('Failed to delete post.');
+      }
+    })
+    .catch(error => console.error('Failed to delete post:', error));
+}  
+  
+  function openEditModal(post) {
+    document.getElementById('edit-post-title').value = post.title;
+    document.getElementById('edit-post-content').value = post.content;
+    document.getElementById('edit-post-date').value = post.scheduled_time;
+    document.getElementById('edit-post-modal').classList.remove('hidden');
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-post-modal').classList.add('hidden');
+  }
 
   // ======= Load Saved Posts Function =======
   const loadSavedPosts = async () => {

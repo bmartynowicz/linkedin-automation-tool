@@ -113,6 +113,10 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Invoking "schedule-post" with updated post:', updatedPost);
     return ipcRenderer.invoke('schedule-post', updatedPost);
   },
+  getSchedules: () => {
+    console.log('Invoking "get-schedules"');
+    return ipcRenderer.invoke('get-schedules');
+  },
   getEnv: (variable) => {
     console.log('Invoking "get-env" for variable:', variable);
     return ipcRenderer.invoke('get-env', variable);

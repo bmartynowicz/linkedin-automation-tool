@@ -164,6 +164,33 @@ app.delete('/api/posts/:id', (req, res) => {
 });
 
 /**
+ * @route   GET /api/posts/scheduled/:date
+ * @desc    Retrieve posts scheduled for a specific date
+ * @access  Public
+ */
+app.get('/api/posts/scheduled/:date', (req, res) => {
+  const { date } = req.params;
+
+  // Query to find posts scheduled for the given date
+  const query = `
+    SELECT p.*
+    FROM posts p
+    JOIN schedules s ON p.id = s.post_id
+    WHERE date(s.scheduled_time) = date(?)
+  `;
+  const params = [date];
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error(`Error fetching scheduled posts for date ${date}:`, err.message);
+      return res.status(500).json({ error: 'Failed to retrieve scheduled posts.' });
+    }
+
+    return res.status(200).json(rows);
+  });
+});
+
+/**
  * @route   GET /api/analytics
  * @desc    Fetch basic analytics data
  * @access  Public (Consider securing with authentication)
