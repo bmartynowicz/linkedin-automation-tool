@@ -510,45 +510,6 @@ async function initializeCalendar() {
   });
 } 
 
-// Update calendar highlights with scheduled posts
-function updateCalendarHighlights(scheduledPosts) {
-  const calendarElement = document.getElementById('calendar');
-  if (!calendarElement || !calendarElement._flatpickr) return;
-
-  // Extract dates with scheduled posts
-  const datesWithPosts = scheduledPosts.map(post => post.scheduled_time.split('T')[0]);
-
-  calendarElement._flatpickr.redraw();
-  calendarElement._flatpickr.days.forEach(dayElement => {
-    const date = dayElement.dateObj.toISOString().split('T')[0];
-    if (datesWithPosts.includes(date)) {
-      dayElement.classList.add('has-posts');
-    } else {
-      dayElement.classList.remove('has-posts');
-    }
-  });
-}
-
-function updateCalendarWithPostCounts(posts) {
-  const calendarElement = document.getElementById('calendar');
-  const datesWithPosts = posts
-    .filter(post => post.scheduled_time) // Ensure scheduled_time exists
-    .map(post => post.scheduled_time.split('T')[0]);
-
-  if (calendarElement._flatpickr) {
-    const fp = calendarElement._flatpickr;
-    fp.redraw();
-    fp.days.forEach(dayElement => {
-      const date = dayElement.dateObj.toISOString().split('T')[0];
-      if (datesWithPosts.includes(date)) {
-        dayElement.setAttribute('data-has-posts', 'true');
-      } else {
-        dayElement.removeAttribute('data-has-posts');
-      }
-    });
-  }
-}
-
 // ======= Load Scheduler Data =======
 async function loadSchedulerData() {
   try {
@@ -572,6 +533,47 @@ async function loadSchedulerData() {
     updateCalendarHighlights(scheduledPosts);
   } catch (error) {
     console.error('Error loading scheduler data:', error.message);
+  }
+}
+
+// Update calendar highlights with scheduled posts
+function updateCalendarHighlights(scheduledPosts) {
+  console.log("Scheduled Posts for Highlights:", scheduledPosts);
+
+  const calendarElement = document.getElementById('calendar');
+  if (!calendarElement || !calendarElement._flatpickr) return;
+
+  const datesWithPosts = scheduledPosts.map(post => post.scheduled_time.split('T')[0]);
+  calendarElement._flatpickr.redraw();
+
+  calendarElement._flatpickr.days.forEach(dayElement => {
+    const date = dayElement.dateObj.toISOString().split('T')[0];
+    if (datesWithPosts.includes(date)) {
+      dayElement.classList.add('has-posts'); // Highlight
+    } else {
+      dayElement.classList.remove('has-posts'); // Remove highlight
+    }
+  });
+}
+
+
+function updateCalendarWithPostCounts(posts) {
+  const calendarElement = document.getElementById('calendar');
+  const datesWithPosts = posts
+    .filter(post => post.scheduled_time) // Ensure scheduled_time exists
+    .map(post => post.scheduled_time.split('T')[0]);
+
+  if (calendarElement._flatpickr) {
+    const fp = calendarElement._flatpickr;
+    fp.redraw();
+    fp.days.forEach(dayElement => {
+      const date = dayElement.dateObj.toISOString().split('T')[0];
+      if (datesWithPosts.includes(date)) {
+        dayElement.setAttribute('data-has-posts', 'true');
+      } else {
+        dayElement.removeAttribute('data-has-posts');
+      }
+    });
   }
 }
 
@@ -620,14 +622,18 @@ function loadPostsForDay(selectedDate) {
   const formattedDate = selectedDate.toISOString().split('T')[0];
   document.getElementById('selected-date').textContent = formattedDate;
 
-  window.api.getSchedules() // Fetch schedules
-    .then(schedules => {
-      return schedules.filter(schedule => schedule.scheduled_time.startsWith(formattedDate));
-    })
+  window.api.getSchedules()
+    .then(schedules => schedules.filter(schedule => schedule.scheduled_time.startsWith(formattedDate)))
     .then(daySchedules => {
-      return Promise.all(daySchedules.map(schedule => window.api.getPostById(schedule.post_id)));
+      return Promise.all(daySchedules.map(schedule =>
+        window.api.getPostById(schedule.post_id).then(post => ({
+          ...post,
+          scheduled_time: schedule.scheduled_time,
+        }))
+      ));
     })
     .then(dayPosts => {
+      console.log("Posts for the selected date:", dayPosts);
       displayPosts('#day-posts', dayPosts);
     })
     .catch(error => console.error('Failed to load posts for the day:', error));
@@ -713,17 +719,29 @@ function handleEditPost(post) {
 function handleDeletePost(postId) {
   if (!confirm('Are you sure you want to delete this post?')) return;
 
-  window.api.deletePost(postId)
+  // Fetch the current user's identifier
+  window.api.fetchUserData()
+    .then(user => {
+      if (!user || (!user.linkedin_id && !user.user_id)) {
+        showToast('Unable to identify the current user. Please log in again.');
+        return;
+      }
+
+      const identifier = user.linkedin_id || user.user_id;
+
+      return window.api.deletePost(postId, identifier);
+    })
     .then(result => {
       if (result.success) {
-        showToast('Post deleted successfully!');
+        showToast('Post and associated schedule deleted successfully!');
         loadSchedulerData(); // Refresh scheduler
+        loadSavedPosts(); // Refresh saved posts list
       } else {
-        showToast('Failed to delete post.');
+        showToast(result.message || 'Failed to delete the post.');
       }
     })
     .catch(error => console.error('Failed to delete post:', error));
-}  
+}
   
   function openEditModal(post) {
     document.getElementById('edit-post-title').value = post.title;

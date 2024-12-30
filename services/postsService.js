@@ -32,7 +32,6 @@ async function getPostsByLinkedInId(linkedin_id) {
  * @param {number} [post.user_id] - Local user ID if not LinkedIn.
  * @param {string} [post.linkedin_id] - LinkedIn user ID if LinkedIn-authenticated.
  * @param {string} [post.linkedin_post_id] - The post ID returned by LinkedIn (urn:li:share:xxx).
- * @param {string} [post.scheduled_time] - If scheduling a post, store the scheduled time.
  * @returns {Promise<Object>} - { success: boolean, postId: number }
  */
 async function savePost(post) {
@@ -44,16 +43,15 @@ async function savePost(post) {
     user_id,
     linkedin_id,
     linkedin_post_id,
-    scheduled_time
   } = post;
 
   return new Promise((resolve, reject) => {
-    // Determine ownership context
+    // Validate that at least one identifier is present
     const identifier = linkedin_id || user_id;
     const identifierColumn = linkedin_id ? 'linkedin_id' : 'user_id';
 
     if (!identifier) {
-      return reject(new Error('No identifier provided for saving the post.'));
+      return reject(new Error('No user identifier provided (linkedin_id or user_id).'));
     }
 
     if (id) {
@@ -64,25 +62,22 @@ async function savePost(post) {
             content = ?,
             status = ?,
             linkedin_post_id = ?,
-            ${scheduled_time ? 'scheduled_time = ?,' : ''}
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
           AND ${identifierColumn} = ?
       `;
 
-      // If scheduling time is provided, we include it in the placeholders
-      // otherwise we skip it
-      const placeholders = scheduled_time
-        ? [title, content, status, linkedin_post_id, scheduled_time, id, identifier]
-        : [title, content, status, linkedin_post_id, id, identifier];
-
-      db.run(sql, placeholders, function (err) {
-        if (err) {
-          console.error('Error updating post:', err.message);
-          return reject(err);
+      db.run(
+        sql,
+        [title, content, status, linkedin_post_id, id, identifier],
+        function (err) {
+          if (err) {
+            console.error('Error updating post:', err.message);
+            return reject(err);
+          }
+          resolve({ success: true, postId: id });
         }
-        resolve({ success: true, postId: id });
-      });
+      );
     } else {
       // Insert new post
       const sql = `
@@ -92,61 +87,76 @@ async function savePost(post) {
           content, 
           status, 
           linkedin_post_id,
-          ${scheduled_time ? 'scheduled_time,' : ''}
           created_at, 
           updated_at
         )
         VALUES (
           ?, ?, ?, ?, ?,
-          ${scheduled_time ? '?,' : ''}
           CURRENT_TIMESTAMP, 
           CURRENT_TIMESTAMP
         )
       `;
 
-      const placeholders = scheduled_time
-        ? [identifier, title, content, status, linkedin_post_id, scheduled_time]
-        : [identifier, title, content, status, linkedin_post_id];
-
-      db.run(sql, placeholders, function (err) {
-        if (err) {
-          console.error('Error saving post:', err.message);
-          return reject(err);
+      db.run(
+        sql,
+        [identifier, title, content, status, linkedin_post_id],
+        function (err) {
+          if (err) {
+            console.error('Error saving post:', err.message);
+            return reject(err);
+          }
+          resolve({ success: true, postId: this.lastID });
         }
-        resolve({ success: true, postId: this.lastID });
-      });
+      );
     }
   });
 }
 
 /**
- * Deletes a post by ID.
+ * Deletes a post and its associated schedule by ID.
  * Handles both logged-in and non-logged-in users.
  * @param {number} postId - The ID of the post to delete.
  * @param {number|string} identifier - The user_id or linkedin_id to verify ownership.
  * @returns {Promise<Object>} - The result of the delete operation.
  */
 async function deletePost(postId, identifier) {
-    return new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
       const identifierColumn = typeof identifier === 'string' ? 'linkedin_id' : 'user_id';
-  
-      db.run(
-        `DELETE FROM posts WHERE id = ? AND ${identifierColumn} = ?`,
-        [postId, identifier],
-        function (err) {
-          if (err) {
-            console.error('Error deleting post:', err.message);
-            return reject(err);
-          }
-          if (this.changes === 0) {
-            console.warn(`No post found with ID ${postId} for identifier ${identifier}`);
-            return resolve({ success: false, message: 'No post found or insufficient permissions.' });
-          }
-          resolve({ success: true });
-        }
-      );
-    });
-}  
+
+      db.serialize(() => {
+          // Delete the associated schedule first
+          db.run(
+              `DELETE FROM schedules WHERE post_id = ?`,
+              [postId],
+              function (err) {
+                  if (err) {
+                      console.error('Error deleting schedule:', err.message);
+                      return reject(err);
+                  }
+                  console.log(`Schedules for post ID ${postId} deleted.`);
+              }
+          );
+
+          // Then delete the post
+          db.run(
+              `DELETE FROM posts WHERE id = ? AND ${identifierColumn} = ?`,
+              [postId, identifier],
+              function (err) {
+                  if (err) {
+                      console.error('Error deleting post:', err.message);
+                      return reject(err);
+                  }
+                  if (this.changes === 0) {
+                      console.warn(`No post found with ID ${postId} for identifier ${identifier}`);
+                      return resolve({ success: false, message: 'No post found or insufficient permissions.' });
+                  }
+                  console.log(`Post with ID ${postId} deleted.`);
+                  resolve({ success: true });
+              }
+          );
+      });
+  });
+}
 
 /**
  * Searches for posts matching a query.

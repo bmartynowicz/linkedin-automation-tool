@@ -389,15 +389,19 @@ ipcMain.handle('delete-post', async (event, { postId, userId }) => {
   console.log(`Deleting post with ID ${postId} for user ID ${userId}`);
 
   try {
+    // Use the centralized deletePost function
     const result = await deletePost(postId, userId);
-    if (result.changes === 0) {
-      console.error(`No post found with ID ${postId} for user ID ${userId}`);
-      return { success: false, message: 'No post found or unauthorized.' };
+
+    if (!result.success) {
+      console.error(`Failed to delete post: ${result.message}`);
+      throw new Error(result.message || 'Post deletion failed.');
     }
-    return { success: true };
+
+    console.log(`Post with ID ${postId} deleted successfully.`);
+    return result;
   } catch (error) {
-    console.error('Error deleting post:', error.message);
-    return { success: false, message: error.message };
+    console.error('Error in delete-post handler:', error.message);
+    throw error;
   }
 });
 
@@ -427,39 +431,24 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
   try {
     const { postId, scheduledTime, recurrence } = updatedPost;
 
-    // Validate required fields
+    // Validate fields
     if (!postId || !scheduledTime) {
-      console.error('Missing required fields for scheduling:', updatedPost);
       return { success: false, message: 'Missing required fields.' };
     }
 
-    // Validate scheduledTime format
-    const scheduledDate = new Date(scheduledTime);
-    if (isNaN(scheduledDate.getTime())) {
-      console.error('Invalid scheduledTime:', scheduledTime);
-      return { success: false, message: 'Invalid scheduled time.' };
-    }
+    // Add or update the schedule in `schedules` table
+    await db.run(
+      `INSERT INTO schedules (post_id, scheduled_time, recurrence)
+       VALUES (?, ?, ?)
+       ON CONFLICT(post_id) DO UPDATE SET scheduled_time = ?, recurrence = ?`,
+      [postId, scheduledTime, recurrence, scheduledTime, recurrence]
+    );
 
-    // Add or update the schedule in the schedules table
-    await new Promise((resolve, reject) => {
-      db.run(
-        `INSERT INTO schedules (post_id, scheduled_time, recurrence, status)
-         VALUES (?, ?, ?, 'Scheduled')
-         ON CONFLICT(post_id) DO UPDATE SET 
-           scheduled_time = excluded.scheduled_time,
-           recurrence = excluded.recurrence,
-           status = 'Scheduled'`,
-        [postId, scheduledTime, recurrence],
-        function (err) {
-          if (err) {
-            console.error('Error inserting/updating schedule:', err.message);
-            return reject(err);
-          }
-          console.log('Schedule updated successfully:', { postId, scheduledTime, recurrence });
-          resolve();
-        }
-      );
-    });
+    // Update the post's status to 'scheduled' in `posts` table
+    await db.run(
+      `UPDATE posts SET status = 'scheduled' WHERE id = ?`,
+      [postId]
+    );
 
     return { success: true };
   } catch (error) {
