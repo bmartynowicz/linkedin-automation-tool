@@ -404,68 +404,61 @@ ipcMain.handle('delete-post', async (event, { postId, userId }) => {
 // ======= IPC Handler for Scheduling Posts =======
 ipcMain.handle('schedule-post', async (event, updatedPost) => {
   try {
-    const { id, title, content, status, scheduled_time } = updatedPost;
+    const { postId, scheduledTime, recurrence } = updatedPost;
 
     // Validate required fields
-    if (!id || !scheduled_time) {
+    if (!postId || !scheduledTime) {
       console.error('Missing required fields for scheduling:', updatedPost);
       return { success: false, message: 'Missing required fields.' };
     }
 
-    // Validate scheduled_time format
-    const scheduledDate = new Date(scheduled_time);
+    // Validate scheduledTime format
+    const scheduledDate = new Date(scheduledTime);
     if (isNaN(scheduledDate.getTime())) {
-      console.error('Invalid scheduled_time:', scheduled_time);
+      console.error('Invalid scheduledTime:', scheduledTime);
       return { success: false, message: 'Invalid scheduled time.' };
     }
 
-    // Update the post in the database
+    // Add or update the schedule in the schedules table
     await new Promise((resolve, reject) => {
       db.run(
-        "UPDATE posts SET title = ?, content = ?, status = ?, scheduled_time = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [title, content, status, scheduled_time, id],
+        `INSERT INTO schedules (post_id, scheduled_time, recurrence, status)
+         VALUES (?, ?, ?, 'Scheduled')
+         ON CONFLICT(post_id) DO UPDATE SET 
+           scheduled_time = excluded.scheduled_time,
+           recurrence = excluded.recurrence,
+           status = 'Scheduled'`,
+        [postId, scheduledTime, recurrence],
         function (err) {
           if (err) {
-            console.error('Error updating post for scheduling:', err.message);
-            return reject({ success: false, message: err.message });
+            console.error('Error inserting/updating schedule:', err.message);
+            return reject(err);
           }
-          console.log('Post updated successfully for scheduling:', id);
+          console.log('Schedule updated successfully:', { postId, scheduledTime, recurrence });
           resolve();
         }
       );
     });
 
-    // Schedule the post
-    schedule.scheduleJob(scheduledDate, async () => {
-      console.log(`Executing scheduled post ID ${id} at ${scheduledDate}`);
-      try {
-        const result = await postToLinkedIn(content);
-        if (result.success) {
-          // Update post status to 'posted'
-          db.run("UPDATE posts SET status = 'posted', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [id], (err) => {
-            if (err) {
-              console.error('Error updating post status to posted:', err.message);
-            } else {
-              console.log('Post successfully posted to LinkedIn.', { id });
-              // Notify renderer about the post being published
-              if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('post-published', id);
-              }
-            }
-          });
-        } else {
-          console.error('Failed to post to LinkedIn.', { id, error: result.message });
-          // Optionally, handle failed scheduling (e.g., retry, notify user)
+    // Update the post in the posts table
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE posts SET status = 'scheduled', scheduled_time = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [scheduledTime, postId],
+        function (err) {
+          if (err) {
+            console.error('Error updating post status to scheduled:', err.message);
+            return reject(err);
+          }
+          console.log('Post status updated to scheduled:', postId);
+          resolve();
         }
-      } catch (error) {
-        console.error('Error posting to LinkedIn during scheduled job:', { error: error.message, id });
-      }
+      );
     });
 
-    console.log('Scheduled a new post:', { id, scheduled_time });
     return { success: true };
   } catch (error) {
-    console.error('Error in schedule-post handler:', error);
+    console.error('Error in schedule-post handler:', error.message);
     return { success: false, message: error.message };
   }
 });

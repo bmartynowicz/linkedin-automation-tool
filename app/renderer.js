@@ -48,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const schedulePostButton = document.getElementById('schedule-post');
   const addSchedule = document.getElementById('add-schedule');
   const saveSchedule = document.getElementById('save-schedule')
+  const closeScheduleModalButton = document.getElementById('close-scheduler-modal');
+  const scheduleDateTimeInput = document.getElementById('schedule-datetime');
 
   // ======= Saved Posts Modal =======
   const savedPostsModal = document.getElementById('saved-posts-modal');
@@ -544,22 +546,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }  
   
+  async function populatePostSelect() {
+    const postSelectEl = document.getElementById('post-select');
+    if (!postSelectEl) return;
+  
+    try {
+      const posts = await window.api.getPosts(); // Fetch all posts
+      const unscheduledPosts = posts.filter(post => post.status === 'draft');
+  
+      postSelectEl.innerHTML = ''; // Clear existing options
+      if (unscheduledPosts.length === 0) {
+        const option = document.createElement('option');
+        option.textContent = 'No unscheduled posts available';
+        option.disabled = true;
+        postSelectEl.appendChild(option);
+        return;
+      }
+  
+      unscheduledPosts.forEach(post => {
+        const option = document.createElement('option');
+        option.value = post.id;
+        option.textContent = post.title || `Post #${post.id}`;
+        postSelectEl.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Error populating post select:', error.message);
+      showToast('Failed to load unscheduled posts.');
+    }
+  }  
+
   // Load posts for a selected date
   async function loadPostsForDay(selectedDate) {
     try {
       const formattedDate = selectedDate.toISOString().split('T')[0];
       const posts = await window.api.getPosts(); // Fetch all posts
-  
+      document.getElementById('selected-date').textContent = formattedDate;
+      populatePostSelect();
+
       const dayPosts = posts.filter(post =>
         post.scheduled_time.startsWith(formattedDate)
       );
   
       displayPosts('#day-posts', dayPosts);
-      document.getElementById('selected-date').textContent = formattedDate;
     } catch (error) {
       console.error('Error loading posts for the day:', error.message);
     }
   }   
+
+
   
   // Function to display posts in a given list
   function displayPosts(listId, posts) {
@@ -714,29 +748,34 @@ document.addEventListener('DOMContentLoaded', () => {
     schedulePostButton.disabled = true;
     deletePostButton.disabled = true;
   }
+
+  function initializeFlatpickr(defaultDate) {
+    flatpickr('#schedule-datetime', {
+      enableTime: true,
+      dateFormat: 'Y-m-d H:i',
+      defaultDate: defaultDate || new Date(), // Use the provided date or fallback to the current date/time
+    });
+  }
   
 // Schedule Post Button Click Event
 schedulePostButton.addEventListener('click', () => {
   if (selectedPost) {
-    // 1) Open the static modal
-    openModal(document.getElementById('schedule-form-modal'));
-
-    // 2) Optionally, populate the <select id="post-select"> with just the selected post
+    const modal = document.getElementById('schedule-form-modal');
     const postSelectEl = document.getElementById('post-select');
+
     if (postSelectEl) {
       postSelectEl.innerHTML = ''; // Clear existing options
       const option = document.createElement('option');
       option.value = selectedPost.id;
       option.textContent = selectedPost.title || `Post #${selectedPost.id}`;
       postSelectEl.appendChild(option);
-      postSelectEl.value = selectedPost.id; // Pre-select it
+      postSelectEl.value = selectedPost.id; // Pre-select the current post
     }
 
-    // 3) Optionally keep the Saved Posts modal open or close it
-    closeModal(savedPostsModal);
-
-    // 4) Reset selection so you can’t schedule the same post again without re-selecting
-    resetSelection();
+    // Get the selected date from the scheduler and pass it to Flatpickr
+    const selectedDate = document.getElementById('selected-date')?.textContent || '';
+    initializeFlatpickr(selectedDate); // Initialize Flatpickr with the selected date
+    openModal(modal);
   } else {
     showToast('Please select a post to schedule.');
   }
@@ -749,7 +788,17 @@ if (addSchedule) {
       showToast('Please select a date first.');
       return;
     }
+    populatePostSelect();
+    initializeFlatpickr(selectedDate);
     openModal(document.getElementById('schedule-form-modal'));
+  });
+}
+
+if (scheduleDateTimeInput) {
+  flatpickr(scheduleDateTimeInput, {
+    enableTime: true,
+    dateFormat: 'Y-m-d H:i',
+    defaultDate: document.getElementById('selected-date')?.textContent || new Date(), // Use selected date or fallback to now
   });
 }
 
@@ -757,23 +806,26 @@ if (saveSchedule) {
   saveSchedule.addEventListener('click', async () => {
     const postId = document.getElementById('post-select').value;
     const scheduleDateTime = document.getElementById('schedule-datetime').value;
+    const recurrenceType = document.getElementById('recurrence-type')?.value || 'none';
 
     if (!postId || !scheduleDateTime) {
       showToast('Please fill out all fields.');
       return;
     }
 
+    console.log('Scheduling post', postId, 'at', scheduleDateTime, 'with recurrence:', recurrenceType);
+
     try {
       const result = await window.api.schedulePost({
-        id: postId,
-        scheduled_time: scheduleDateTime,
-        status: 'scheduled',
+        postId,
+        scheduledTime: scheduleDateTime,
+        recurrence: recurrenceType,
       });
 
       if (result.success) {
         showToast('Post scheduled successfully!');
         closeModal(document.getElementById('schedule-form-modal'));
-        await loadSchedulerData();
+        await loadSchedulerData(); // Refresh calendar and posts
       } else {
         showToast(`Failed to schedule the post: ${result.message}`);
       }
@@ -781,6 +833,13 @@ if (saveSchedule) {
       console.error('Error scheduling the post:', error.message);
       showToast('An error occurred while scheduling the post.');
     }
+  });
+}
+
+if (closeScheduleModalButton) {
+  closeScheduleModalButton.addEventListener('click', () => {
+    const modal = document.getElementById('schedule-form-modal');
+    if (modal) closeModal(modal);
   });
 }
 

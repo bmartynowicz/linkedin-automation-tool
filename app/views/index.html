@@ -305,12 +305,7 @@
           Single Schedule-Form Modal for both the "Add Post" button
           and the "Schedule Post" action from the Saved Posts Modal.
         -->
-        <div
-          id="schedule-form-modal"
-          class="hidden modal"
-          role="dialog"
-          aria-modal="true"
-        >
+        <div id="schedule-form-modal" class="hidden modal" role="dialog" aria-modal="true">
           <div class="modal-content">
             <span
               class="close-button"
@@ -319,16 +314,24 @@
               >&times;</span
             >
             <h2>Schedule Post</h2>
-
+        
             <label for="post-select">Select Post:</label>
             <select id="post-select"></select>
-
+        
+            <label for="recurrence-type">Recurrence:</label>
+            <select id="recurrence-type">
+              <option value="none">None (One-Time)</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+        
             <label for="schedule-datetime">Select Date & Time:</label>
             <input type="text" id="schedule-datetime" placeholder="YYYY-MM-DD HH:MM" />
-
+        
             <button id="save-schedule" class="action-button">Schedule</button>
           </div>
-        </div>
+        </div>        
    
   <!-- Updated Sidebar Navigation -->
   <nav id="sidebar" class="sidebar">

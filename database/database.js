@@ -69,9 +69,11 @@ function initializeDatabase() {
     db.run(`
       CREATE TABLE IF NOT EXISTS schedules (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        post_id INTEGER,
-        scheduled_time DATETIME,
+        post_id INTEGER NOT NULL,
+        scheduled_time DATETIME NOT NULL,
+        recurrence TEXT,
         status TEXT DEFAULT 'Scheduled',
+        UNIQUE(post_id),
         FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE
       )
     `);
