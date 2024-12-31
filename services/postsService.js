@@ -253,8 +253,10 @@ async function schedulePost(postId, scheduledTime, recurrence) {
       db.run(
         `INSERT INTO schedules (post_id, scheduled_time, recurrence)
          VALUES (?, ?, ?)
-         ON CONFLICT(post_id) DO UPDATE SET scheduled_time = ?, recurrence = ?`,
-        [postId, scheduledTime, recurrence, scheduledTime, recurrence],
+         ON CONFLICT(post_id) DO UPDATE SET 
+           scheduled_time = excluded.scheduled_time, 
+           recurrence = excluded.recurrence`,
+        [postId, scheduledTime, recurrence],
         function (err) {
           if (err) {
             console.error('Error updating schedules:', err.message);

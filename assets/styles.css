@@ -851,6 +851,7 @@ body.sidebar-collapsed #settings-page {
   top: 50%; /* Center vertically */
   left: 50%; /* Center horizontally */
   transform: translate(-50%, -50%); /* Ensure proper centering */
+  border-radius: 8px; /* Rounded corners */
   width: 80%; /* Default width of the modal */
   max-width: 600px; /* Limit the maximum width */
   background-color: rgba(0, 0, 0, 0.5); /* Backdrop color */
@@ -863,7 +864,6 @@ body.sidebar-collapsed #settings-page {
 
 .modal-content {
   background-color: #fff; /* Modal background */
-  border-radius: 8px; /* Rounded corners */
   padding: 20px; /* Internal spacing */
   width: 100%; /* Full width */
   max-height: 80%; /* Prevent overflow if content is too tall */
