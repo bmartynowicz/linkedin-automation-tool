@@ -9,7 +9,7 @@ const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refresh
 const db = require('../database/database');
 const { formatLinkedInText } = require('../utils/formatLinkedInText.js');
 const { postToLinkedIn } = require('../automation/linkedin');
-const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
+const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById, getScheduledPosts, schedulePost } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
 const crypto = require('crypto');
@@ -232,12 +232,23 @@ ipcMain.on('post-status-update', (event, status) => {
 // Fetch user data
 ipcMain.handle('fetch-user-data', async () => {
   try {
-    const userData = await getCurrentUser(); // Call getCurrentUser directly
-    global.currentUser = userData; // Keep the global user updated
-    return userData || { username: 'Guest', profilePicture: '../../assets/default-profile.png' };
+    const userData = await getCurrentUserWithPreferences();
+    if (!userData) {
+      console.warn('No user data fetched from the database.');
+      return { username: 'Guest', profilePicture: '../../assets/default-profile.png', linkedin_id: null };
+    }
+
+    if (!userData.linkedin_id) {
+      console.error('LinkedIn ID is missing in the user data:', userData);
+      return { ...userData, linkedin_id: null };
+    }
+
+    console.log('User data successfully fetched:', userData);
+    global.currentUser = userData; // Update global state
+    return userData;
   } catch (error) {
     console.error('Error fetching user data:', error.message);
-    throw error;
+    return { username: 'Guest', profilePicture: '../../assets/default-profile.png', linkedin_id: null };
   }
 });
 
@@ -350,14 +361,14 @@ ipcMain.handle('savePost', async (event, post) => {
 
 // Retrieve all posts
 ipcMain.handle('get-posts', async () => {
-  if (!global.currentUser || !global.currentUser.linkedin_id) {
-    console.error('No user is logged in. Current user:', global.currentUser);
-    throw new Error('No user is logged in.');
-  }
-  const linkedin_id = global.currentUser.linkedin_id;
-  console.log(`Fetching posts for LinkedIn ID: ${linkedin_id}`);
   try {
-    return await getPostsByLinkedInId(linkedin_id);
+    if (!global.currentUser || !global.currentUser.linkedin_id) {
+      throw new Error('No user is logged in. Current user data is missing.');
+    }
+
+    const linkedin_id = global.currentUser.linkedin_id;
+    console.log(`Fetching posts for LinkedIn ID: ${linkedin_id}`);
+    return await getPostsByLinkedInId(linkedin_id); // Ensure this function exists and works
   } catch (error) {
     console.error('Error fetching posts:', error.message);
     throw error;
@@ -405,26 +416,13 @@ ipcMain.handle('delete-post', async (event, { postId, userId }) => {
   }
 });
 
-// Get post schedules
-ipcMain.handle('get-schedules', async () => {
-  try {
-    const query = 'SELECT * FROM schedules';
-    return new Promise((resolve, reject) => {
-      db.all(query, [], (err, rows) => {
-        if (err) {
-          console.error('Error fetching schedules:', err.message);
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
-  } catch (error) {
-    console.error('Error in get-schedules handler:', error.message);
-    throw error;
-  }
-});
 
+ipcMain.handle('get-scheduled-posts', async (event, linkedin_id) => {
+  console.log('IPC Handler: get-scheduled-posts for LinkedIn ID:', linkedin_id);
+  const scheduledPosts = await getScheduledPosts(linkedin_id);
+  console.log('Fetched Scheduled Posts:', scheduledPosts);
+  return scheduledPosts;
+});
 
 // ======= IPC Handler for Scheduling Posts =======
 ipcMain.handle('schedule-post', async (event, updatedPost) => {
@@ -436,21 +434,8 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
       return { success: false, message: 'Missing required fields.' };
     }
 
-    // Add or update the schedule in `schedules` table
-    await db.run(
-      `INSERT INTO schedules (post_id, scheduled_time, recurrence)
-       VALUES (?, ?, ?)
-       ON CONFLICT(post_id) DO UPDATE SET scheduled_time = ?, recurrence = ?`,
-      [postId, scheduledTime, recurrence, scheduledTime, recurrence]
-    );
-
-    // Update the post's status to 'scheduled' in `posts` table
-    await db.run(
-      `UPDATE posts SET status = 'scheduled' WHERE id = ?`,
-      [postId]
-    );
-
-    return { success: true };
+    const result = await schedulePost(postId, scheduledTime, recurrence);
+    return result;
   } catch (error) {
     console.error('Error in schedule-post handler:', error.message);
     return { success: false, message: error.message };

@@ -261,7 +261,7 @@ h2 {
 
 label {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   font-weight: bold;
   font-size: 1.1em;
 }
@@ -280,6 +280,25 @@ label input[type="checkbox"] {
   max-width: 80%;
   margin-bottom: 10px;
   margin-right: 10px;
+}
+
+input,
+select,
+textarea {
+  box-sizing: border-box; /* Ensure padding doesn't affect dimensions */
+  width: 100%; /* Full width */
+  padding: 8px 10px; /* Internal padding for better readability */
+  border: 1px solid #ccc; /* Define border */
+  border-radius: 4px; /* Rounded corners */
+  font-size: 1rem; /* Adjust font size */
+  margin-bottom: 15px; /* Space between fields */
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #3498db; /* Highlight on focus */
+  outline-offset: 2px; /* Separate outline from the border */
 }
 
 /* Button Styles */
@@ -366,6 +385,7 @@ input[type="text"] {
   background-color: #ffffff;
   height: calc(100vh - 60px); /* Full height minus header */
   overflow-y: auto; /* Enable scrolling if content overflows */
+  position: static;
 }
 
 body.sidebar-collapsed #scheduler-page {
@@ -464,17 +484,13 @@ body.sidebar-collapsed #scheduler-page {
   color: #0056b3;
 }
 
-#calendar .flatpickr-day.selected {
+.flatpickr-day.selected {
   background-color: #007bff;
   color: #fff;
   border-radius: 50%;
 }
 
-#calendar .flatpickr-day.has-posts {
-  position: relative;
-}
-
-#calendar .flatpickr-day.has-posts::after {
+.flatpickr-day.has-posts::after {
   content: "•";
   color: #007bff;
   font-size: 1.2rem;
@@ -482,6 +498,16 @@ body.sidebar-collapsed #scheduler-page {
   bottom: 5px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.flatpickr-day.has-posts {
+  background-color: #ffeb3b; /* Yellow highlight */
+  border-radius: 50%;
+  color: #000;
+}
+
+.flatpickr-day.has-posts:hover {
+  background-color: #ffc107; /* Darker yellow on hover */
 }
 
 .action-button {
@@ -821,29 +847,28 @@ body.sidebar-collapsed #settings-page {
 
 /* ======= Modal Styles ======= */
 .modal {
-  position: fixed; /* Ensure modals are fixed to the viewport */
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Add a translucent backdrop */
-  display: flex;
+  position: fixed; /* Always position relative to the viewport */
+  top: 50%; /* Center vertically */
+  left: 50%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Ensure proper centering */
+  width: 80%; /* Default width of the modal */
+  max-width: 600px; /* Limit the maximum width */
+  background-color: rgba(0, 0, 0, 0.5); /* Backdrop color */
+  z-index: 1300; /* Ensure the modal stays above all other elements */
+  display: flex; /* Flexbox for centering */
   justify-content: center;
   align-items: center;
-  z-index: 1300; /* Ensure modals are above all other content */
   overflow: hidden; /* Prevent scrolling within the modal */
 }
 
 .modal-content {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  width: 80%;
-  max-width: 600px;
-  max-height: 80%; /* Limit modal content height */
-  overflow-y: auto; /* Enable scrolling within the modal content */
-  position: relative;
-  border: 1px solid #888;
+  background-color: #fff; /* Modal background */
+  border-radius: 8px; /* Rounded corners */
+  padding: 20px; /* Internal spacing */
+  width: 100%; /* Full width */
+  max-height: 80%; /* Prevent overflow if content is too tall */
+  overflow-y: auto; /* Enable vertical scrolling if necessary */
+  position: relative; /* For positioning child elements */
 }
 
 .modal-actions {

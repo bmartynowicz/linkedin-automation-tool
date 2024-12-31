@@ -215,6 +215,70 @@ async function getPostsByUserId(user_id) {
     });
 }
 
+/**
+ * Fetches scheduled posts and their associated schedule times.
+ * @param {string} linkedin_id - The LinkedIn ID of the user.
+ * @returns {Promise<Array>} - The list of scheduled posts with their schedule times.
+ */
+async function getScheduledPosts(linkedin_id) {
+  return new Promise((resolve, reject) => {
+    const query = `
+  SELECT 
+    p.id AS post_id,       -- Ensure correct field aliasing
+    p.title, 
+    p.content,
+    s.scheduled_time,
+    s.recurrence
+  FROM posts p
+  JOIN schedules s ON p.id = s.post_id
+  WHERE p.linkedin_id = ? 
+    AND s.scheduled_time IS NOT NULL
+`;
+
+    db.all(query, [linkedin_id], (err, rows) => {
+      if (err) {
+        console.error('Error fetching scheduled posts:', err.message);
+        return reject(err);
+      }
+      console.log('Scheduled Posts Fetched:', rows); // No more s.status
+      resolve(rows);
+    });
+  });
+}
+
+async function schedulePost(postId, scheduledTime, recurrence) {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      // Add or update the schedule in `schedules` table
+      db.run(
+        `INSERT INTO schedules (post_id, scheduled_time, recurrence)
+         VALUES (?, ?, ?)
+         ON CONFLICT(post_id) DO UPDATE SET scheduled_time = ?, recurrence = ?`,
+        [postId, scheduledTime, recurrence, scheduledTime, recurrence],
+        function (err) {
+          if (err) {
+            console.error('Error updating schedules:', err.message);
+            return reject({ success: false, message: 'Failed to schedule post.' });
+          }
+
+          // Update the post's status to 'scheduled' in `posts` table
+          db.run(
+            `UPDATE posts SET status = 'scheduled' WHERE id = ?`,
+            [postId],
+            function (err) {
+              if (err) {
+                console.error('Error updating post status:', err.message);
+                return reject({ success: false, message: 'Failed to update post status.' });
+              }
+              resolve({ success: true });
+            }
+          );
+        }
+      );
+    });
+  });
+}
+
 module.exports = {
   getPostsByLinkedInId,
   savePost,
@@ -222,4 +286,6 @@ module.exports = {
   searchPosts,
   getPostById,
   getPostsByUserId,
+  getScheduledPosts,
+  schedulePost,
 };

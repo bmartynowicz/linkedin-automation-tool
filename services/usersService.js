@@ -74,36 +74,45 @@ async function getCurrentUser() {
     });
 }
 
+// Default preferences
+const defaultPreferences = {
+  theme: 'light',
+  tone: 'professional',
+  writing_style: 'brief',
+  engagement_focus: 'comments',
+  vocabulary_level: 'simplified',
+  content_type: 'linkedin-post',
+  content_perspective: 'first-person',
+  emphasis_tags: '',
+  language: 'en',
+  data_sharing: false,
+  auto_logout: false,
+  save_session: false,
+  font_size: 16,
+  text_to_speech: false,
+  notification_settings: {
+      suggestion_readiness: false,
+      engagement_tips: false,
+      system_updates: false,
+      frequency: 'realtime',
+  },
+};
+
 async function getCurrentUserWithPreferences() {
   try {
     // Fetch the current user
     const user = await getCurrentUser();
-    if (!user) throw new Error('No user found.');
+    if (!user) {
+      console.warn('No user found in the database.');
+      throw new Error('User not found.');
+    }
+    console.log('User fetched from database:', user);
 
-    // Fetch user preferences
+    // Fetch preferences
     const preferences = await getUserPreferences(user.id);
+    console.log('User preferences fetched:', preferences);
 
-    // Apply fallback defaults for missing preferences
-    const defaultPreferences = {
-      theme: 'light',
-      tone: 'professional',
-      writing_style: 'brief',
-      engagement_focus: 'comments',
-      vocabulary_level: 'simplified',
-      content_type: 'linkedin-post',
-      content_perspective: 'first-person',
-      emphasis_tags: '',
-      notification_settings: {
-        suggestion_readiness: false,
-        engagement_tips: false,
-        system_updates: false,
-        frequency: 'realtime',
-      },
-      language: 'en',
-      data_sharing: false,
-    };
-
-    // Combine preferences with defaults (deep merge for notification_settings)
+    // Combine with defaults
     const combinedPreferences = {
       ...defaultPreferences,
       ...preferences,
@@ -111,14 +120,10 @@ async function getCurrentUserWithPreferences() {
         ...defaultPreferences.notification_settings,
         ...preferences.notification_settings,
       },
-      language: preferences.language || defaultPreferences.language,
-      data_sharing: preferences.data_sharing !== undefined ? preferences.data_sharing : defaultPreferences.data_sharing,
     };
 
-    return {
-      ...user,
-      preferences: combinedPreferences,
-    };
+    console.log('Returning user with preferences:', { ...user, preferences: combinedPreferences });
+    return { ...user, preferences: combinedPreferences };
   } catch (error) {
     console.error('Error in getCurrentUserWithPreferences:', error.message);
     throw error;
@@ -143,114 +148,86 @@ async function updateUser(userID, name, email, accessToken, refreshToken, expire
 }
 
 /**
- * Fetches user preferences for the current user.
+ * Fetches user preferences from the database.
  * @param {number} userId - The user's database ID.
  * @returns {Promise<Object>} - The user's preferences.
  */
 async function getUserPreferences(userId) {
   return new Promise((resolve, reject) => {
-    db.get(
-      `SELECT 
-        theme, notification_settings, tone, writing_style, engagement_focus, vocabulary_level, 
-        content_type, content_perspective, emphasis_tags, language, data_sharing
-       FROM user_preferences WHERE user_id = ?`,
-      [userId],
-      (err, row) => {
-        if (err) {
-          console.error('Error fetching user preferences:', err.message);
-          return reject(err);
-        }
+      db.get(
+          `SELECT 
+          theme, tone, notification_settings, writing_style, engagement_focus, vocabulary_level, 
+          content_type, content_perspective, emphasis_tags, language, data_sharing, auto_logout, save_session, 
+          font_size, text_to_speech
+           FROM user_preferences WHERE user_id = ?`,
+          [userId],
+          (err, row) => {
+              if (err) {
+                  console.error('Error fetching user preferences:', err.message);
+                  return reject(err);
+              }
 
-        if (!row) {
-          console.warn('No preferences found for userId:', userId);
-          resolve(null);
-        } else {
-          // Parse JSON fields for notification_settings
-          try {
-            row.notification_settings = JSON.parse(row.notification_settings || '{}');
-          } catch (error) {
-            console.error('Error parsing notification_settings JSON:', error.message);
-            row.notification_settings = {};
+              if (!row) {
+                  console.warn('No preferences found for userId:', userId);
+                  resolve(null);
+              } else {
+                  try {
+                      row.notification_settings = JSON.parse(row.notification_settings || '{}');
+                  } catch (error) {
+                      console.error('Error parsing notification_settings JSON:', error.message);
+                      row.notification_settings = {};
+                  }
+                  resolve(row);
+              }
           }
-
-          // Ensure data_sharing is converted to boolean and defaults to false
-          row.data_sharing = !!row.data_sharing;
-
-          resolve(row);
-        }
-      }
-    );
+      );
   });
 }
 
 /**
- * Updates user preferences for the current user.
+ * Updates user preferences in the database.
  * @param {number} userId - The user's database ID.
  * @param {Object} preferences - The preferences object to update.
  * @returns {Promise<void>}
  */
 async function updateUserPreferences(userId, preferences) {
-  const defaults = {
-    theme: 'light',
-    notification_settings: {
-      suggestion_readiness: false,
-      engagement_tips: false,
-      system_updates: false,
-      frequency: 'realtime',
-    },
-    language: 'en',
-    data_sharing: false,
-    auto_logout: false,
-    save_session: false,
-    font_size: 16,
-    text_to_speech: false,
-    tone: 'professional',
-    writing_style: 'brief',
-    engagement_focus: 'comments',
-    vocabulary_level: 'simplified',
-    content_type: 'linkedin-post',
-    content_perspective: 'first-person',
-    emphasis_tags: '',
-  };
-
-  // Merge defaults with provided preferences
-  const mergedPreferences = { ...defaults, ...preferences };
-  const notificationSettings = JSON.stringify(mergedPreferences.notification_settings); // Serialize notifications to JSON
+  const mergedPreferences = { ...defaultPreferences, ...preferences };
+  const notificationSettings = JSON.stringify(mergedPreferences.notification_settings);
 
   return new Promise((resolve, reject) => {
-    db.run(
-      `UPDATE user_preferences
-       SET theme = ?, notification_settings = ?, language = ?, data_sharing = ?, auto_logout = ?, save_session = ?, 
-           font_size = ?, text_to_speech = ?, tone = ?, writing_style = ?, engagement_focus = ?, vocabulary_level = ?, 
-           content_type = ?, content_perspective = ?, emphasis_tags = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = ?`,
-      [
-        mergedPreferences.theme,
-        notificationSettings, // Save JSON string
-        mergedPreferences.language,
-        mergedPreferences.data_sharing,
-        mergedPreferences.auto_logout,
-        mergedPreferences.save_session,
-        mergedPreferences.font_size,
-        mergedPreferences.text_to_speech,
-        mergedPreferences.tone,
-        mergedPreferences.writing_style,
-        mergedPreferences.engagement_focus,
-        mergedPreferences.vocabulary_level,
-        mergedPreferences.content_type,
-        mergedPreferences.content_perspective,
-        mergedPreferences.emphasis_tags,
-        userId,
-      ],
-      function (err) {
-        if (err) {
-          console.error('Error updating user preferences:', err.message);
-          return reject(err);
-        }
-        console.log('Preferences updated successfully for user ID:', userId);
-        resolve();
-      }
-    );
+      db.run(
+          `UPDATE user_preferences
+           SET theme = ?, tone = ?, notification_settings = ?, writing_style = ?, engagement_focus = ?, 
+               vocabulary_level = ?, content_type = ?, content_perspective = ?, emphasis_tags = ?, language = ?, 
+               data_sharing = ?, auto_logout = ?, save_session = ?, font_size = ?, text_to_speech = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = ?`,
+          [
+              mergedPreferences.theme,
+              mergedPreferences.tone,
+              notificationSettings,
+              mergedPreferences.writing_style,
+              mergedPreferences.engagement_focus,
+              mergedPreferences.vocabulary_level,
+              mergedPreferences.content_type,
+              mergedPreferences.content_perspective,
+              mergedPreferences.emphasis_tags,
+              mergedPreferences.language,
+              mergedPreferences.data_sharing,
+              mergedPreferences.auto_logout,
+              mergedPreferences.save_session,
+              mergedPreferences.font_size,
+              mergedPreferences.text_to_speech,
+              userId,
+          ],
+          (err) => {
+              if (err) {
+                  console.error('Error updating user preferences:', err.message);
+                  return reject(err);
+              }
+              console.log('Preferences updated successfully for user ID:', userId);
+              resolve();
+          }
+      );
   });
 }
 

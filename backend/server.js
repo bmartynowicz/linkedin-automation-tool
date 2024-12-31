@@ -55,7 +55,11 @@ app.post('/api/posts', (req, res) => {
  * @access  Public (Consider securing with authentication)
  */
 app.get('/api/posts', (req, res) => {
-  const query = `SELECT * FROM posts`;
+  const query = `
+    SELECT p.*, s.scheduled_time
+    FROM posts p
+    LEFT JOIN schedules s ON p.id = s.post_id
+  `;
 
   db.all(query, [], (err, rows) => {
     if (err) {
