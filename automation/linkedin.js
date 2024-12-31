@@ -1,8 +1,11 @@
+// automation/linkedin.js
+
 const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 const dotenv = require('dotenv');
 const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../services/usersService.js');
+const { scrapeLinkedInAnalytics } = require('../automation/linkedinScraper.js');
 
 dotenv.config();
 
@@ -55,6 +58,28 @@ async function postToLinkedIn(content, accessToken, userId) {
   } catch (error) {
     console.error('Error posting to LinkedIn:', error.message);
     return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Function: getScrapedAnalytics
+ * Scrapes LinkedIn analytics and returns the data.
+ * @param {string} query - The keyword or hashtag to search for.
+ * @returns {Promise<Object>} The scraped analytics data.
+ */
+async function getScrapedAnalytics(query) {
+  try {
+    if (!query) throw new Error('Query is required for scraping analytics.');
+
+    const posts = await scrapeLinkedInAnalytics(query);
+
+    // Optionally save analytics to the database
+    await Promise.all(posts.map(post => saveAnalytics(post)));
+
+    return { success: true, data: posts };
+  } catch (error) {
+    console.error('Error in getScrapedAnalytics:', error.message);
+    return { success: false, error: error.message };
   }
 }
 
@@ -154,7 +179,25 @@ router.post('/post-to-linkedin', async (req, res) => {
   }
 });
 
+router.post('/analytics/scrape', async (req, res) => {
+  try {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: 'Query is required.' });
+
+    const posts = await scrapeLinkedInAnalytics(query);
+
+    // Save analytics data to the database
+    await Promise.all(posts.map(post => saveAnalytics(post)));
+
+    res.status(200).json({ message: 'Analytics scraped and saved.', data: posts });
+  } catch (error) {
+    console.error('Error scraping analytics:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = {
   router,
   postToLinkedIn,
+  getScrapedAnalytics,
 };

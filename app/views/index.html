@@ -61,6 +61,120 @@
     </ul>
   </div>
 
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+    <div class="modal-content">
+      <span class="close-button" id="close-profile">&times;</span>
+      <h2 id="profile-title">Your Profile</h2>
+      <div class="profile-info">
+        <img id="profile-picture" src="../../assets/default-profile.png" alt="Profile Picture">
+        <p id="username">Username</p>
+      </div>
+      <button id="linkedin-login-button" class="editor-action-button" aria-label="Login with LinkedIn">
+        <i class="fab fa-linkedin"></i> Login with LinkedIn
+      </button>
+      <button id="logout-button">Logout</button>
+    </div>
+  </div>
+     
+  <!-- Scheduler Page -->
+  <div id="scheduler-page" class="hidden">
+    <div class="scheduler-container">
+      <!-- Left Sidebar -->
+      <div class="scheduler-sidebar">
+        <h3>Unscheduled Posts</h3>
+        <ul id="unscheduled-posts">
+          <!-- Dynamically populated list of unscheduled posts -->
+        </ul>
+        <h3>Upcoming Posts</h3>
+        <ul id="upcoming-posts">
+          <!-- Dynamically populated list of upcoming scheduled posts -->
+        </ul>
+      </div>
+      <!-- Right Calendar Section -->
+      <div class="scheduler-main">
+        <div id="calendar-container">
+          <!-- Calendar will be initialized here -->
+          <div id="main-scheduler-calendar"></div>
+        </div>
+        <div id="day-schedule">
+          <h3>Posts Scheduled for <span id="selected-date"></span></h3>
+          <ul id="day-posts">
+            <!-- Dynamically populated posts for the selected day -->
+          </ul>
+          <button id="add-schedule" class="action-button">Add Post</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Page -->
+  <div id="analytics-page" class="hidden">
+    <h2>Analytics Dashboard</h2>
+
+    <!-- Filters Section -->
+    <div class="filters">
+      <label for="analytics-query">Search by Keyword:</label>
+      <input type="text" id="analytics-query" placeholder="Enter hashtag or keyword" />
+      <button id="apply-filters">Apply Filters</button>
+
+      <label for="date-range">Date Range:</label>
+      <input type="text" id="date-range" placeholder="Select date range" />
+    </div>
+
+    <button id="scrape-analytics">Scrape Analytics</button>
+
+    <!-- Overview Section -->
+    <section id="overview-section">
+      <h3>Overview</h3>
+      <div class="overview-cards">
+        <div class="card">
+          <h4>Total Posts</h4>
+          <p id="total-posts">0</p>
+        </div>
+        <div class="card">
+          <h4>Total Reactions</h4>
+          <p id="total-reactions">0</p>
+        </div>
+        <div class="card">
+          <h4>Total Comments</h4>
+          <p id="total-comments">0</p>
+        </div>
+        <div class="card">
+          <h4>Total Reach</h4>
+          <p id="total-reach">0</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Posts Analytics Table -->
+    <section id="posts-analytics">
+      <h3>Post Details</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Author</th>
+            <th>Title</th>
+            <th>Reactions</th>
+            <th>Comments</th>
+            <th>Reach</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="posts-table-body">
+          <!-- Dynamic rows will be populated here -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Charts Section -->
+    <section id="charts-section">
+      <h3>Engagement Metrics</h3>
+      <div id="reactions-chart" class="chart"></div>
+      <div id="comments-chart" class="chart"></div>
+    </section>
+  </div>
+
   <!-- Settings Page -->
   <div id="settings-page" class="hidden">
     <!-- Personal Settings -->
@@ -196,53 +310,6 @@
     </section>
 
     <button id="save-settings">Save Settings</button>
-  </div>
-
-  <!-- Profile Modal -->
-  <div id="profile-modal" class="hidden modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
-    <div class="modal-content">
-      <span class="close-button" id="close-profile">&times;</span>
-      <h2 id="profile-title">Your Profile</h2>
-      <div class="profile-info">
-        <img id="profile-picture" src="../../assets/default-profile.png" alt="Profile Picture">
-        <p id="username">Username</p>
-      </div>
-      <button id="linkedin-login-button" class="editor-action-button" aria-label="Login with LinkedIn">
-        <i class="fab fa-linkedin"></i> Login with LinkedIn
-      </button>
-      <button id="logout-button">Logout</button>
-    </div>
-  </div>
-     
-  <!-- Scheduler Page -->
-  <div id="scheduler-page" class="hidden">
-    <div class="scheduler-container">
-      <!-- Left Sidebar -->
-      <div class="scheduler-sidebar">
-        <h3>Unscheduled Posts</h3>
-        <ul id="unscheduled-posts">
-          <!-- Dynamically populated list of unscheduled posts -->
-        </ul>
-        <h3>Upcoming Posts</h3>
-        <ul id="upcoming-posts">
-          <!-- Dynamically populated list of upcoming scheduled posts -->
-        </ul>
-      </div>
-      <!-- Right Calendar Section -->
-      <div class="scheduler-main">
-        <div id="calendar-container">
-          <!-- Calendar will be initialized here -->
-          <div id="main-scheduler-calendar"></div>
-        </div>
-        <div id="day-schedule">
-          <h3>Posts Scheduled for <span id="selected-date"></span></h3>
-          <ul id="day-posts">
-            <!-- Dynamically populated posts for the selected day -->
-          </ul>
-          <button id="add-schedule" class="action-button">Add Post</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Edit Posts Modal -->

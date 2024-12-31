@@ -8,7 +8,7 @@ const { fileURLToPath } = require('url');
 const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 const db = require('../database/database');
 const { formatLinkedInText } = require('../utils/formatLinkedInText.js');
-const { postToLinkedIn } = require('../automation/linkedin');
+const { postToLinkedIn, getScrapedAnalytics } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById, getScheduledPosts, schedulePost } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
@@ -227,6 +227,18 @@ ipcMain.on('post-status-update', (event, status) => {
   // event.sender.send('status-success', 'Status updated successfully!');
   // On error:
   // event.sender.send('status-error', 'Failed to update status.');
+});
+
+// Handle scraping analytics data
+ipcMain.handle('scrape-analytics', async (event, postId) => {
+  try {
+    console.log('IPC scrape-analytics invoked with query:', postId);
+    const result = await getScrapedAnalytics(postId);
+    return result;
+  } catch (error) {
+    console.error('Error handling scrape-analytics IPC:', error.message);
+    return { success: false, error: error.message };
+  }
 });
 
 // Fetch user data

@@ -2,7 +2,6 @@
 const axios = require('axios');
 const db = require('../database/database.js');
 const LINKEDIN_REFRESH_URL = 'https://www.linkedin.com/oauth/v2/accessToken';
-const userModel = require('../models/user.js');
 
 // Centralized function to fetch user from database
 async function findUserByLinkedInId(linkedin_id) {

@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastSuggestionTime = 0;
   let suggestionCooldown = false;
   let editingPostId = null;
-  let schedulerCalendarInstance = null;
   let modalCalendarInstance = null;
   let isSchedulerCalendarInitialized = false;
 
@@ -23,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const contentCreationButton = document.querySelector('#sidebar .nav-item a[href="#content-creation"]');
   const dashboardButton = document.querySelector('#sidebar .nav-item a[href="#dashboard"]');
   const analyticsButton = document.querySelector('#sidebar .nav-item a[href="#analytics"]');
+  console.log('Analytics Button:', analyticsButton);
   const schedulerButton = document.querySelector('#sidebar .nav-item a[href="#scheduler"]');
 
   // ======= Notifications =======
@@ -55,6 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const scheduleDateTimeInput = document.getElementById('schedule-datetime');
   const calendarElement = document.getElementById('calendar');
 
+  // ======= Analytics Page =======
+  const analyticsPage = document.getElementById('analytics-page');
+
   // ======= Saved Posts Modal =======
   const savedPostsModal = document.getElementById('saved-posts-modal');
   const openSavedPostsButton = document.getElementById('open-saved-posts');
@@ -86,6 +89,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const acceptButton = document.getElementById('accept-suggestion');
   const rejectButton = document.getElementById('reject-suggestion');
   const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
+
+  console.log('Analytics Button:', analyticsButton);
+  console.log('Analytics Page:', analyticsPage);
+  console.log('Content Editor:', contentEditor);
+  console.log('Scheduler Page:', schedulerPage);
+  console.log('Settings Page:', settingsPage);
 
   // ======= Emoji Bullet Button =======
   const emojiBulletButton = document.getElementById('ql-custom-bullet');
@@ -150,6 +159,95 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Generate AI Prompt based on preferences
+  const generateAIPrompt = (preferences) => {
+    const {
+      tone = 'professional',
+      writing_style = 'brief',
+      engagement_focus = 'comments',
+      vocabulary_level = 'simplified',
+      content_type = 'linkedin-post',
+      content_perspective = 'first-person',
+      emphasis_tags = '',
+    } = preferences;
+  
+    return `
+      You are assisting a LinkedIn user who focuses on ${content_type}.
+      They prefer a ${tone} tone with a ${writing_style} style.
+      Their engagement goal is ${engagement_focus}, using a ${vocabulary_level} vocabulary and ${content_perspective} perspective.
+      Emphasize the following tags where relevant: ${emphasis_tags}.
+      Provide a professional and engaging revision with tailored hashtags and a concise call-to-action.
+    `.trim();
+    };
+
+    // Load settings into the UI
+  const loadSettings = async () => {
+      try {
+        const user = await window.api.getCurrentUserWithPreferences();
+        console.log('Loaded user with preferences:', user);
+    
+        if (!user || !user.preferences) {
+          console.warn('No preferences found for the current user.');
+          return;
+        }
+    
+        const { preferences } = user;
+    
+        // Map of field IDs to preference keys
+        const fieldMapping = {
+          'theme-select': 'theme',
+          'tone-select': 'tone',
+          'suggestion-readiness': 'notification_settings.suggestion_readiness',
+          'engagement-tips': 'notification_settings.engagement_tips',
+          'system-updates': 'notification_settings.system_updates',
+          'notification-frequency': 'notification_settings.frequency',
+          'language': 'language',
+          'data-sharing': 'data_sharing',
+          'auto-logout': 'auto_logout',
+          'save-session': 'save_session',
+          'font-size': 'font_size',
+          'text-to-speech': 'text_to_speech',
+          'writing-style': 'writing_style',
+          'engagement-focus': 'engagement_focus',
+          'vocabulary-level': 'vocabulary_level',
+          'content-type': 'content_type',
+          'content-perspective': 'content_perspective',
+          'emphasis-tags': 'emphasis_tags',
+        };
+    
+        // Populate fields dynamically
+        Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
+          const element = document.getElementById(fieldId);
+          if (!element) {
+            console.warn(`Element with ID "${fieldId}" not found.`);
+            return;
+          }
+    
+          const value = prefKey.split('.').reduce((acc, key) => acc?.[key], preferences);
+          if (element.type === 'checkbox') {
+            element.checked = !!value;
+          } else {
+            element.value = value || '';
+          }
+        });
+    
+        // Generate and display the AI prompt in the preview section
+        const promptPreviewElement = document.getElementById('prompt-preview');
+        if (promptPreviewElement) {
+          const aiPrompt = generateAIPrompt(preferences);
+          promptPreviewElement.textContent = aiPrompt; // Display the prompt
+          console.log('AI Prompt displayed:', aiPrompt);
+        } else {
+          console.warn('Prompt preview element not found.');
+        }
+      } catch (error) {
+        console.error('Error loading settings into UI:', error.message);
+      }
+  };
+    
+  // Ensure settings load when the page is ready
+  document.addEventListener('DOMContentLoaded', loadSettings);    
+
   if (toggleMenuButton && sidebar) {
     toggleMenuButton.addEventListener('click', () => {
       // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
@@ -197,11 +295,11 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchNotifications();
   }
   
-if (profileButton && profileModal && closeProfileButton) {
+  if (profileButton && profileModal && closeProfileButton) {
     profileButton.addEventListener('click', () => openModal(profileModal));
     closeProfileButton.addEventListener('click', () => closeModal(profileModal));
     window.api.fetchUserData();
-}
+  }
 
   // Handle Settings Navigation
   if (settingsButton && contentEditor && settingsPage) {
@@ -221,8 +319,8 @@ if (profileButton && profileModal && closeProfileButton) {
     });
   }
 
-// Handle Scheduler Navigation
-if (schedulerButton && contentEditor && schedulerPage) {
+  // Handle Scheduler Navigation
+  if (schedulerButton && contentEditor && schedulerPage) {
   schedulerButton.addEventListener('click', async () => {
     try {
       console.log('Navigating to Scheduler Page...');
@@ -243,7 +341,65 @@ if (schedulerButton && contentEditor && schedulerPage) {
       console.error('Error navigating to Scheduler Page:', error.message);
     }
   });
+  }
+
+// Handle Analytics Navigation
+if (analyticsButton && contentEditor && analyticsPage) {
+  analyticsButton.addEventListener('click', async () => {
+    try {
+      console.log('Navigating to Analytics Page...');
+
+      // Hide all other pages
+      contentEditor.classList.add('hidden');
+      schedulerPage.classList.add('hidden');
+      settingsPage.classList.add('hidden');
+
+      // Show the analytics page
+      analyticsPage.classList.remove('hidden');
+
+      console.log('Analytics Page Classes:', analyticsPage.classList);
+
+      // Fetch analytics data via the preload bridge
+      const query = document.getElementById('analytics-query').value.trim() || 'default';
+      console.log('Fetching analytics for query:', query);
+
+      const result = await window.api.scrapeAnalytics(query);
+
+      if (result.success) {
+        console.log('Fetched analytics data:', result.data);
+
+        // Update Overview Section
+        document.getElementById('total-posts').textContent = result.data.totalPosts || 0;
+        document.getElementById('total-reactions').textContent = result.data.totalReactions || 0;
+        document.getElementById('total-comments').textContent = result.data.totalComments || 0;
+        document.getElementById('total-reach').textContent = result.data.totalReach || 0;
+
+        // Update Posts Table
+        const tableBody = document.getElementById('posts-table-body');
+        tableBody.innerHTML = ''; // Clear existing rows
+        result.data.forEach(post => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${post.author}</td>
+            <td>${post.title}</td>
+            <td>${post.reactions}</td>
+            <td>${post.comments}</td>
+            <td>${post.reach || 'N/A'}</td>
+            <td>${new Date(post.date).toLocaleDateString()}</td>
+          `;
+          tableBody.appendChild(row);
+        });
+      } else {
+        console.error('Failed to fetch analytics:', result.error);
+        alert('Error fetching analytics data. Check console for details.');
+      }
+    } catch (error) {
+      console.error('Error navigating to Analytics Page:', error.message);
+      alert('An error occurred while navigating to the Analytics Page.');
+    }
+  });
 }
+
    
   // Attach Event Listener for Form Submission
   if (saveSettingsButton) {
@@ -383,8 +539,8 @@ if (schedulerButton && contentEditor && schedulerPage) {
     });
   }
 
-// Attach Event Listener for LinkedIn Reauthentication
-if (reauthenticateButton) {
+  // Attach Event Listener for LinkedIn Reauthentication
+  if (reauthenticateButton) {
     reauthenticateButton.addEventListener('click', async () => {
       try {
         console.log('Reauthentication button clicked');
@@ -399,20 +555,20 @@ if (reauthenticateButton) {
         showToast('An error occurred during LinkedIn reauthentication.');
       }
     });    
-}
+  }
 
-// Add a handler for returning to the Content Editor
-if (contentCreationButton) {
+  // Add a handler for returning to the Content Editor
+  if (contentCreationButton) {
     contentCreationButton.addEventListener('click', () => {
       // Show content editor and hide settings page
       settingsPage.classList.add('hidden');
       schedulerPage.classList.add('hidden');
       contentEditor.classList.remove('hidden');
     });
-}
+  }
 
-// Add a handler for managing the save post functionality
-if (openSavedPostsButton && savedPostsModal && closeSavedPostsButton) {
+  // Add a handler for managing the save post functionality
+  if (openSavedPostsButton && savedPostsModal && closeSavedPostsButton) {
     openSavedPostsButton.addEventListener('click', () => {
       openModal(savedPostsModal);
       loadSavedPosts(); // Function to load saved posts when modal opens
@@ -431,10 +587,10 @@ if (openSavedPostsButton && savedPostsModal && closeSavedPostsButton) {
         resetSelection();
       }
     });
-}
+  }
 
-// ======= Function to Load a Post for Editing =======
-async function loadPostForEditing(post) {
+  // ======= Function to Load a Post for Editing =======
+  async function loadPostForEditing(post) {
     console.log('loadPostForEditing called with post:', post);
     
     if (quill && postTitleInput) {
@@ -477,43 +633,10 @@ async function loadPostForEditing(post) {
       showToast('Editor is not initialized.');
       console.error('Quill or Post Title Input is not available.');
     }
-}
-
-// ===== Main Scheduler Calendar =====
-function initializeSchedulerCalendar(scheduledPosts) {
-  const schedulerCalendarElement = document.getElementById('calendar');
-  console.log('Initializing Scheduler Calendar with:', scheduledPosts);
-
-  if (!schedulerCalendarElement) {
-    console.error('Scheduler calendar element not found.');
-    return;
   }
 
-  schedulerCalendarInstance = flatpickr(schedulerCalendarElement, {
-    inline: true,
-    enableTime: false,
-    dateFormat: 'Y-m-d',
-    onReady: () => {
-      if (!schedulerCalendarInstance) {
-        console.error('Scheduler calendar instance not initialized on ready.');
-        return;
-      }
-      console.log('Scheduler calendar initialized.');
-      updateCalendarHighlights(scheduledPosts); // Moved inside onReady
-    },
-    onChange: ([selectedDate]) => {
-      if (!selectedDate) {
-        console.warn('No date selected in scheduler.');
-        return;
-      }
-      console.log('Date selected in scheduler:', selectedDate);
-      loadPostsForSelectedDate(selectedDate);
-    },
-  });
-}
-
-// ===== Modal Calendar for Scheduling =====
-function initializeModalCalendar(defaultDate, onChangeCallback) {
+  // ===== Modal Calendar for Scheduling =====
+  function initializeModalCalendar(defaultDate, onChangeCallback) {
   const modalDateTimeInput = document.getElementById('schedule-datetime');
   if (!modalDateTimeInput) {
     console.error('Modal date/time input not found.');
@@ -537,10 +660,10 @@ function initializeModalCalendar(defaultDate, onChangeCallback) {
       onChangeCallback(selectedDates);
     },
   });
-}
+  }
 
-// ===== Load Scheduler Data =====
-async function loadSchedulerData() {
+  // ===== Load Scheduler Data =====
+  async function loadSchedulerData() {
   try {
     console.log('Loading scheduler data...');
     const user = await window.api.fetchUserData();
@@ -587,23 +710,37 @@ async function loadSchedulerData() {
   } catch (error) {
     console.error('Error loading scheduler data:', error);
   }
-}
+  }
 
-// ===== Event Handlers =====
-document.getElementById('add-schedule').addEventListener('click', () => {
+  // ===== Event Handlers =====
+  document.getElementById('add-schedule').addEventListener('click', () => {
   const selectedDate = document.getElementById('selected-date')?.textContent || new Date();
   initializeModalCalendar(selectedDate, (selectedDates) => {
     console.log('Date selected in modal:', selectedDates);
   });
   document.getElementById('schedule-form-modal').style.display = 'block';
-});
+  });
 
-document.getElementById('close-scheduler-modal').addEventListener('click', () => {
+  document.getElementById('close-scheduler-modal').addEventListener('click', () => {
   document.getElementById('schedule-form-modal').style.display = 'none';
+  });
+
+  // Trigger scraping
+document.getElementById('scrape-analytics').addEventListener('click', async () => {
+  const query = document.getElementById('analytics-query').value.trim();
+  if (!query) return alert('Enter a query!');
+
+  const response = await fetch('http://localhost:3000/analytics/scrape', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  const result = await response.json();
+  console.log(result);
 });
 
-// Highlight dates in the scheduler calendar
-function updateCalendarHighlights(scheduledPosts) {
+  // Highlight dates in the scheduler calendar
+  function updateCalendarHighlights(scheduledPosts) {
   if (!scheduledPosts || !Array.isArray(scheduledPosts)) {
     console.warn('No scheduled posts provided to highlight.');
     return;
@@ -629,27 +766,9 @@ function updateCalendarHighlights(scheduledPosts) {
   });
 
   console.log('Calendar highlights updated with scheduled posts:', scheduledDates);
-}
-
-// ======= Initialize the Scheduler =======
-async function initializeScheduler() {
-  try {
-    console.log('Initializing Scheduler...');
-    const user = await window.api.fetchUserData();
-    console.log('Fetched user data:', user);
-
-    const linkedinId = user.linkedin_id;
-
-    const scheduledPosts = await window.api.getScheduledPosts(linkedinId);
-    console.log('Scheduled Posts:', scheduledPosts);
-
-    initializeSchedulerCalendar(scheduledPosts);
-  } catch (error) {
-    console.error('Error initializing Scheduler:', error.message);
   }
-}
   
-async function populatePostSelect(selectedPostId = null) {
+  async function populatePostSelect(selectedPostId = null) {
   const postSelectEl = document.getElementById('post-select');
   if (!postSelectEl) return;
 
@@ -681,10 +800,10 @@ async function populatePostSelect(selectedPostId = null) {
     console.error('Error populating post select:', error.message);
     showToast('Failed to load unscheduled posts.');
   }
-}
+  }
 
-// Load posts for a selected date
-async function loadPostsForSelectedDate(selectedDate) {
+  // Load posts for a selected date
+  async function loadPostsForSelectedDate(selectedDate) {
   try {
     if (!selectedDate) throw new Error('Invalid date provided.');
 
@@ -704,10 +823,10 @@ async function loadPostsForSelectedDate(selectedDate) {
   } catch (error) {
     console.error('Error loading posts for selected date:', error.message);
   }
-}
+  }
 
-// Function to display posts in a given list
-function displayPosts(listId, posts) {
+  // Function to display posts in a given list
+  function displayPosts(listId, posts) {
     console.log(`Attempting to display posts in ${listId}`);
     const listElement = document.querySelector(listId);
   
@@ -750,7 +869,7 @@ function displayPosts(listId, posts) {
       listElement.appendChild(postCard);
     });
     console.log(`Posts successfully displayed in ${listId}.`);
-} 
+  } 
 
   // ======= Load Saved Posts Function =======
   const loadSavedPosts = async () => {
@@ -816,7 +935,7 @@ function displayPosts(listId, posts) {
 
     savedPostsList.appendChild(li);
   });
-};
+  };
 
   // ======= Function to Perform Search =======
   const performSearch = debounce(async () => {
@@ -869,7 +988,7 @@ function displayPosts(listId, posts) {
   });
 
   // Clear the saved posts modal selector
-function resetSelection() {
+  function resetSelection() {
     // Deselect any selected post
     const selectedLi = savedPostsList.querySelector('.selected');
     if (selectedLi) {
@@ -882,9 +1001,9 @@ function resetSelection() {
     editPostButton.disabled = true;
     schedulePostButton.disabled = true;
     deletePostButton.disabled = true;
-}
+  }
 
-function initializeFlatpickr(elementOrId, options) {
+  function initializeFlatpickr(elementOrId, options) {
   let element;
 
   // Handle if a string selector or DOM element is passed
@@ -914,10 +1033,10 @@ function initializeFlatpickr(elementOrId, options) {
 
   // Initialize Flatpickr
   return flatpickr(element, options);
-}
+  }
 
-// Function to initialize the main scheduler calendar
-async function initializeMainSchedulerCalendar(scheduledPosts) {
+  // Function to initialize the main scheduler calendar
+  async function initializeMainSchedulerCalendar(scheduledPosts) {
   const schedulerCalendarElement = document.getElementById('main-scheduler-calendar');
   if (!schedulerCalendarElement) {
     console.error('Main Scheduler Calendar element not found.');
@@ -937,23 +1056,10 @@ async function initializeMainSchedulerCalendar(scheduledPosts) {
       loadPostsForSelectedDate(selectedDate); // Load posts for the selected date
     },
   });
-}
-
-// Function to initialize the calendar in the saved posts dialog
-function initializeSavedPostsCalendar() {
-  const calendarElementId = '#saved-posts-calendar';
-  const options = {
-    enableTime: true,
-    dateFormat: 'Y-m-d H:i',
-    onChange: ([selectedDate]) => {
-      console.log('Date selected in saved posts dialog:', selectedDate);
-    },
-  };
-  initializeFlatpickr(calendarElementId, options);
-}
+  }
   
-// Schedule Post Button Click Event
-schedulePostButton.addEventListener('click', async () => {
+  // Schedule Post Button Click Event
+  schedulePostButton.addEventListener('click', async () => {
   if (selectedPost) {
     const modal = document.getElementById('schedule-form-modal');
     const scheduleDateTimeInput = document.getElementById('schedule-datetime');
@@ -972,9 +1078,9 @@ schedulePostButton.addEventListener('click', async () => {
   } else {
     showToast('Please select a post to schedule.');
   }
-});
+  });
 
-if (addSchedule) {
+  if (addSchedule) {
   addSchedule.addEventListener('click', async () => {
     const selectedDate = document.getElementById('selected-date')?.textContent;
     if (!selectedDate) {
@@ -994,17 +1100,17 @@ if (addSchedule) {
 
     openModal(document.getElementById('schedule-form-modal'));
   });
-}
+  }
 
-if (scheduleDateTimeInput) {
+  if (scheduleDateTimeInput) {
   flatpickr(scheduleDateTimeInput, {
     enableTime: true,
     dateFormat: 'Y-m-d H:i',
     defaultDate: document.getElementById('selected-date')?.textContent || new Date(), // Use selected date or fallback to now
   });
-}
+  }
 
-if (saveSchedule) {
+  if (saveSchedule) {
   saveSchedule.addEventListener('click', async () => {
     const postId = document.getElementById('post-select').value;
     const scheduleDateTime = document.getElementById('schedule-datetime').value;
@@ -1036,26 +1142,26 @@ if (saveSchedule) {
       showToast('An error occurred while scheduling the post.');
     }
   });
-}
+  }
 
-if (closeScheduleModalButton) {
+  if (closeScheduleModalButton) {
   closeScheduleModalButton.addEventListener('click', () => {
     const modal = document.getElementById('schedule-form-modal');
     if (modal) closeModal(modal);
   });
-}
+  }
 
-// Delete Post Button Click Event
-deletePostButton.addEventListener('click', () => {
+  // Delete Post Button Click Event
+  deletePostButton.addEventListener('click', () => {
   if (selectedPost) {
     openDeleteConfirmation(selectedPost.id);
   } else {
     showToast('Please select a post to delete.');
   }
-});
+  });
 
-// ======= Function to Open Delete Confirmation Modal =======
-const openDeleteConfirmation = async (postId) => {
+  // ======= Function to Open Delete Confirmation Modal =======
+  const openDeleteConfirmation = async (postId) => {
   if (!deleteConfirmationModal) return;
 
   postIdToDelete = postId; // Store the post ID to delete
@@ -1070,10 +1176,10 @@ const openDeleteConfirmation = async (postId) => {
 
   // Open the modal
   openModal(deleteConfirmationModal);
-};
+  };
 
-// Event Listener for Confirm Delete Button
-if (confirmDeleteButton) {
+  // Event Listener for Confirm Delete Button
+  if (confirmDeleteButton) {
   confirmDeleteButton.addEventListener('click', async () => {
     if (postIdToDelete !== null) {
       try {
@@ -1105,191 +1211,102 @@ if (confirmDeleteButton) {
       }
     }
   });
-}
+  }
 
-// Event Listener for Cancel Delete Button
-if (cancelDeleteButton) {
+  // Event Listener for Cancel Delete Button
+  if (cancelDeleteButton) {
   cancelDeleteButton.addEventListener('click', () => {
     closeModal(deleteConfirmationModal);
     postIdToDelete = null; // Reset the variable
   });
-}
+  }
 
-// Event Listener for Close Button
-if (closeDeleteConfirmationButton) {
+  // Event Listener for Close Button
+  if (closeDeleteConfirmationButton) {
   closeDeleteConfirmationButton.addEventListener('click', () => {
     closeModal(deleteConfirmationModal);
     postIdToDelete = null; // Reset the variable
   });
-}
+  }
 
   // Loader Management
-const showLoader = () => {
+  const showLoader = () => {
   const loader = document.getElementById('posts-loader');
   if (loader) {
     loader.classList.remove('hidden');
   }
-};
+  };
 
-const hideLoader = () => {
+  const hideLoader = () => {
   const loader = document.getElementById('posts-loader');
   if (loader) {
     loader.classList.add('hidden');
   }
-};
+  };
 
-// ======= Handle LinkedIn Auth Feedback =======
+  // ======= Handle LinkedIn Auth Feedback =======
 
-// Listen to 'post-success' event
-window.api.on('post-success', (args) => {
+  // Listen to 'post-success' event
+  window.api.on('post-success', (args) => {
   console.log('Received "post-success" event:', args);
   showToast(`Post ID ${args} has been published to LinkedIn.`);
   loadSavedPosts(); // Refresh the saved posts list
-});
+  });
 
-// Listen to 'post-error' event
-window.api.on('post-error', (args) => {
+  // Listen to 'post-error' event
+  window.api.on('post-error', (args) => {
   console.error('Received "post-error" event:', args);
   showToast(`Error posting to LinkedIn: ${args}`);
-});
+  });
 
-// Listen to 'post-published' event
-window.api.on('post-published', (postId) => {
+  // Listen to 'post-published' event
+  window.api.on('post-published', (postId) => {
   console.log('Received "post-published" event:', postId);
   showToast(`Post ID ${postId} has been published to LinkedIn.`);
   loadSavedPosts(); // Refresh the saved posts list
-});
+  });
 
-// Listen to 'update-user-data' event (example)
-window.api.on('update-user-data', (userData) => {
+  // Listen to 'update-user-data' event (example)
+  window.api.on('update-user-data', (userData) => {
   console.log('Received "update-user-data" event:', userData);
   usernameDisplay.textContent = userData.name;
   profilePicture.src = userData.profilePicture || '../../assets/default-profile.png';
   showToast('User data updated.');
-});
+  });
 
-// Listen to 'linkedin-auth-success' event
-window.api.on('linkedin-auth-success', (userData) => {
+  // Listen to 'linkedin-auth-success' event
+  window.api.on('linkedin-auth-success', (userData) => {
   console.log('Received "linkedin-auth-success" event:', userData);
   usernameDisplay.textContent = userData.name;
   profilePicture.src = userData.profilePicture || '../../assets/default-profile.png';
   showToast('Successfully logged in with LinkedIn!');
-});
+  });
 
-// Listen to 'linkedin-auth-failure' event
-window.api.on('linkedin-auth-failure', (errorData) => {
+  // Listen to 'linkedin-auth-failure' event
+  window.api.on('linkedin-auth-failure', (errorData) => {
   console.error('Received "linkedin-auth-failure" event:', errorData);
   showToast('Failed to authenticate with LinkedIn.');
-});
+  });
 
-// Listen to 'linkedin-auth-closed' event
-window.api.on('linkedin-auth-closed', () => {
+  // Listen to 'linkedin-auth-closed' event
+  window.api.on('linkedin-auth-closed', () => {
   console.warn('Received "linkedin-auth-closed" event');
   showToast('LinkedIn authentication was canceled.');
-});
+  });
 
-if (linkedinLoginButton) {
+  if (linkedinLoginButton) {
   linkedinLoginButton.addEventListener('click', () => {
     console.log('LinkedIn login button clicked');
     window.api.openLinkedInAuthWindow();
   });
-} else {
-  console.error('LinkedIn login button not found.');
-}
-
-// Generate AI Prompt based on preferences
-const generateAIPrompt = (preferences) => {
-  const {
-    tone = 'professional',
-    writing_style = 'brief',
-    engagement_focus = 'comments',
-    vocabulary_level = 'simplified',
-    content_type = 'linkedin-post',
-    content_perspective = 'first-person',
-    emphasis_tags = '',
-  } = preferences;
-
-  return `
-    You are assisting a LinkedIn user who focuses on ${content_type}.
-    They prefer a ${tone} tone with a ${writing_style} style.
-    Their engagement goal is ${engagement_focus}, using a ${vocabulary_level} vocabulary and ${content_perspective} perspective.
-    Emphasize the following tags where relevant: ${emphasis_tags}.
-    Provide a professional and engaging revision with tailored hashtags and a concise call-to-action.
-  `.trim();
-};
-
-// Load settings into the UI
-const loadSettings = async () => {
-  try {
-    const user = await window.api.getCurrentUserWithPreferences();
-    console.log('Loaded user with preferences:', user);
-
-    if (!user || !user.preferences) {
-      console.warn('No preferences found for the current user.');
-      return;
-    }
-
-    const { preferences } = user;
-
-    // Map of field IDs to preference keys
-    const fieldMapping = {
-      'theme-select': 'theme',
-      'tone-select': 'tone',
-      'suggestion-readiness': 'notification_settings.suggestion_readiness',
-      'engagement-tips': 'notification_settings.engagement_tips',
-      'system-updates': 'notification_settings.system_updates',
-      'notification-frequency': 'notification_settings.frequency',
-      'language': 'language',
-      'data-sharing': 'data_sharing',
-      'auto-logout': 'auto_logout',
-      'save-session': 'save_session',
-      'font-size': 'font_size',
-      'text-to-speech': 'text_to_speech',
-      'writing-style': 'writing_style',
-      'engagement-focus': 'engagement_focus',
-      'vocabulary-level': 'vocabulary_level',
-      'content-type': 'content_type',
-      'content-perspective': 'content_perspective',
-      'emphasis-tags': 'emphasis_tags',
-    };
-
-    // Populate fields dynamically
-    Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
-      const element = document.getElementById(fieldId);
-      if (!element) {
-        console.warn(`Element with ID "${fieldId}" not found.`);
-        return;
-      }
-
-      const value = prefKey.split('.').reduce((acc, key) => acc?.[key], preferences);
-      if (element.type === 'checkbox') {
-        element.checked = !!value;
-      } else {
-        element.value = value || '';
-      }
-    });
-
-    // Generate and display the AI prompt in the preview section
-    const promptPreviewElement = document.getElementById('prompt-preview');
-    if (promptPreviewElement) {
-      const aiPrompt = generateAIPrompt(preferences);
-      promptPreviewElement.textContent = aiPrompt; // Display the prompt
-      console.log('AI Prompt displayed:', aiPrompt);
-    } else {
-      console.warn('Prompt preview element not found.');
-    }
-  } catch (error) {
-    console.error('Error loading settings into UI:', error.message);
+  } else {
+    console.error('LinkedIn login button not found.');
   }
-};
 
-// Ensure settings load when the page is ready
-document.addEventListener('DOMContentLoaded', loadSettings);
+  // ======= Register the Custom Bullet Format =======
+  const Block = Quill.import('blots/block');
 
-// ======= Register the Custom Bullet Format =======
-const Block = Quill.import('blots/block');
-
-class CustomBullet extends Block {
+  class CustomBullet extends Block {
   static create(value) {
     const node = super.create();
     node.setAttribute('data-custom-bullet', value || '◾');
@@ -1311,14 +1328,14 @@ class CustomBullet extends Block {
           super.format(name, value);
       }
   }
-}
+  }
 
-CustomBullet.blotName = 'custom-bullet';
-CustomBullet.tagName = 'LI'; // Use list item tag
-Quill.register(CustomBullet, true);
+  CustomBullet.blotName = 'custom-bullet';
+  CustomBullet.tagName = 'LI'; // Use list item tag
+  Quill.register(CustomBullet, true);
 
-// Function to apply custom formatting
-function applyCustomFormat(format) {
+  // Function to apply custom formatting
+  function applyCustomFormat(format) {
   const range = quill.getSelection();
   if (range) {
     const selectedText = quill.getText(range.index, range.length);
@@ -1329,10 +1346,10 @@ function applyCustomFormat(format) {
     quill.insertText(range.index, formattedText);
     quill.setSelection(range.index + formattedText.length, 0);
   }
-}
+  }
 
-// ======= Initialize the Quill Editor =======
-if (typeof Quill !== 'undefined') {
+  // ======= Initialize the Quill Editor =======
+  if (typeof Quill !== 'undefined') {
   console.log('Quill is available.');
 
   // Initialize Quill
@@ -1825,8 +1842,9 @@ if (closeSuggestionBoxButton) {
     });
   });
 
-} else {
-  console.error('Quill is not available.');
-}
+  } else {
+    console.error('Quill is not available.');
+  }
+  
 });
 

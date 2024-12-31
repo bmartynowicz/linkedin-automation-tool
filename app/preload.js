@@ -20,6 +20,7 @@ const allowedChannels = [
   'getEnv',
   'getPosts',
   'getPostById',
+  'scrapeAnalytics',
   // Add any other event channels you intend to expose
 ];
 
@@ -127,6 +128,10 @@ contextBridge.exposeInMainWorld('api', {
   getScheduledPosts: (linkedinId) => {
     console.log('Invoking "get-scheduled-posts" with LinkedIn ID:', linkedinId);
     return ipcRenderer.invoke('get-scheduled-posts', linkedinId);
+  },
+  scrapeAnalytics: (postId) => {
+    console.log('Invoking "scrape-analytics" with PostID:', postId);
+    return ipcRenderer.invoke('scrape-analytics', postId);
   },
   getEnv: (variable) => {
     console.log('Invoking "get-env" for variable:', variable);
