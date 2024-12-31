@@ -9,7 +9,7 @@ const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refresh
 const db = require('../database/database');
 const { formatLinkedInText } = require('../utils/formatLinkedInText.js');
 const { postToLinkedIn } = require('../automation/linkedin');
-const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById } = require('../services/postsService.js');
+const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById, getScheduledPosts, schedulePost } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
 const crypto = require('crypto');
@@ -232,12 +232,23 @@ ipcMain.on('post-status-update', (event, status) => {
 // Fetch user data
 ipcMain.handle('fetch-user-data', async () => {
   try {
-    const userData = await getCurrentUser(); // Call getCurrentUser directly
-    global.currentUser = userData; // Keep the global user updated
-    return userData || { username: 'Guest', profilePicture: '../../assets/default-profile.png' };
+    const userData = await getCurrentUserWithPreferences();
+    if (!userData) {
+      console.warn('No user data fetched from the database.');
+      return { username: 'Guest', profilePicture: '../../assets/default-profile.png', linkedin_id: null };
+    }
+
+    if (!userData.linkedin_id) {
+      console.error('LinkedIn ID is missing in the user data:', userData);
+      return { ...userData, linkedin_id: null };
+    }
+
+    console.log('User data successfully fetched:', userData);
+    global.currentUser = userData; // Update global state
+    return userData;
   } catch (error) {
     console.error('Error fetching user data:', error.message);
-    throw error;
+    return { username: 'Guest', profilePicture: '../../assets/default-profile.png', linkedin_id: null };
   }
 });
 
@@ -350,14 +361,14 @@ ipcMain.handle('savePost', async (event, post) => {
 
 // Retrieve all posts
 ipcMain.handle('get-posts', async () => {
-  if (!global.currentUser || !global.currentUser.linkedin_id) {
-    console.error('No user is logged in. Current user:', global.currentUser);
-    throw new Error('No user is logged in.');
-  }
-  const linkedin_id = global.currentUser.linkedin_id;
-  console.log(`Fetching posts for LinkedIn ID: ${linkedin_id}`);
   try {
-    return await getPostsByLinkedInId(linkedin_id);
+    if (!global.currentUser || !global.currentUser.linkedin_id) {
+      throw new Error('No user is logged in. Current user data is missing.');
+    }
+
+    const linkedin_id = global.currentUser.linkedin_id;
+    console.log(`Fetching posts for LinkedIn ID: ${linkedin_id}`);
+    return await getPostsByLinkedInId(linkedin_id); // Ensure this function exists and works
   } catch (error) {
     console.error('Error fetching posts:', error.message);
     throw error;
@@ -389,83 +400,44 @@ ipcMain.handle('delete-post', async (event, { postId, userId }) => {
   console.log(`Deleting post with ID ${postId} for user ID ${userId}`);
 
   try {
+    // Use the centralized deletePost function
     const result = await deletePost(postId, userId);
-    if (result.changes === 0) {
-      console.error(`No post found with ID ${postId} for user ID ${userId}`);
-      return { success: false, message: 'No post found or unauthorized.' };
+
+    if (!result.success) {
+      console.error(`Failed to delete post: ${result.message}`);
+      throw new Error(result.message || 'Post deletion failed.');
     }
-    return { success: true };
+
+    console.log(`Post with ID ${postId} deleted successfully.`);
+    return result;
   } catch (error) {
-    console.error('Error deleting post:', error.message);
-    return { success: false, message: error.message };
+    console.error('Error in delete-post handler:', error.message);
+    throw error;
   }
+});
+
+
+ipcMain.handle('get-scheduled-posts', async (event, linkedin_id) => {
+  console.log('IPC Handler: get-scheduled-posts for LinkedIn ID:', linkedin_id);
+  const scheduledPosts = await getScheduledPosts(linkedin_id);
+  console.log('Fetched Scheduled Posts:', scheduledPosts);
+  return scheduledPosts;
 });
 
 // ======= IPC Handler for Scheduling Posts =======
 ipcMain.handle('schedule-post', async (event, updatedPost) => {
   try {
-    const { id, title, content, status, scheduled_time } = updatedPost;
+    const { postId, scheduledTime, recurrence } = updatedPost;
 
-    // Validate required fields
-    if (!id || !scheduled_time) {
-      console.error('Missing required fields for scheduling:', updatedPost);
+    // Validate fields
+    if (!postId || !scheduledTime) {
       return { success: false, message: 'Missing required fields.' };
     }
 
-    // Validate scheduled_time format
-    const scheduledDate = new Date(scheduled_time);
-    if (isNaN(scheduledDate.getTime())) {
-      console.error('Invalid scheduled_time:', scheduled_time);
-      return { success: false, message: 'Invalid scheduled time.' };
-    }
-
-    // Update the post in the database
-    await new Promise((resolve, reject) => {
-      db.run(
-        "UPDATE posts SET title = ?, content = ?, status = ?, scheduled_time = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [title, content, status, scheduled_time, id],
-        function (err) {
-          if (err) {
-            console.error('Error updating post for scheduling:', err.message);
-            return reject({ success: false, message: err.message });
-          }
-          console.log('Post updated successfully for scheduling:', id);
-          resolve();
-        }
-      );
-    });
-
-    // Schedule the post
-    schedule.scheduleJob(scheduledDate, async () => {
-      console.log(`Executing scheduled post ID ${id} at ${scheduledDate}`);
-      try {
-        const result = await postToLinkedIn(content);
-        if (result.success) {
-          // Update post status to 'posted'
-          db.run("UPDATE posts SET status = 'posted', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [id], (err) => {
-            if (err) {
-              console.error('Error updating post status to posted:', err.message);
-            } else {
-              console.log('Post successfully posted to LinkedIn.', { id });
-              // Notify renderer about the post being published
-              if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('post-published', id);
-              }
-            }
-          });
-        } else {
-          console.error('Failed to post to LinkedIn.', { id, error: result.message });
-          // Optionally, handle failed scheduling (e.g., retry, notify user)
-        }
-      } catch (error) {
-        console.error('Error posting to LinkedIn during scheduled job:', { error: error.message, id });
-      }
-    });
-
-    console.log('Scheduled a new post:', { id, scheduled_time });
-    return { success: true };
+    const result = await schedulePost(postId, scheduledTime, recurrence);
+    return result;
   } catch (error) {
-    console.error('Error in schedule-post handler:', error);
+    console.error('Error in schedule-post handler:', error.message);
     return { success: false, message: error.message };
   }
 });

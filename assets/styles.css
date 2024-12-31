@@ -183,6 +183,33 @@ header h1 {
   position: relative; /* For positioning the emoji picker */
 }
 
+/* Scoped Quill Toolbar Styles */
+.ql-toolbar button {
+  background: none; /* Ensure it doesn't inherit custom button background */
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  color: #333; /* Default Quill toolbar button color */
+  font-size: 1rem; /* Match with Quill's default size */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.ql-toolbar button:hover {
+  background-color: #f0f0f0;
+  color: #000;
+}
+
+.ql-toolbar button:active {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.ql-toolbar button:focus {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+}
+
 /* ======= Settings Page Styles ======= */
 #settings-page {
   margin-left: 250px; /* Default width of the sidebar */
@@ -234,7 +261,7 @@ h2 {
 
 label {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   font-weight: bold;
   font-size: 1.1em;
 }
@@ -255,11 +282,30 @@ label input[type="checkbox"] {
   margin-right: 10px;
 }
 
+input,
+select,
+textarea {
+  box-sizing: border-box; /* Ensure padding doesn't affect dimensions */
+  width: 100%; /* Full width */
+  padding: 8px 10px; /* Internal padding for better readability */
+  border: 1px solid #ccc; /* Define border */
+  border-radius: 4px; /* Rounded corners */
+  font-size: 1rem; /* Adjust font size */
+  margin-bottom: 15px; /* Space between fields */
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #3498db; /* Highlight on focus */
+  outline-offset: 2px; /* Separate outline from the border */
+}
+
 /* Button Styles */
 button {
   padding: 10px 15px;
   background-color: #007bff;
-  color: white;
+  color: rgb(255, 255, 255);
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -329,6 +375,156 @@ input[type="text"] {
   white-space: pre-wrap; /* Preserve newlines and spacing */
   word-wrap: break-word; /* Prevent overflow */
   border-radius: 5px;
+}
+
+#scheduler-page {
+  margin-left: 250px; /* Default margin to accommodate expanded sidebar */
+  margin-top: 60px; /* Below the header */
+  padding: 20px;
+  transition: margin-left 0.3s ease; /* Smooth transition for sidebar toggle */
+  background-color: #ffffff;
+  height: calc(100vh - 60px); /* Full height minus header */
+  overflow-y: auto; /* Enable scrolling if content overflows */
+  position: static;
+}
+
+body.sidebar-collapsed #scheduler-page {
+  margin-left: 60px; /* Adjust margin for collapsed sidebar */
+}
+
+.scheduler-container {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.scheduler-sidebar {
+  flex: 1;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.scheduler-main {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#calendar-container {
+  flex: 1;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+#day-schedule {
+  flex: 2;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+#day-posts li {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+#add-schedule {
+  margin-top: 15px;
+  display: block;
+}
+
+.post-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: box-shadow 0.3s ease;
+}
+
+.post-card:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.post-details {
+  flex: 1;
+}
+
+.post-title {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: bold;
+}
+
+.post-date {
+  font-size: 0.85rem;
+  color: #777;
+  margin-top: 5px;
+}
+
+.post-actions button {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.post-actions button:hover {
+  color: #0056b3;
+}
+
+.flatpickr-day.selected {
+  background-color: #007bff;
+  color: #fff;
+  border-radius: 50%;
+}
+
+.flatpickr-day.has-posts::after {
+  content: "•";
+  color: #007bff;
+  font-size: 1.2rem;
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.flatpickr-day.has-posts {
+  background-color: #ffeb3b; /* Yellow highlight */
+  border-radius: 50%;
+  color: #000;
+}
+
+.flatpickr-day.has-posts:hover {
+  background-color: #ffc107; /* Darker yellow on hover */
+}
+
+.action-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.action-button.cancel {
+  background-color: #6c757d;
+}
+
+.action-button:hover {
+  background-color: #0056b3;
 }
 
 #content-editor {
@@ -651,29 +847,34 @@ body.sidebar-collapsed #settings-page {
 
 /* ======= Modal Styles ======= */
 .modal {
-  position: fixed; /* Ensure modals are fixed to the viewport */
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Add a translucent backdrop */
-  display: flex;
+  position: fixed; /* Always position relative to the viewport */
+  top: 50%; /* Center vertically */
+  left: 50%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Ensure proper centering */
+  width: 80%; /* Default width of the modal */
+  max-width: 600px; /* Limit the maximum width */
+  background-color: rgba(0, 0, 0, 0.5); /* Backdrop color */
+  z-index: 1300; /* Ensure the modal stays above all other elements */
+  display: flex; /* Flexbox for centering */
   justify-content: center;
   align-items: center;
-  z-index: 1300; /* Ensure modals are above all other content */
   overflow: hidden; /* Prevent scrolling within the modal */
 }
 
 .modal-content {
-  background-color: #fefefe;
-  padding: 20px;
-  border-radius: 8px;
-  width: 80%;
-  max-width: 600px;
-  max-height: 80%; /* Limit modal content height */
-  overflow-y: auto; /* Enable scrolling within the modal content */
-  position: relative;
-  border: 1px solid #888;
+  background-color: #fff; /* Modal background */
+  border-radius: 8px; /* Rounded corners */
+  padding: 20px; /* Internal spacing */
+  width: 100%; /* Full width */
+  max-height: 80%; /* Prevent overflow if content is too tall */
+  overflow-y: auto; /* Enable vertical scrolling if necessary */
+  position: relative; /* For positioning child elements */
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .modal-content:focus {
@@ -943,6 +1144,16 @@ body.sidebar-collapsed #settings-page {
   #settings-page {
     margin-left: 50px; /* Adjust for smaller collapsed sidebar */
     padding: 10px; /* Reduce padding for smaller screens */
+  }
+
+  .scheduler-container {
+    flex-direction: column;
+  }
+
+  #calendar-container,
+  #day-schedule {
+    width: 100%;
+    margin-bottom: 20px;
   }
 }
 

@@ -13,6 +13,13 @@ const allowedChannels = [
   'update-user-data',
   'savePost',
   'saveSettings',
+  'getScheduledPosts',
+  'fetchUserData',
+  'fetchNotifications',
+  'getAISuggestions',
+  'getEnv',
+  'getPosts',
+  'getPostById',
   // Add any other event channels you intend to expose
 ];
 
@@ -112,6 +119,14 @@ contextBridge.exposeInMainWorld('api', {
   schedulePost: (updatedPost) => {
     console.log('Invoking "schedule-post" with updated post:', updatedPost);
     return ipcRenderer.invoke('schedule-post', updatedPost);
+  },
+  getSchedules: () => {
+    console.log('Invoking "get-schedules"');
+    return ipcRenderer.invoke('get-schedules');
+  },
+  getScheduledPosts: (linkedinId) => {
+    console.log('Invoking "get-scheduled-posts" with LinkedIn ID:', linkedinId);
+    return ipcRenderer.invoke('get-scheduled-posts', linkedinId);
   },
   getEnv: (variable) => {
     console.log('Invoking "get-env" for variable:', variable);

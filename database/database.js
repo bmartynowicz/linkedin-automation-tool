@@ -55,7 +55,6 @@ function initializeDatabase() {
         title TEXT, 
         content TEXT NOT NULL,
         status TEXT CHECK(status IN ('draft', 'scheduled', 'posted', 'closed')) NOT NULL DEFAULT 'draft',
-        scheduled_time DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         edited_at DATETIME,  -- For last edited timestamp
@@ -69,9 +68,11 @@ function initializeDatabase() {
     db.run(`
       CREATE TABLE IF NOT EXISTS schedules (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        post_id INTEGER,
-        scheduled_time DATETIME,
+        post_id INTEGER NOT NULL,
+        scheduled_time DATETIME NOT NULL,
+        recurrence TEXT,
         status TEXT DEFAULT 'Scheduled',
+        UNIQUE(post_id),
         FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE
       )
     `);
