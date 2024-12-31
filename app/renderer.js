@@ -649,34 +649,39 @@ async function initializeScheduler() {
   }
 }
   
-async function populatePostSelect() {
-    const postSelectEl = document.getElementById('post-select');
-    if (!postSelectEl) return;
-  
-    try {
-      const posts = await window.api.getPosts(); // Fetch all posts
-      const unscheduledPosts = posts.filter(post => post.status === 'draft');
-  
-      postSelectEl.innerHTML = ''; // Clear existing options
-      if (unscheduledPosts.length === 0) {
-        const option = document.createElement('option');
-        option.textContent = 'No unscheduled posts available';
-        option.disabled = true;
-        postSelectEl.appendChild(option);
-        return;
-      }
-  
-      unscheduledPosts.forEach(post => {
-        const option = document.createElement('option');
-        option.value = post.id;
-        option.textContent = post.title || `Post #${post.id}`;
-        postSelectEl.appendChild(option);
-      });
-    } catch (error) {
-      console.error('Error populating post select:', error.message);
-      showToast('Failed to load unscheduled posts.');
+async function populatePostSelect(selectedPostId = null) {
+  const postSelectEl = document.getElementById('post-select');
+  if (!postSelectEl) return;
+
+  try {
+    const posts = await window.api.getPosts(); // Fetch all posts
+    const unscheduledPosts = posts.filter((post) => post.status === 'draft');
+
+    postSelectEl.innerHTML = ''; // Clear existing options
+    if (unscheduledPosts.length === 0) {
+      const option = document.createElement('option');
+      option.textContent = 'No unscheduled posts available';
+      option.disabled = true;
+      postSelectEl.appendChild(option);
+      return;
     }
-}  
+
+    unscheduledPosts.forEach((post) => {
+      const option = document.createElement('option');
+      option.value = post.id;
+      option.textContent = post.title || `Post #${post.id}`;
+      postSelectEl.appendChild(option);
+    });
+
+    // Pre-select the provided post ID if available
+    if (selectedPostId) {
+      postSelectEl.value = selectedPostId;
+    }
+  } catch (error) {
+    console.error('Error populating post select:', error.message);
+    showToast('Failed to load unscheduled posts.');
+  }
+}
 
 // Load posts for a selected date
 async function loadPostsForSelectedDate(selectedDate) {
@@ -879,23 +884,35 @@ function resetSelection() {
     deletePostButton.disabled = true;
 }
 
-function initializeFlatpickr(elementId, options) {
-  if (!elementId || elementId.trim() === '') {
-    console.error('initializeFlatpickr called with an empty or invalid selector.');
+function initializeFlatpickr(elementOrId, options) {
+  let element;
+
+  // Handle if a string selector or DOM element is passed
+  if (typeof elementOrId === 'string') {
+    if (!elementOrId.trim()) {
+      console.error('initializeFlatpickr called with an empty or invalid selector.');
+      return null;
+    }
+    element = document.querySelector(elementOrId);
+  } else if (elementOrId instanceof HTMLElement) {
+    element = elementOrId;
+  } else {
+    console.error('initializeFlatpickr called with an invalid argument. Expected a string or DOM element.');
     return null;
   }
 
-  const element = document.querySelector(elementId);
   if (!element) {
-    console.error(`Element not found for selector: ${elementId}`);
+    console.error(`Element not found for selector: ${elementOrId}`);
     return null;
   }
 
+  // Destroy any existing Flatpickr instance
   if (element._flatpickr) {
-    console.log(`Destroying existing Flatpickr instance for ${elementId}.`);
+    console.log(`Destroying existing Flatpickr instance for ${elementOrId}.`);
     element._flatpickr.destroy();
   }
 
+  // Initialize Flatpickr
   return flatpickr(element, options);
 }
 
@@ -936,23 +953,21 @@ function initializeSavedPostsCalendar() {
 }
   
 // Schedule Post Button Click Event
-schedulePostButton.addEventListener('click', () => {
+schedulePostButton.addEventListener('click', async () => {
   if (selectedPost) {
     const modal = document.getElementById('schedule-form-modal');
-    const postSelectEl = document.getElementById('post-select');
+    const scheduleDateTimeInput = document.getElementById('schedule-datetime');
 
-    if (postSelectEl) {
-      postSelectEl.innerHTML = ''; // Clear existing options
-      const option = document.createElement('option');
-      option.value = selectedPost.id;
-      option.textContent = selectedPost.title || `Post #${selectedPost.id}`;
-      postSelectEl.appendChild(option);
-      postSelectEl.value = selectedPost.id; // Pre-select the current post
-    }
+    // Populate the dropdown and pre-select the post
+    await populatePostSelect(selectedPost.id);
 
-    // Get the selected date from the scheduler and pass it to Flatpickr
-    const selectedDate = document.getElementById('selected-date')?.textContent || '';
-    initializeSavedPostsCalendar(selectedDate); // Initialize Flatpickr with the selected date
+    // Initialize Flatpickr using the DOM element directly
+    initializeFlatpickr(scheduleDateTimeInput, {
+      enableTime: true,
+      dateFormat: 'Y-m-d H:i',
+      defaultDate: new Date(), // Default to now or set a preferred date
+    });
+
     openModal(modal);
   } else {
     showToast('Please select a post to schedule.');
@@ -960,14 +975,23 @@ schedulePostButton.addEventListener('click', () => {
 });
 
 if (addSchedule) {
-  addSchedule.addEventListener('click', () => {
-    const selectedDate = document.getElementById('selected-date').textContent;
+  addSchedule.addEventListener('click', async () => {
+    const selectedDate = document.getElementById('selected-date')?.textContent;
     if (!selectedDate) {
       showToast('Please select a date first.');
       return;
     }
-    populatePostSelect();
-    initializeSavedPostsCalendar(selectedDate);
+
+    // Populate dropdown with unscheduled posts
+    await populatePostSelect();
+
+    // Initialize Flatpickr for the selected date
+    initializeFlatpickr(scheduleDateTimeInput, {
+      enableTime: true,
+      dateFormat: 'Y-m-d H:i',
+      defaultDate: selectedDate || new Date(),
+    });
+
     openModal(document.getElementById('schedule-form-modal'));
   });
 }
