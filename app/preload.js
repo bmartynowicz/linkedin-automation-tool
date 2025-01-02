@@ -20,6 +20,16 @@ const allowedChannels = [
   'getEnv',
   'getPosts',
   'getPostById',
+  'scrape-post-analytics',
+  'open-linkedin-browser',
+  'navigate-to-page',
+  'page-hook-execute',
+  'navigate',
+  'navigate-to-page',
+  'open-browser-and-save-cookies',
+  'load-browser-with-cookies',
+  'getCookiesForUser',
+  'getCurrentBrowserPage',
   // Add any other event channels you intend to expose
 ];
 
@@ -128,6 +138,17 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Invoking "get-scheduled-posts" with LinkedIn ID:', linkedinId);
     return ipcRenderer.invoke('get-scheduled-posts', linkedinId);
   },
+  scrapePostAnalytics: async (userId, postId) => {
+    return await ipcRenderer.invoke('scrape-post-analytics', userId, postId);
+  },  
+  openLinkedInBrowser: async () => {
+    if (allowedChannels.includes('open-linkedin-browser')) {
+      console.log('Opening LinkedIn browser...');
+      return ipcRenderer.invoke('open-linkedin-browser');
+    } else {
+      console.warn('Unauthorized attempt to invoke open-linkedin-browser');
+    }
+  },
   getEnv: (variable) => {
     console.log('Invoking "get-env" for variable:', variable);
     return ipcRenderer.invoke('get-env', variable);
@@ -139,5 +160,23 @@ contextBridge.exposeInMainWorld('api', {
   saveSettings: (settingsData) => {
     console.log('Invoking saveSettings with data:', settingsData);
     return ipcRenderer.invoke('save-settings', settingsData);
+  },
+  navigateToPage: (targetPageId, allPageIds) => {
+    ipcRenderer.send('navigate', { targetPageId, allPageIds });
+  },
+  onNavigate: (callback) => {
+    ipcRenderer.on('navigate-to-page', (event, args) => callback(args));
+  },
+  openBrowserAndSaveCookies: async (userId) => {
+    return await ipcRenderer.invoke('open-browser-and-save-cookies', userId);
+  },
+  loadBrowserWithCookies: async (userId) => {
+    return await ipcRenderer.invoke('load-browser-with-cookies', userId);
+  },
+  getCookiesForUser: (userId) => {
+    return ipcRenderer.invoke('get-cookies-for-user', userId);
+  },
+  getCurrentBrowserPage: async () => {
+    return await ipcRenderer.invoke('get-current-browser-page');
   },
 });

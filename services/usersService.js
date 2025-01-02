@@ -2,7 +2,6 @@
 const axios = require('axios');
 const db = require('../database/database.js');
 const LINKEDIN_REFRESH_URL = 'https://www.linkedin.com/oauth/v2/accessToken';
-const userModel = require('../models/user.js');
 
 // Centralized function to fetch user from database
 async function findUserByLinkedInId(linkedin_id) {
@@ -106,11 +105,11 @@ async function getCurrentUserWithPreferences() {
       console.warn('No user found in the database.');
       throw new Error('User not found.');
     }
-    console.log('User fetched from database:', user);
+    console.log('User fetched from database:');
 
     // Fetch preferences
     const preferences = await getUserPreferences(user.id);
-    console.log('User preferences fetched:', preferences);
+    console.log('User preferences fetched:');
 
     // Combine with defaults
     const combinedPreferences = {

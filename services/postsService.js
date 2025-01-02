@@ -1,3 +1,5 @@
+// services/postsService.js
+
 const db = require('../database/database.js');
 
 /**

@@ -1,4 +1,4 @@
-// server.js
+// backend/server.js
 
 const express = require('express');
 const db = require('../database/database.js');
