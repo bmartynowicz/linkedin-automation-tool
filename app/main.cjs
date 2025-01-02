@@ -8,13 +8,12 @@ const { fileURLToPath } = require('url');
 const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 const db = require('../database/database');
 const { formatLinkedInText } = require('../utils/formatLinkedInText.js');
-const { postToLinkedIn, getScrapedAnalytics } = require('../automation/linkedin');
+const { postToLinkedIn, getScrapedAnalytics, openLinkedInBrowser } = require('../automation/linkedin');
 const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById, getScheduledPosts, schedulePost } = require('../services/postsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
 const crypto = require('crypto');
 const jwtDecode = require('jwt-decode');
-
 
 // Load environment variables
 dotenv.config();
@@ -466,6 +465,19 @@ ipcMain.handle('search-posts', async (event, { query, linkedin_id }) => {
   }
 });
 
+
+// ======= IPC Handler for LinkedIn Browser =======
+ipcMain.handle('open-linkedin-browser', async () => {
+  try {
+    console.log('IPC open-linkedin-browser invoked.');
+    const result = await openLinkedInBrowser();
+    return result;
+  } catch (error) {
+    console.error('Error in open-linkedin-browser IPC:', error.message);
+    return { success: false, error: error.message };
+  }
+});
+
 // ======= IPC Handler for LinkedIn Auth Feedback =======
 
 // LinkedIn Authentication and User Login
@@ -538,6 +550,11 @@ ipcMain.on('open-linkedin-auth-window', () => {
     console.log('Auth window was closed by the user');
     notifyRenderer('linkedin-auth-closed');
   });
+});
+
+ipcMain.on('navigate', (event, { targetPageId, allPageIds }) => {
+  console.log(`Navigating to page: ${targetPageId}`);
+  event.sender.send('navigate-to-page', { targetPageId, allPageIds });
 });
 
 // Helper: Create LinkedIn Authentication Window

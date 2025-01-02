@@ -18,12 +18,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // ======= Sidebar =======
   const toggleMenuButton = document.getElementById('toggle-menu');
   const sidebar = document.getElementById('sidebar');
-  const settingsButton = document.querySelector('#sidebar .nav-item a[href="#settings"]');
-  const contentCreationButton = document.querySelector('#sidebar .nav-item a[href="#content-creation"]');
   const dashboardButton = document.querySelector('#sidebar .nav-item a[href="#dashboard"]');
   const analyticsButton = document.querySelector('#sidebar .nav-item a[href="#analytics"]');
   console.log('Analytics Button:', analyticsButton);
   const schedulerButton = document.querySelector('#sidebar .nav-item a[href="#scheduler"]');
+
+  const allPageIds = ['content-editor', 'settings-page', 'scheduler-page', 'analytics-page'];
+
+  const sidebarButtons = {
+    'content-editor': document.querySelector('#sidebar .nav-item a[href="#content-creation"]'),
+    'settings-page': document.querySelector('#sidebar .nav-item a[href="#settings"]'),
+    'scheduler-page': document.querySelector('#sidebar .nav-item a[href="#scheduler"]'),
+    'analytics-page': document.querySelector('#sidebar .nav-item a[href="#analytics"]'),
+  };
 
   // ======= Notifications =======
   const notificationsButton = document.getElementById('notifications');
@@ -96,6 +103,101 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('Scheduler Page:', schedulerPage);
   console.log('Settings Page:', settingsPage);
 
+  // Load application data on startup
+  async function initializeApp() {
+    try {
+      console.log('Initializing application...');
+      await loadSettings(); // Load settings
+      await loadSchedulerData(); // Load scheduler data
+      // await checkLinkedInAuth(); // Ensure LinkedIn browser is ready or authenticated
+      console.log('Application initialized successfully.');
+    } catch (error) {
+      console.error('Error during application initialization:', error.message);
+    }
+  }
+
+  // Load settings into the UI
+  const loadSettings = async () => {
+    try {
+      const user = await window.api.getCurrentUserWithPreferences();
+      console.log('Loaded user with preferences:', user);
+  
+      if (!user || !user.preferences) {
+        console.warn('No preferences found for the current user.');
+        return;
+      }
+  
+      const { preferences } = user;
+  
+      // Map of field IDs to preference keys
+      const fieldMapping = {
+        'theme-select': 'theme',
+        'tone-select': 'tone',
+        'suggestion-readiness': 'notification_settings.suggestion_readiness',
+        'engagement-tips': 'notification_settings.engagement_tips',
+        'system-updates': 'notification_settings.system_updates',
+        'notification-frequency': 'notification_settings.frequency',
+        'language': 'language',
+        'data-sharing': 'data_sharing',
+        'auto-logout': 'auto_logout',
+        'save-session': 'save_session',
+        'font-size': 'font_size',
+        'text-to-speech': 'text_to_speech',
+        'writing-style': 'writing_style',
+        'engagement-focus': 'engagement_focus',
+        'vocabulary-level': 'vocabulary_level',
+        'content-type': 'content_type',
+        'content-perspective': 'content_perspective',
+        'emphasis-tags': 'emphasis_tags',
+      };
+  
+      // Populate fields dynamically
+      Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
+        const element = document.getElementById(fieldId);
+        if (!element) {
+          console.warn(`Element with ID "${fieldId}" not found.`);
+          return;
+        }
+  
+        const value = prefKey.split('.').reduce((acc, key) => acc?.[key], preferences);
+        if (element.type === 'checkbox') {
+          element.checked = !!value;
+        } else {
+          element.value = value || '';
+        }
+      });
+  
+      // Generate and display the AI prompt in the preview section
+      const promptPreviewElement = document.getElementById('prompt-preview');
+      if (promptPreviewElement) {
+        const aiPrompt = generateAIPrompt(preferences);
+        promptPreviewElement.textContent = aiPrompt; // Display the prompt
+        console.log('AI Prompt displayed:', aiPrompt);
+      } else {
+        console.warn('Prompt preview element not found.');
+      }
+    } catch (error) {
+      console.error('Error loading settings into UI:', error.message);
+    }
+};
+
+  initializeApp();
+
+  // Sidebar navigation buttons
+  Object.keys(sidebarButtons).forEach((pageId) => {
+    const button = sidebarButtons[pageId];
+    if (button) {
+      button.addEventListener('click', () => {
+        window.api.navigateToPage(pageId, allPageIds);
+      });
+    }
+  });
+
+  // Listen for navigation events
+  window.api.onNavigate(({ targetPageId, allPageIds }) => {
+    switchPage(targetPageId, allPageIds);
+  });
+
   // ======= Emoji Bullet Button =======
   const emojiBulletButton = document.getElementById('ql-custom-bullet');
 
@@ -111,6 +213,32 @@ document.addEventListener('DOMContentLoaded', () => {
     element.classList.toggle(className);
     return element.classList.contains(className);
   }
+
+  function switchPage(targetPageId, allPageIds) {
+    try {
+      const allPages = allPageIds.map((pageId) => document.getElementById(pageId));
+      const targetPage = document.getElementById(targetPageId);
+  
+      if (!targetPage) {
+        console.error(`Target page "${targetPageId}" not found.`);
+        return;
+      }
+  
+      allPages.forEach((page) => {
+        if (page) {
+          if (page.id === targetPageId) {
+            page.classList.remove('hidden');
+          } else {
+            page.classList.add('hidden');
+          }
+        }
+      });
+  
+      console.log(`Switched to page: ${targetPageId}`);
+    } catch (error) {
+      console.error('Error in switchPage:', error.message);
+    }
+  }  
 
   // Apply Theme Dynamically
   function applyTheme(theme) {
@@ -179,71 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
       Provide a professional and engaging revision with tailored hashtags and a concise call-to-action.
     `.trim();
     };
-
-    // Load settings into the UI
-  const loadSettings = async () => {
-      try {
-        const user = await window.api.getCurrentUserWithPreferences();
-        console.log('Loaded user with preferences:', user);
-    
-        if (!user || !user.preferences) {
-          console.warn('No preferences found for the current user.');
-          return;
-        }
-    
-        const { preferences } = user;
-    
-        // Map of field IDs to preference keys
-        const fieldMapping = {
-          'theme-select': 'theme',
-          'tone-select': 'tone',
-          'suggestion-readiness': 'notification_settings.suggestion_readiness',
-          'engagement-tips': 'notification_settings.engagement_tips',
-          'system-updates': 'notification_settings.system_updates',
-          'notification-frequency': 'notification_settings.frequency',
-          'language': 'language',
-          'data-sharing': 'data_sharing',
-          'auto-logout': 'auto_logout',
-          'save-session': 'save_session',
-          'font-size': 'font_size',
-          'text-to-speech': 'text_to_speech',
-          'writing-style': 'writing_style',
-          'engagement-focus': 'engagement_focus',
-          'vocabulary-level': 'vocabulary_level',
-          'content-type': 'content_type',
-          'content-perspective': 'content_perspective',
-          'emphasis-tags': 'emphasis_tags',
-        };
-    
-        // Populate fields dynamically
-        Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
-          const element = document.getElementById(fieldId);
-          if (!element) {
-            console.warn(`Element with ID "${fieldId}" not found.`);
-            return;
-          }
-    
-          const value = prefKey.split('.').reduce((acc, key) => acc?.[key], preferences);
-          if (element.type === 'checkbox') {
-            element.checked = !!value;
-          } else {
-            element.value = value || '';
-          }
-        });
-    
-        // Generate and display the AI prompt in the preview section
-        const promptPreviewElement = document.getElementById('prompt-preview');
-        if (promptPreviewElement) {
-          const aiPrompt = generateAIPrompt(preferences);
-          promptPreviewElement.textContent = aiPrompt; // Display the prompt
-          console.log('AI Prompt displayed:', aiPrompt);
-        } else {
-          console.warn('Prompt preview element not found.');
-        }
-      } catch (error) {
-        console.error('Error loading settings into UI:', error.message);
-      }
-  };
     
   // Ensure settings load when the page is ready
   document.addEventListener('DOMContentLoaded', loadSettings);    
@@ -301,48 +364,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.api.fetchUserData();
   }
 
-  // Handle Settings Navigation
-  if (settingsButton && contentEditor && settingsPage) {
-    settingsButton.addEventListener('click', () => {
-      try {
-        // Switch to the settings page
-        contentEditor.classList.add('hidden');
-        settingsPage.classList.remove('hidden');
-  
-        // Call loadSettings to populate the settings form
-        loadSettings();
-  
-        console.log('Settings page displayed.');
-      } catch (error) {
-        console.error('Error showing settings page:', error.message);
-      }
-    });
-  }
-
-  // Handle Scheduler Navigation
-  if (schedulerButton && contentEditor && schedulerPage) {
-  schedulerButton.addEventListener('click', async () => {
-    try {
-      console.log('Navigating to Scheduler Page...');
-      
-      // Hide all other pages
-      contentEditor.classList.add('hidden');
-      settingsPage.classList.add('hidden');
-      
-      // Show the scheduler page
-      schedulerPage.classList.remove('hidden');
-
-      console.log('Scheduler Page Classes:', schedulerPage.classList);
-      console.log('Content Editor Classes:', contentEditor.classList);
-
-      // Load scheduler data (fetch unscheduled, upcoming, and scheduled posts)
-      await loadSchedulerData();
-    } catch (error) {
-      console.error('Error navigating to Scheduler Page:', error.message);
-    }
-  });
-  }
-
 // Handle Analytics Navigation
 if (analyticsButton && contentEditor && analyticsPage) {
   analyticsButton.addEventListener('click', async () => {
@@ -356,28 +377,39 @@ if (analyticsButton && contentEditor && analyticsPage) {
 
       // Show the analytics page
       analyticsPage.classList.remove('hidden');
-
       console.log('Analytics Page Classes:', analyticsPage.classList);
 
-      // Fetch analytics data via the preload bridge
+      // Step 1: Open LinkedIn Browser
+      console.log('Opening LinkedIn browser...');
+      const browserResult = await window.api.openLinkedInBrowser();
+
+      if (browserResult.success) {
+        console.log('Browser launched successfully:', browserResult.message);
+      } else {
+        console.error('Failed to launch browser:', browserResult.error);
+        alert('Error opening LinkedIn browser. Check console for details.');
+        return; // Stop further execution if browser fails to launch
+      }
+
+      // Step 2: Fetch Analytics Data (temporarily disabled)
+      /*
+      console.log('Fetching analytics data...');
       const query = document.getElementById('analytics-query').value.trim() || 'default';
-      console.log('Fetching analytics for query:', query);
+      const analyticsResult = await window.api.scrapeAnalytics(query);
 
-      const result = await window.api.scrapeAnalytics(query);
-
-      if (result.success) {
-        console.log('Fetched analytics data:', result.data);
+      if (analyticsResult.success) {
+        console.log('Fetched analytics data:', analyticsResult.data);
 
         // Update Overview Section
-        document.getElementById('total-posts').textContent = result.data.totalPosts || 0;
-        document.getElementById('total-reactions').textContent = result.data.totalReactions || 0;
-        document.getElementById('total-comments').textContent = result.data.totalComments || 0;
-        document.getElementById('total-reach').textContent = result.data.totalReach || 0;
+        document.getElementById('total-posts').textContent = analyticsResult.data.totalPosts || 0;
+        document.getElementById('total-reactions').textContent = analyticsResult.data.totalReactions || 0;
+        document.getElementById('total-comments').textContent = analyticsResult.data.totalComments || 0;
+        document.getElementById('total-reach').textContent = analyticsResult.data.totalReach || 0;
 
         // Update Posts Table
         const tableBody = document.getElementById('posts-table-body');
         tableBody.innerHTML = ''; // Clear existing rows
-        result.data.forEach(post => {
+        analyticsResult.data.forEach(post => {
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${post.author}</td>
@@ -390,16 +422,16 @@ if (analyticsButton && contentEditor && analyticsPage) {
           tableBody.appendChild(row);
         });
       } else {
-        console.error('Failed to fetch analytics:', result.error);
+        console.error('Failed to fetch analytics:', analyticsResult.error);
         alert('Error fetching analytics data. Check console for details.');
       }
+      */
     } catch (error) {
       console.error('Error navigating to Analytics Page:', error.message);
       alert('An error occurred while navigating to the Analytics Page.');
     }
   });
 }
-
    
   // Attach Event Listener for Form Submission
   if (saveSettingsButton) {
@@ -555,16 +587,6 @@ if (analyticsButton && contentEditor && analyticsPage) {
         showToast('An error occurred during LinkedIn reauthentication.');
       }
     });    
-  }
-
-  // Add a handler for returning to the Content Editor
-  if (contentCreationButton) {
-    contentCreationButton.addEventListener('click', () => {
-      // Show content editor and hide settings page
-      settingsPage.classList.add('hidden');
-      schedulerPage.classList.add('hidden');
-      contentEditor.classList.remove('hidden');
-    });
   }
 
   // Add a handler for managing the save post functionality

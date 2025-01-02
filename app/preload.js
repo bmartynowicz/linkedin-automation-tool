@@ -20,7 +20,12 @@ const allowedChannels = [
   'getEnv',
   'getPosts',
   'getPostById',
-  'scrapeAnalytics',
+  'scrape-analytics',
+  'open-linkedin-browser',
+  'navigate-to-page',
+  'page-hook-execute',
+  'navigate',
+  'navigate-to-page',
   // Add any other event channels you intend to expose
 ];
 
@@ -133,6 +138,14 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Invoking "scrape-analytics" with PostID:', postId);
     return ipcRenderer.invoke('scrape-analytics', postId);
   },
+  openLinkedInBrowser: async () => {
+    if (allowedChannels.includes('open-linkedin-browser')) {
+      console.log('Opening LinkedIn browser...');
+      return ipcRenderer.invoke('open-linkedin-browser');
+    } else {
+      console.warn('Unauthorized attempt to invoke open-linkedin-browser');
+    }
+  },
   getEnv: (variable) => {
     console.log('Invoking "get-env" for variable:', variable);
     return ipcRenderer.invoke('get-env', variable);
@@ -144,5 +157,11 @@ contextBridge.exposeInMainWorld('api', {
   saveSettings: (settingsData) => {
     console.log('Invoking saveSettings with data:', settingsData);
     return ipcRenderer.invoke('save-settings', settingsData);
+  },
+  navigateToPage: (targetPageId, allPageIds) => {
+    ipcRenderer.send('navigate', { targetPageId, allPageIds });
+  },
+  onNavigate: (callback) => {
+    ipcRenderer.on('navigate-to-page', (event, args) => callback(args));
   },
 });

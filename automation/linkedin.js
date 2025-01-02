@@ -6,6 +6,7 @@ const fetch = require('node-fetch');
 const dotenv = require('dotenv');
 const { findOrCreateUser, getCurrentUser, refreshAccessToken } = require('../services/usersService.js');
 const { scrapeLinkedInAnalytics } = require('../automation/linkedinScraper.js');
+const { chromium } = require('playwright');
 
 dotenv.config();
 
@@ -79,6 +80,28 @@ async function getScrapedAnalytics(query) {
     return { success: true, data: posts };
   } catch (error) {
     console.error('Error in getScrapedAnalytics:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Function: openLinkedInBrowser
+ * Opens a Playwright-controlled browser and navigates to LinkedIn.
+ * @returns {Promise<Object>} Success message or error.
+ */
+async function openLinkedInBrowser() {
+  try {
+    console.log('Launching Playwright browser...');
+    const browser = await chromium.launch({ headless: false }); // Set headless to false for debugging
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    console.log('Navigating to LinkedIn...');
+    await page.goto('https://www.linkedin.com/login');
+
+    return { success: true, message: 'Browser launched and LinkedIn loaded.' };
+  } catch (error) {
+    console.error('Error opening LinkedIn browser:', error.message);
     return { success: false, error: error.message };
   }
 }
@@ -200,4 +223,5 @@ module.exports = {
   router,
   postToLinkedIn,
   getScrapedAnalytics,
+  openLinkedInBrowser,
 };
