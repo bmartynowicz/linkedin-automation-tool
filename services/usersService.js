@@ -105,11 +105,11 @@ async function getCurrentUserWithPreferences() {
       console.warn('No user found in the database.');
       throw new Error('User not found.');
     }
-    console.log('User fetched from database:', user);
+    console.log('User fetched from database:');
 
     // Fetch preferences
     const preferences = await getUserPreferences(user.id);
-    console.log('User preferences fetched:', preferences);
+    console.log('User preferences fetched:');
 
     // Combine with defaults
     const combinedPreferences = {

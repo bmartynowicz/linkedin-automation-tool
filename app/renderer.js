@@ -18,14 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // ======= Sidebar =======
   const toggleMenuButton = document.getElementById('toggle-menu');
   const sidebar = document.getElementById('sidebar');
-  const dashboardButton = document.querySelector('#sidebar .nav-item a[href="#dashboard"]');
-  const analyticsButton = document.querySelector('#sidebar .nav-item a[href="#analytics"]');
-  console.log('Analytics Button:', analyticsButton);
-  const schedulerButton = document.querySelector('#sidebar .nav-item a[href="#scheduler"]');
 
-  const allPageIds = ['content-editor', 'settings-page', 'scheduler-page', 'analytics-page'];
+  const allPageIds = ['dashboard', 'content-editor', 'settings-page', 'scheduler-page', 'analytics-page'];
 
   const sidebarButtons = {
+    'dashboard': document.querySelector('#sidebar .nav-item a[href="#dashboard"]'),
     'content-editor': document.querySelector('#sidebar .nav-item a[href="#content-creation"]'),
     'settings-page': document.querySelector('#sidebar .nav-item a[href="#settings"]'),
     'scheduler-page': document.querySelector('#sidebar .nav-item a[href="#scheduler"]'),
@@ -62,9 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const scheduleDateTimeInput = document.getElementById('schedule-datetime');
   const calendarElement = document.getElementById('calendar');
 
-  // ======= Analytics Page =======
-  const analyticsPage = document.getElementById('analytics-page');
-
   // ======= Saved Posts Modal =======
   const savedPostsModal = document.getElementById('saved-posts-modal');
   const openSavedPostsButton = document.getElementById('open-saved-posts');
@@ -97,23 +91,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const rejectButton = document.getElementById('reject-suggestion');
   const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
 
-  console.log('Analytics Button:', analyticsButton);
-  console.log('Analytics Page:', analyticsPage);
-  console.log('Content Editor:', contentEditor);
-  console.log('Scheduler Page:', schedulerPage);
-  console.log('Settings Page:', settingsPage);
-
   // Load application data on startup
   async function initializeApp() {
-    try {
-      console.log('Initializing application...');
-      await loadSettings(); // Load settings
-      await loadSchedulerData(); // Load scheduler data
-      // await checkLinkedInAuth(); // Ensure LinkedIn browser is ready or authenticated
-      console.log('Application initialized successfully.');
-    } catch (error) {
-      console.error('Error during application initialization:', error.message);
+  try {
+    console.log('Initializing application...');
+    await loadSettings(); // Load settings
+    await loadSchedulerData(); // Load scheduler data
+
+    const hasValidCookies = await checkCookies(); // Check for valid LinkedIn cookies
+    if (!hasValidCookies) {
+      console.warn('No valid cookies found. Prompting user to log in...');
+      // Optionally prompt the user to log in via LinkedIn
+      await window.api.openBrowserAndSaveCookies(user.id); // Allow the user to log in and save cookies
     }
+
+    console.log('Application initialized successfully.');
+  } catch (error) {
+    console.error('Error during application initialization:', error.message);
+  }
   }
 
   // Load settings into the UI
@@ -179,7 +174,31 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error('Error loading settings into UI:', error.message);
     }
-};
+  };
+
+  // Check if valid cookies exist for LinkedIn
+  async function checkCookies() {
+  try {
+    console.log('Checking LinkedIn cookies...');
+    const user = await window.api.getCurrentUserWithPreferences();
+    if (!user || !user.id) {
+      console.warn('User ID is not available. Ensure the user is logged in.');
+      return false;
+    }
+
+    const cookies = await window.api.getCookiesForUser(user.id); // Implement this in preload.js and main.cjs
+    if (!cookies || cookies.length === 0) {
+      console.warn('No cookies found for the current user.');
+      return false;
+    }
+
+    console.log('Cookies are valid for the current user.');
+    return true;
+  } catch (error) {
+    console.error('Error checking cookies:', error.message);
+    return false;
+  }
+  }
 
   initializeApp();
 
@@ -226,19 +245,23 @@ document.addEventListener('DOMContentLoaded', () => {
   
       allPages.forEach((page) => {
         if (page) {
-          if (page.id === targetPageId) {
-            page.classList.remove('hidden');
-          } else {
-            page.classList.add('hidden');
-          }
+          page.classList.toggle('hidden', page.id !== targetPageId);
         }
       });
+  
+      // Hook-based refresh logic
+      if (targetPageId === 'settings-page') {
+        loadSettings(); // Refresh settings page
+      } else if (targetPageId === 'scheduler-page') {
+        loadSchedulerData(); // Refresh scheduler data
+      }
   
       console.log(`Switched to page: ${targetPageId}`);
     } catch (error) {
       console.error('Error in switchPage:', error.message);
     }
-  }  
+  }
+   
 
   // Apply Theme Dynamically
   function applyTheme(theme) {
@@ -307,10 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
       Provide a professional and engaging revision with tailored hashtags and a concise call-to-action.
     `.trim();
     };
-    
-  // Ensure settings load when the page is ready
-  document.addEventListener('DOMContentLoaded', loadSettings);    
-
+  
   if (toggleMenuButton && sidebar) {
     toggleMenuButton.addEventListener('click', () => {
       // Toggle the 'collapsed' class on the sidebar to switch between expanded/collapsed states
@@ -363,76 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeProfileButton.addEventListener('click', () => closeModal(profileModal));
     window.api.fetchUserData();
   }
-
-// Handle Analytics Navigation
-if (analyticsButton && contentEditor && analyticsPage) {
-  analyticsButton.addEventListener('click', async () => {
-    try {
-      console.log('Navigating to Analytics Page...');
-
-      // Hide all other pages
-      contentEditor.classList.add('hidden');
-      schedulerPage.classList.add('hidden');
-      settingsPage.classList.add('hidden');
-
-      // Show the analytics page
-      analyticsPage.classList.remove('hidden');
-      console.log('Analytics Page Classes:', analyticsPage.classList);
-
-      // Step 1: Open LinkedIn Browser
-      console.log('Opening LinkedIn browser...');
-      const browserResult = await window.api.openLinkedInBrowser();
-
-      if (browserResult.success) {
-        console.log('Browser launched successfully:', browserResult.message);
-      } else {
-        console.error('Failed to launch browser:', browserResult.error);
-        alert('Error opening LinkedIn browser. Check console for details.');
-        return; // Stop further execution if browser fails to launch
-      }
-
-      // Step 2: Fetch Analytics Data (temporarily disabled)
-      /*
-      console.log('Fetching analytics data...');
-      const query = document.getElementById('analytics-query').value.trim() || 'default';
-      const analyticsResult = await window.api.scrapeAnalytics(query);
-
-      if (analyticsResult.success) {
-        console.log('Fetched analytics data:', analyticsResult.data);
-
-        // Update Overview Section
-        document.getElementById('total-posts').textContent = analyticsResult.data.totalPosts || 0;
-        document.getElementById('total-reactions').textContent = analyticsResult.data.totalReactions || 0;
-        document.getElementById('total-comments').textContent = analyticsResult.data.totalComments || 0;
-        document.getElementById('total-reach').textContent = analyticsResult.data.totalReach || 0;
-
-        // Update Posts Table
-        const tableBody = document.getElementById('posts-table-body');
-        tableBody.innerHTML = ''; // Clear existing rows
-        analyticsResult.data.forEach(post => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${post.author}</td>
-            <td>${post.title}</td>
-            <td>${post.reactions}</td>
-            <td>${post.comments}</td>
-            <td>${post.reach || 'N/A'}</td>
-            <td>${new Date(post.date).toLocaleDateString()}</td>
-          `;
-          tableBody.appendChild(row);
-        });
-      } else {
-        console.error('Failed to fetch analytics:', analyticsResult.error);
-        alert('Error fetching analytics data. Check console for details.');
-      }
-      */
-    } catch (error) {
-      console.error('Error navigating to Analytics Page:', error.message);
-      alert('An error occurred while navigating to the Analytics Page.');
-    }
-  });
-}
-   
+  
   // Attach Event Listener for Form Submission
   if (saveSettingsButton) {
     saveSettingsButton.addEventListener('click', async (e) => {
@@ -735,6 +686,44 @@ if (analyticsButton && contentEditor && analyticsPage) {
   }
 
   // ===== Event Handlers =====
+
+  document.getElementById("scrape-analytics").addEventListener("click", async () => {
+    try {
+      console.log("Scrape Analytics button clicked.");
+  
+      // Fetch current user data
+      const user = await window.api.getCurrentUserWithPreferences();
+      if (!user || !user.id) {
+        throw new Error("User data not available. Please log in.");
+      }
+  
+      // Get or create the current browser page
+      const pageResult = await window.api.getCurrentBrowserPage();
+  
+      if (pageResult.success) {
+        console.log("Using existing browser page.");
+        const postId = 'urn:li:share:7280464486644289536'; // Example post ID
+  
+        console.log(`Initiating scraping for post ID: ${postId}`);
+        const scrapeResult = await window.api.scrapePostAnalytics(user.id, postId);
+  
+        if (scrapeResult.success) {
+          console.log("Scraped Analytics Data:", scrapeResult.data);
+          alert("Analytics data scraped successfully!");
+        } else {
+          console.error("Error scraping analytics:", scrapeResult.error);
+          alert("Failed to scrape analytics. Check console for details.");
+        }
+      } else {
+        console.error("Failed to get browser page:", pageResult.error);
+        alert("Failed to get browser page. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error scraping analytics:", error.message);
+      alert("An error occurred. Check the console for details.");
+    }
+  });  
+
   document.getElementById('add-schedule').addEventListener('click', () => {
   const selectedDate = document.getElementById('selected-date')?.textContent || new Date();
   initializeModalCalendar(selectedDate, (selectedDates) => {
@@ -746,20 +735,6 @@ if (analyticsButton && contentEditor && analyticsPage) {
   document.getElementById('close-scheduler-modal').addEventListener('click', () => {
   document.getElementById('schedule-form-modal').style.display = 'none';
   });
-
-  // Trigger scraping
-document.getElementById('scrape-analytics').addEventListener('click', async () => {
-  const query = document.getElementById('analytics-query').value.trim();
-  if (!query) return alert('Enter a query!');
-
-  const response = await fetch('http://localhost:3000/analytics/scrape', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-  });
-  const result = await response.json();
-  console.log(result);
-});
 
   // Highlight dates in the scheduler calendar
   function updateCalendarHighlights(scheduledPosts) {

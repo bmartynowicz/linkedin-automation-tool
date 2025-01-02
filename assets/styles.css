@@ -541,6 +541,126 @@ body.sidebar-collapsed #content-editor {
   margin-left: 60px; /* Adjust for collapsed sidebar */
 }
 
+/* ======= Analytics Page Styles ======= */
+#analytics-page {
+  margin-left: 250px; /* Account for sidebar width */
+  margin-top: 60px; /* Below the header */
+  padding: 20px;
+  background-color: #ffffff;
+  height: calc(100vh - 60px); /* Full height minus header */
+  overflow-y: auto; /* Enable scrolling if content overflows */
+  transition: margin-left 0.3s ease; /* Smooth transition for sidebar toggle */
+}
+
+body.sidebar-collapsed #analytics-page {
+  margin-left: 60px; /* Adjust for collapsed sidebar */
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.filters label {
+  display: flex;
+  flex-direction: column;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.filters input,
+.filters button {
+  margin-top: 5px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.filters button {
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.filters button:hover {
+  background-color: #0056b3;
+}
+
+.overview-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.overview-cards .card {
+  flex: 1 1 calc(25% - 15px); /* Four cards in a row */
+  background-color: #ffffff;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.overview-cards .card h4 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.overview-cards .card p {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+  color: #007bff;
+}
+
+#posts-analytics table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+#posts-analytics th,
+#posts-analytics td {
+  text-align: left;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+#posts-analytics th {
+  background-color: #f9f9f9;
+  font-weight: bold;
+}
+
+#posts-analytics tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+#charts-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+#charts-section .chart {
+  flex: 1 1 calc(50% - 20px); /* Two charts per row */
+  height: 300px;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 /* ======= Editor Container Styles ======= */
 #editor-container {
   flex: 1; /* Take up all remaining space in #content-editor */
