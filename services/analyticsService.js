@@ -21,6 +21,24 @@ async function saveAnalytics(post) {
   });
 }
 
+async function getUserAnalytics(userId) {
+    return new Promise((resolve, reject) => {
+      db.all(
+        'SELECT * FROM analytics WHERE user_id = ?',
+        [userId],
+        (err, rows) => {
+          if (err) {
+            console.error('Error fetching analytics:', err.message);
+            return reject(err);
+          }
+          resolve(rows);
+        }
+      );
+    });
+  }
+  
+
 module.exports = {
   saveAnalytics,
+  getUserAnalytics,
 };

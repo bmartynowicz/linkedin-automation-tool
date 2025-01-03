@@ -967,19 +967,23 @@ body.sidebar-collapsed #settings-page {
 
 /* ======= Modal Styles ======= */
 .modal {
-  position: fixed; /* Always position relative to the viewport */
-  top: 50%; /* Center vertically */
-  left: 50%; /* Center horizontally */
-  transform: translate(-50%, -50%); /* Ensure proper centering */
-  border-radius: 8px; /* Rounded corners */
-  width: 80%; /* Default width of the modal */
-  max-width: 600px; /* Limit the maximum width */
-  background-color: rgba(0, 0, 0, 0.5); /* Backdrop color */
-  z-index: 1300; /* Ensure the modal stays above all other elements */
-  display: flex; /* Flexbox for centering */
+  display: none; /* Default is hidden */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 8px;
+  width: 80%;
+  max-width: 600px;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1300;
   justify-content: center;
   align-items: center;
-  overflow: hidden; /* Prevent scrolling within the modal */
+  overflow: hidden;
+}
+
+.modal.show {
+  display: flex; /* Only show when the modal has the 'show' class */
 }
 
 .modal-content {
@@ -1017,6 +1021,15 @@ body.sidebar-collapsed #settings-page {
 .close-button:focus {
   color: black;
   outline: none;
+}
+
+.action-button.secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.action-button.secondary:hover {
+  background-color: #5a6268;
 }
 
 /* Saved Posts List */

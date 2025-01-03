@@ -12,10 +12,10 @@ const allowedChannels = [
   'linkedin-auth-closed',
   'update-user-data',
   'savePost',
-  'saveSettings',
+  'saveSettingsForUser',
   'getScheduledPosts',
   'fetchUserData',
-  'fetchNotifications',
+  'fetch-notifications',
   'getAISuggestions',
   'getEnv',
   'getPosts',
@@ -30,6 +30,15 @@ const allowedChannels = [
   'load-browser-with-cookies',
   'getCookiesForUser',
   'getCurrentBrowserPage',
+  'rememberCredentials',
+  'getRememberCredentialsFlag',
+  'userLogin',
+  'checkUserCredentials',
+  'logout',
+  'change-password',
+  'registerUser',
+  'createAccount',
+  'loadSettingsForUser',
   // Add any other event channels you intend to expose
 ];
 
@@ -94,10 +103,10 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Invoking "get-ai-suggestions" with prompt and userId:', prompt, userId);
     return ipcRenderer.invoke('get-ai-suggestions', { prompt, userId });
   },
-  fetchNotifications: () => {
-    console.log('Invoking "fetch-notifications"');
-    return ipcRenderer.invoke('fetch-notifications');
-  },
+  fetchNotifications: async () => {
+    console.log('Invoking "fetch-notifications" for the current user');
+    return await ipcRenderer.invoke('fetch-notifications');
+  },  
   fetchUserData: () => {
     console.log('Invoking "fetch-user-data"');
     return ipcRenderer.invoke('fetch-user-data');
@@ -157,9 +166,13 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Sending "test-message" to main process');
     ipcRenderer.send('test-message');
   },
-  saveSettings: (settingsData) => {
-    console.log('Invoking saveSettings with data:', settingsData);
-    return ipcRenderer.invoke('save-settings', settingsData);
+  loadSettingsForUser: async (userId) => {
+    console.log('Invoking "load-settings-for-user" with userId:', userId);
+    return await ipcRenderer.invoke('load-settings', userId);
+  },
+  saveSettingsForUser: async (userId, settings) => {
+    console.log('Invoking "save-settings-for-user" with userId:', userId, 'and settings:', settings);
+    return await ipcRenderer.invoke('save-settings', userId, settings);
   },
   navigateToPage: (targetPageId, allPageIds) => {
     ipcRenderer.send('navigate', { targetPageId, allPageIds });
@@ -178,5 +191,41 @@ contextBridge.exposeInMainWorld('api', {
   },
   getCurrentBrowserPage: async () => {
     return await ipcRenderer.invoke('get-current-browser-page');
+  },
+  getFirstLaunchFlag: async () => {
+    return localStorage.getItem('firstLaunch') || 'true';
+  },
+  setFirstLaunchFlag: async () => {
+    localStorage.setItem('firstLaunch', 'false');
+  },
+  rememberCredentials: async (remember) => {
+    localStorage.setItem('rememberCredentials', remember ? 'true' : 'false');
+  },
+  getRememberCredentialsFlag: async () => {
+    return localStorage.getItem('rememberCredentials') === 'true';
+  },
+  updateRememberMePreference: async (userId, remember) => {
+    return await ipcRenderer.invoke('update-remember-me-preference', userId, remember);
+  },
+  userLogin: async (username, password) => {
+    return ipcRenderer.invoke('user-login', { username, password });
+  },
+  checkUserCredentials: async () => {
+    return await ipcRenderer.invoke('check-user-credentials');
+  },
+  logout: async () => {
+    console.log('Invoking "logout"');
+    return await ipcRenderer.invoke('logout');
+  },
+  changePassword: async (currentPassword, newPassword) => {
+    console.log('Invoking "change-password" with currentPassword and newPassword');
+    return await ipcRenderer.invoke('change-password', { currentPassword, newPassword });
+  },
+  registerUser: async (data) => {
+    console.log('Invoking "register-user" with data:', data);
+    return await ipcRenderer.invoke('register-user', data);
+  },
+  createAccount: async (data) => {  
+    return await ipcRenderer.invoke('create-account', data);
   },
 });
