@@ -30,6 +30,14 @@ const allowedChannels = [
   'load-browser-with-cookies',
   'getCookiesForUser',
   'getCurrentBrowserPage',
+  'rememberCredentials',
+  'getRememberCredentialsFlag',
+  'userLogin',
+  'checkUserCredentials',
+  'logout',
+  'change-password',
+  'registerUser',
+  'createAccount',
   // Add any other event channels you intend to expose
 ];
 
@@ -178,5 +186,41 @@ contextBridge.exposeInMainWorld('api', {
   },
   getCurrentBrowserPage: async () => {
     return await ipcRenderer.invoke('get-current-browser-page');
+  },
+  getFirstLaunchFlag: async () => {
+    return localStorage.getItem('firstLaunch') || 'true';
+  },
+  setFirstLaunchFlag: async () => {
+    localStorage.setItem('firstLaunch', 'false');
+  },
+  rememberCredentials: async (remember) => {
+    localStorage.setItem('rememberCredentials', remember ? 'true' : 'false');
+  },
+  getRememberCredentialsFlag: async () => {
+    return localStorage.getItem('rememberCredentials') === 'true';
+  },
+  updateRememberMePreference: async (userId, remember) => {
+    return await ipcRenderer.invoke('update-remember-me-preference', userId, remember);
+  },
+  userLogin: async (username, password) => {
+    return ipcRenderer.invoke('user-login', { username, password });
+  },
+  checkUserCredentials: async () => {
+    return await ipcRenderer.invoke('check-user-credentials');
+  },
+  logout: async () => {
+    console.log('Invoking "logout"');
+    return await ipcRenderer.invoke('logout');
+  },
+  changePassword: async (currentPassword, newPassword) => {
+    console.log('Invoking "change-password" with currentPassword and newPassword');
+    return await ipcRenderer.invoke('change-password', { currentPassword, newPassword });
+  },
+  registerUser: async (data) => {
+    console.log('Invoking "register-user" with data:', data);
+    return await ipcRenderer.invoke('register-user', data);
+  },
+  createAccount: async (data) => {  
+    return await ipcRenderer.invoke('create-account', data);
   },
 });

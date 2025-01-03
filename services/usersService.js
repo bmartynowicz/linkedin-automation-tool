@@ -1,7 +1,67 @@
 // services/usersService.js
 const axios = require('axios');
 const db = require('../database/database.js');
+const bcrypt = require('bcrypt');
+
 const LINKEDIN_REFRESH_URL = 'https://www.linkedin.com/oauth/v2/accessToken';
+
+/**
+ * Registers a new user.
+ * @param {string} email - The user's email.
+ * @param {string} username - The user's username.
+ * @param {string} password - The user's password.
+ * @returns {Promise<Object>} - The created user object or an error message.
+ */
+async function registerUser(email, username, password) {
+  try {
+    // Check for existing email or username
+    const existingUser = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT * FROM users WHERE email = ? OR name = ?`,
+        [email, username],
+        (err, row) => {
+          if (err) return reject(err);
+          resolve(row);
+        }
+      );
+    });
+
+    if (existingUser) {
+      throw new Error('A user with the given email or username already exists.');
+    }
+
+    // Hash password and insert new user
+    const passwordHash = await hashPassword(password);
+    await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO users (email, name, password_hash, created_at, updated_at) 
+         VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [email, username, passwordHash],
+        (err) => {
+          if (err) return reject(err);
+          resolve();
+        }
+      );
+    });
+
+    // Fetch the newly created user
+    const newUser = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT * FROM users WHERE email = ?`,
+        [email],
+        (err, row) => {
+          if (err) return reject(err);
+          resolve(row);
+        }
+      );
+    });
+
+    return { success: true, user: newUser };
+  } catch (error) {
+    console.error('Error registering user:', error.message);
+    return { success: false, message: error.message };
+  }
+}
 
 // Centralized function to fetch user from database
 async function findUserByLinkedInId(linkedin_id) {
@@ -12,6 +72,30 @@ async function findUserByLinkedInId(linkedin_id) {
       });
     });
 }
+
+async function updateRememberMePreference(userId, remember) {
+  try {
+    const query = `UPDATE users SET remembered = ? WHERE id = ?`;
+    await db.run(query, [remember ? 1 : 0, userId]);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update Remember Me preference:', error.message);
+    throw error;
+  }
+}
+
+async function findRememberedUser() {
+  return new Promise((resolve, reject) => {
+    db.get(`SELECT * FROM users WHERE remembered = 1 LIMIT 1`, (err, row) => {
+      if (err) {
+        console.error('Error fetching remembered user:', err.message);
+        return reject(err);
+      }
+      resolve(row || null);
+    });
+  });
+}
+
 
 /**
  * Finds or creates a user based on LinkedIn authentication data.
@@ -36,25 +120,52 @@ async function findOrCreateUser(userID, name, email, accessToken, refreshToken, 
 }
 
 // Create a new user
-async function createUser(userID, name, email, accessToken, refreshToken, expiresIn) {
-    return new Promise((resolve, reject) => {
-      db.run(
-        `INSERT INTO users (linkedin_id, name, email, access_token, refresh_token, expires_in, token_creation_time) 
-         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [userID, name, email || '', accessToken, refreshToken, expiresIn],
-        function (err) {
-          if (err) return reject(err);
-          resolve({
-            linkedin_id: userID,
-            name,
-            email,
-            access_token: accessToken,
-            refresh_token: refreshToken,
-            expires_in: expiresIn,
-          });
-        }
-      );
+async function createUser(userID, name, email, accessToken, refreshToken, expiresIn, password) {
+  const passwordHash = await hashPassword(password);
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO users (linkedin_id, name, email, access_token, refresh_token, expires_in, token_creation_time, password_hash) 
+       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+      [userID, name, email || '', accessToken, refreshToken, expiresIn, passwordHash],
+      function (err) {
+        if (err) return reject(err);
+        resolve({
+          linkedin_id: userID,
+          name,
+          email,
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_in: expiresIn,
+        });
+      }
+    );
+  });
+}
+
+async function hashPassword(password) {
+  const saltRounds = 10;
+  return bcrypt.hash(password, saltRounds);
+}
+
+async function validatePassword(inputPassword, storedHash) {
+  return bcrypt.compare(inputPassword, storedHash);
+}
+
+async function loginUser(username, password) {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM users WHERE email = ?', [username], async (err, user) => {
+      if (err) {
+        console.error('Error fetching user during login:', err.message);
+        return reject(err);
+      }
+      if (!user) return resolve({ success: false, message: 'User not found.' });
+
+      const isValid = await validatePassword(password, user.password_hash);
+      if (!isValid) return resolve({ success: false, message: 'Invalid password.' });
+
+      resolve({ success: true, user });
     });
+  });
 }
 
 /**
@@ -153,33 +264,37 @@ async function updateUser(userID, name, email, accessToken, refreshToken, expire
  */
 async function getUserPreferences(userId) {
   return new Promise((resolve, reject) => {
-      db.get(
-          `SELECT 
-          theme, tone, notification_settings, writing_style, engagement_focus, vocabulary_level, 
-          content_type, content_perspective, emphasis_tags, language, data_sharing, auto_logout, save_session, 
-          font_size, text_to_speech
-           FROM user_preferences WHERE user_id = ?`,
-          [userId],
-          (err, row) => {
-              if (err) {
-                  console.error('Error fetching user preferences:', err.message);
-                  return reject(err);
-              }
+    db.get(
+      `SELECT 
+      theme, tone, notification_settings, writing_style, engagement_focus, vocabulary_level, 
+      content_type, content_perspective, emphasis_tags, language, data_sharing, auto_logout, save_session, 
+      font_size, text_to_speech
+       FROM user_preferences WHERE user_id = ?`,
+      [userId],
+      (err, row) => {
+        if (err) {
+          console.error('Error fetching user preferences:', err.message);
+          return reject(err);
+        }
 
-              if (!row) {
-                  console.warn('No preferences found for userId:', userId);
-                  resolve(null);
-              } else {
-                  try {
-                      row.notification_settings = JSON.parse(row.notification_settings || '{}');
-                  } catch (error) {
-                      console.error('Error parsing notification_settings JSON:', error.message);
-                      row.notification_settings = {};
-                  }
-                  resolve(row);
-              }
-          }
-      );
+        const preferences = row || {};
+        try {
+          preferences.notification_settings = JSON.parse(preferences.notification_settings || '{}');
+        } catch (error) {
+          console.warn('Failed to parse notification_settings JSON:', error.message);
+          preferences.notification_settings = {};
+        }
+
+        resolve({
+          ...defaultPreferences,
+          ...preferences,
+          notification_settings: {
+            ...defaultPreferences.notification_settings,
+            ...preferences.notification_settings,
+          },
+        });
+      }
+    );
   });
 }
 
@@ -264,10 +379,17 @@ async function refreshAccessToken(linkedin_id) {
 }
 
 module.exports = {
+  registerUser,
+  findUserByLinkedInId,
   findOrCreateUser,
+  createUser,
   getCurrentUser,
+  updateUser,
   getCurrentUserWithPreferences,
   refreshAccessToken,
   getUserPreferences,
   updateUserPreferences,
+  loginUser,
+  updateRememberMePreference,
+  findRememberedUser,
 };

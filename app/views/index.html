@@ -54,6 +54,55 @@
     </div>
   </header>
 
+  <!-- Login Modal -->
+<div id="login-modal" class="modal" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <span class="close-button" id="close-login-modal">&times;</span>
+    <h2>Login</h2>
+    <form id="login-form">
+      <label for="username">Username or Email:</label>
+      <input type="text" id="username" name="username" required />
+      
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required />
+      
+      <label>
+        <input type="checkbox" id="remember-me" /> Remember Me
+      </label>
+      
+      <button type="submit" class="action-button">Login</button>
+    </form>
+    <button id="linkedin-login-button" class="action-button">
+      <i class="fab fa-linkedin"></i> Login with LinkedIn
+    </button>
+    <button id="create-account-button" class="action-button secondary">Create Account</button>
+  </div>
+</div>
+
+<!-- Create Account Modal -->
+<div id="create-account-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <span class="close-button" id="close-create-account-modal">&times;</span>
+    <h2>Create Account</h2>
+    <form id="create-account-form">
+      <label for="new-username">Username:</label>
+      <input type="text" id="new-username" name="username" required />
+      
+      <label for="new-email">Email:</label>
+      <input type="email" id="new-email" name="email" required />
+      
+      <label for="new-password">Password:</label>
+      <input type="password" id="new-password" name="password" required />
+      
+      <label for="confirm-password">Confirm Password:</label>
+      <input type="password" id="confirm-password" name="confirm-password" required />
+      
+      <button type="submit" class="action-button">Create Account</button>
+    </form>
+    <button id="back-to-login" class="action-button secondary">Back to Login</button>
+  </div>
+</div>
+
   <!-- Notifications Dropdown -->
   <div id="notifications-dropdown" class="dropdown hidden" aria-label="Notifications">
     <ul id="notifications-list">
@@ -68,12 +117,23 @@
       <h2 id="profile-title">Your Profile</h2>
       <div class="profile-info">
         <img id="profile-picture" src="../../assets/default-profile.png" alt="Profile Picture">
-        <p id="username">Username</p>
+        <p id="username">John Doe</p>
       </div>
-      <button id="linkedin-login-button" class="editor-action-button" aria-label="Login with LinkedIn">
-        <i class="fab fa-linkedin"></i> Login with LinkedIn
+      <form id="change-password-form">
+        <label for="current-password">Current Password:</label>
+        <input type="password" id="current-password" name="current-password" required>
+
+        <label for="new-password">New Password:</label>
+        <input type="password" id="new-password" name="new-password" required>
+
+        <label for="confirm-password">Confirm New Password:</label>
+        <input type="password" id="confirm-password" name="confirm-password" required>
+
+        <button type="submit" id="change-password-button">Change Password</button>
+      </form>
+      <button id="logout-button" class="editor-action-button" aria-label="Logout">
+        <i class="fas fa-sign-out-alt"></i> Logout
       </button>
-      <button id="logout-button">Logout</button>
     </div>
   </div>
      

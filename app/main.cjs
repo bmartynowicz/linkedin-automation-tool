@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
-const { findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
+const { registerUser, loginUser, findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, updateRememberMePreference, updateUserPreferences, findRememberedUser } = require('../services/usersService.js');
 const db = require('../database/database');
 const { formatLinkedInText } = require('../utils/formatLinkedInText.js');
 const { postToLinkedIn, scrapePostAnalytics, getCookiesFromDatabase, openLinkedInBrowser, openLinkedInBrowserAndSaveCookies, loadCookiesAndOpenBrowser} = require('../automation/linkedin');
@@ -13,6 +13,7 @@ const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById, ge
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const jwtDecode = require('jwt-decode');
 const { chromium } = require('playwright');
 
@@ -253,6 +254,110 @@ ipcMain.handle('get-current-browser-page', async () => {
     return { success: false, error: error.message };
   }
 });
+
+ipcMain.handle('check-user-credentials', async () => {
+  try {
+    const user = await findRememberedUser();
+    console.log('Query result for remembered user:', user);
+    return user
+      ? { success: true, user }
+      : { success: false, message: 'No remembered user found' };
+  } catch (error) {
+    console.error('Failed to check user credentials:', error.message);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('register-user', async (event, { email, username, password }) => {
+  try {
+    const result = await registerUser(email, username, password);
+    return result;
+  } catch (error) {
+    console.error('Error in register-user handler:', error.message);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('create-account', async (event, { email, username, password }) => {
+  try {
+    const result = await registerUser(email, username, password);
+    return result;
+  } catch (error) {
+    console.error('Error in create-account handler:', error.message);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('user-login', async (event, { username, password, rememberMe }) => {
+  try {
+    const result = await loginUser(username, password);
+    if (result.success) {
+      if (rememberMe) {
+        await updateRememberMePreference(result.user.id, true);
+      }
+      global.currentUser = result.user;
+      return { success: true, user: result.user };
+    } else {
+      return { success: false, message: result.message };
+    }
+  } catch (error) {
+    console.error('Error in user-login handler:', error.message);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('logout', async () => {
+  try {
+    await db.run('UPDATE users SET remembered = 0'); // Clear all remember me flags
+    global.currentUser = null; // Reset global state
+    return { success: true };
+  } catch (error) {
+    console.error('Error during logout:', error.message);
+    return { success: false, error: error.message };
+  }
+});
+
+
+ipcMain.handle('change-password', async (event, { currentPassword, newPassword }) => {
+  try {
+    const user = global.currentUser; // Ensure current user is fetched
+    if (!user) throw new Error('No user is logged in.');
+
+    // Validate current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isPasswordValid) return { success: false, message: 'Incorrect current password.' };
+
+    // Hash and update the new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [newPasswordHash, user.id]);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error changing password:', error.message);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('update-remember-me-preference', async (event, userId, remember) => {
+  try {
+    const result = await updateRememberMePreference(userId, remember);
+    return result;
+  } catch (error) {
+    console.error('Failed to update Remember Me preference:', error.message);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-default-preferences', async () => {
+  try {
+    const defaultPreferences = defaultPreferences();
+    return defaultPreferences;
+  } catch (error) {
+    console.error('Error fetching default preferences:', error.message);
+    throw error;
+  }
+});
+
 
 // Fetch user data
 ipcMain.handle('fetch-user-data', async () => {

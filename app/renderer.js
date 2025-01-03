@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let editingPostId = null;
   let modalCalendarInstance = null;
   let isSchedulerCalendarInitialized = false;
+  let isLoggedIn = false;
+  let isAppInitializing = false;
 
   // ======= Content Editor =======
   const contentEditor = document.getElementById('content-editor');
@@ -29,8 +31,33 @@ document.addEventListener('DOMContentLoaded', () => {
     'analytics-page': document.querySelector('#sidebar .nav-item a[href="#analytics"]'),
   };
 
+  // ======= Modals =======
+
+  const modals = {
+    login: document.getElementById('login-modal'),
+    createAccount: document.getElementById('create-account-modal'),
+    profile: document.getElementById('profile-modal'),
+    notifications: document.getElementById('notifications-dropdown'),
+    savedPosts: document.getElementById('saved-posts-modal'),
+    deleteConfirmation: document.getElementById('delete-confirmation-modal'),
+    scheduler: document.getElementById('schedule-form-modal'),
+  };
+
+  const modalConfig = [
+    { trigger: 'create-account-button', show: 'createAccount', hide: 'login' },
+    { trigger: 'back-to-login', show: 'login', hide: 'createAccount' },
+    { trigger: 'close-login-modal', hide: 'login' },
+    { trigger: 'close-create-account-modal', hide: 'createAccount' },
+    { trigger: 'profile', show: 'profile' },
+    { trigger: 'close-profile', hide: 'profile' },
+    { trigger: 'open-saved-posts', show: 'savedPosts' },
+    { trigger: 'close-saved-posts', hide: 'savedPosts' },
+    { trigger: 'confirm-delete', hide: 'deleteConfirmation' },
+    { trigger: 'cancel-delete', hide: 'deleteConfirmation' },
+    { trigger: 'close-scheduler-modal', hide: 'scheduler' },
+  ];
+
   // ======= Notifications =======
-  const notificationsButton = document.getElementById('notifications');
   const notificationsDropdown = document.getElementById('notifications-dropdown');
   const notificationCount = document.getElementById('notification-count');
   const notificationsList = document.getElementById('notifications-list');
@@ -42,6 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const usernameDisplay = document.getElementById('username');
   const profilePicture = document.getElementById('profile-picture');
   const linkedinLoginButton = document.getElementById('linkedin-login-button');
+
+  // ==== Account Creation Modal ====
+  const loginModal = document.getElementById('login-modal');
+  const createAccountModal = document.getElementById('create-account-modal');
+  const createAccountButton = document.getElementById('create-account-button');
+  const createAccountForm = document.getElementById('create-account-form');
+  const backToLoginButton = document.getElementById('back-to-login');
+  const closeLoginModalButton = document.getElementById('close-login-modal');
+  const closeCreateAccountModalButton = document.getElementById('close-create-account-modal');
 
   // ======= Settings Page =======
   const settingsPage = document.getElementById('settings-page');
@@ -91,25 +127,81 @@ document.addEventListener('DOMContentLoaded', () => {
   const rejectButton = document.getElementById('reject-suggestion');
   const closeSuggestionBoxButton = document.getElementById('close-suggestion-box');
 
+  function debugModalState() {
+    const loginModal = document.getElementById('login-modal');
+    const isVisible = loginModal && getComputedStyle(loginModal).display !== 'none';
+    console.log(`Login Modal State: isModalOpen=${isModalOpen}, isVisible=${isVisible}`);
+  }
+
+  function showLoginModal() {
+    if (isModalVisible('login-modal')) {
+      console.warn('Login modal is already open. Skipping...');
+      return;
+    }
+    showModal('login');
+    console.log('Login modal displayed.');
+  }
+
+  function hideLoginModal() {
+    if (!isModalVisible('login-modal')) {
+      console.warn('Login modal is already closed. Skipping...');
+      return;
+    }
+    hideModal('login');
+    console.log('Login modal hidden successfully.');
+  }
+
+  // Event Listener Setup for Modals
+  function initializeModals() {
+    modalConfig.forEach(({ trigger, show, hide }) => {
+      const button = document.getElementById(trigger);
+      if (button) {
+        button.addEventListener('click', () => {
+          if (hide) hideModal(hide);
+          if (show) showModal(show);
+        });
+      } else {
+        console.warn(`Trigger button "${trigger}" not found.`);
+      }
+    });
+  }
+
+  initializeModals();
+
   // Load application data on startup
   async function initializeApp() {
-  try {
-    console.log('Initializing application...');
-    await loadSettings(); // Load settings
-    await loadSchedulerData(); // Load scheduler data
-
-    const hasValidCookies = await checkCookies(); // Check for valid LinkedIn cookies
-    if (!hasValidCookies) {
-      console.warn('No valid cookies found. Prompting user to log in...');
-      // Optionally prompt the user to log in via LinkedIn
-      await window.api.openBrowserAndSaveCookies(user.id); // Allow the user to log in and save cookies
+    if (isAppInitializing) {
+      console.warn('Application initialization already in progress. Skipping...');
+      return;
     }
-
-    console.log('Application initialized successfully.');
-  } catch (error) {
-    console.error('Error during application initialization:', error.message);
-  }
-  }
+    isAppInitializing = true;
+  
+    console.log('Starting application initialization...');
+  
+    try {
+      const rememberedUser = await window.api.checkUserCredentials();
+      console.log('checkUserCredentials result:', rememberedUser);
+  
+      if (rememberedUser.success && rememberedUser.user) {
+        console.log('Remembered user found:', rememberedUser.user);
+        isLoggedIn = true;
+        globalCurrentUser = rememberedUser.user;
+        hideLoginModal();
+        await loadSettings();
+        await loadSchedulerData();
+        console.log('Application initialized successfully for remembered user.');
+      } else {
+        console.warn('No remembered user found. Showing login modal.');
+        showLoginModal();
+      }
+    } catch (error) {
+      console.error('Error during application initialization:', error.message);
+      showLoginModal();
+    } finally {
+      isAppInitializing = false;
+      console.log('Application initialization completed.');
+    }
+  }      
 
   // Load settings into the UI
   const loadSettings = async () => {
@@ -217,6 +309,36 @@ document.addEventListener('DOMContentLoaded', () => {
     switchPage(targetPageId, allPageIds);
   });
 
+  // Utility Functions
+  function showModal(modalKey) {
+    const modal = modals[modalKey];
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('show');
+      document.body.classList.add('modal-open');
+      console.log(`Modal "${modalKey}" displayed.`);
+    } else {
+      console.warn(`Modal "${modalKey}" not found.`);
+    }
+  }
+
+  function hideModal(modalKey) {
+    const modal = modals[modalKey];
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      console.log(`Modal "${modalKey}" hidden.`);
+    } else {
+      console.warn(`Modal "${modalKey}" not found.`);
+    }
+  }
+
+  function isModalVisible(modalId) {
+    const modal = document.getElementById(modalId);
+    return modal && getComputedStyle(modal).display !== 'none';
+  }
+
   // ======= Emoji Bullet Button =======
   const emojiBulletButton = document.getElementById('ql-custom-bullet');
 
@@ -261,7 +383,86 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error in switchPage:', error.message);
     }
   }
-   
+
+  // Event listener for "Create Account" button
+  if (createAccountButton) {
+    createAccountButton.addEventListener('click', () => {
+      hideModal('login-modal');
+      showModal('create-account-modal');
+    });
+  }
+
+  // Event listener for "Back to Login" button
+  if (backToLoginButton) {
+    backToLoginButton.addEventListener('click', () => {
+      hideModal('create-account-modal');
+      showModal('login-modal');
+    });
+  }
+
+  // Close modal buttons
+  if (closeLoginModalButton) {
+    closeLoginModalButton.addEventListener('click', () => hideModal('login-modal'));
+  }
+
+  if (closeCreateAccountModalButton) {
+    closeCreateAccountModalButton.addEventListener('click', () => hideModal('create-account-modal'));
+  }
+
+  if (createAccountForm) {
+    createAccountForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+  
+      const username = document.getElementById('new-username').value.trim();
+      const email = document.getElementById('new-email').value.trim();
+      const password = document.getElementById('new-password').value.trim();
+      const confirmPassword = document.getElementById('confirm-password').value.trim();
+  
+      if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+      }
+  
+      try {
+        const result = await window.api.createAccount({ username, email, password });
+        if (result.success) {
+          alert('Account created successfully!');
+          hideModal('create-account-modal'); // Close the Create Account Modal
+          showModal('login-modal'); // Show the Login Modal
+        } else {
+          alert(`Failed to create account: ${result.message}`);
+        }
+      } catch (error) {
+        console.error('Error creating account:', error);
+        alert('An error occurred while creating the account.');
+      }
+    });
+  }  
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const rememberMe = document.getElementById('remember-me').checked;
+  
+    try {
+      const result = await window.api.userLogin(username, password);
+      console.log('Login result:', result);
+      if (result.success) {
+          alert('Login successful!');
+          isLoggedIn = true;
+          await window.api.updateRememberMePreference(result.user.id, rememberMe);
+          hideLoginModal(); // Explicitly hide the modal
+          await loadSettings();
+          await loadSchedulerData();
+      } else {
+          alert('Login failed: ' + result.message);
+      }
+  } catch (error) {
+      console.error('Login error:', error);
+  }
+  });
+    
 
   // Apply Theme Dynamically
   function applyTheme(theme) {
@@ -370,19 +571,75 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  if (notificationsButton && notificationsDropdown) {
+  const notificationsButton = document.getElementById('notifications');
+  if (notificationsButton) {
     notificationsButton.addEventListener('click', () => {
-      const expanded = toggleElement(notificationsDropdown, 'hidden');
-      notificationsButton.setAttribute('aria-expanded', expanded);
+      const modalKey = 'notifications';
+      const modal = modals[modalKey];
+      if (modal) {
+        modal.classList.toggle('hidden');
+        const isVisible = !modal.classList.contains('hidden');
+        notificationsButton.setAttribute('aria-expanded', isVisible);
+        console.log(`Notifications dropdown ${isVisible ? 'opened' : 'closed'}.`);
+      }
     });
-    fetchNotifications();
+  } else {
+    console.warn('Notifications button not found.');
   }
   
   if (profileButton && profileModal && closeProfileButton) {
-    profileButton.addEventListener('click', () => openModal(profileModal));
+    profileButton.addEventListener('click', async () => {
+      openModal(profileModal);
+      const userData = await window.api.fetchUserData();
+      if (userData) {
+        document.getElementById('username').textContent = userData.name || 'User';
+        document.getElementById('profile-picture').src = userData.profilePicture || '../../assets/default-profile.png';
+      }
+    });
+  
     closeProfileButton.addEventListener('click', () => closeModal(profileModal));
-    window.api.fetchUserData();
   }
+
+  // Logout Button Logic
+const logoutButton = document.getElementById('logout-button');
+if (logoutButton) {
+  logoutButton.addEventListener('click', async () => {
+    await window.api.logout(); // Ensure you have an IPC handler to clear the session
+    showToast('Logged out successfully!');
+    closeModal(profileModal);
+    showLoginModal(); // Redirect to login modal
+  });
+}
+
+// Password Change Logic
+const changePasswordForm = document.getElementById('change-password-form');
+if (changePasswordForm) {
+  changePasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const currentPassword = document.getElementById('current-password').value.trim();
+    const newPassword = document.getElementById('new-password').value.trim();
+    const confirmPassword = document.getElementById('confirm-password').value.trim();
+
+    if (newPassword !== confirmPassword) {
+      showToast('New passwords do not match!');
+      return;
+    }
+
+    try {
+      const result = await window.api.changePassword(currentPassword, newPassword);
+      if (result.success) {
+        showToast('Password changed successfully!');
+        changePasswordForm.reset();
+      } else {
+        showToast(result.message || 'Failed to change password.');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error.message);
+      showToast('An error occurred while changing your password.');
+    }
+  });
+}
   
   // Attach Event Listener for Form Submission
   if (saveSettingsButton) {
@@ -390,7 +647,6 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       console.log('Save Settings button clicked.');
   
-      // Map of field IDs to preference keys
       const fieldMapping = {
         'theme-select': 'theme',
         'tone-select': 'tone',
@@ -412,17 +668,10 @@ document.addEventListener('DOMContentLoaded', () => {
         'emphasis-tags': 'emphasis_tags',
       };
   
-      // Collect preferences dynamically
       const preferences = {};
-      console.log('Language:', preferences.language);
-      console.log('Data Sharing:', preferences.data_sharing);
-
       Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
         const element = document.getElementById(fieldId);
-        if (!element) {
-          console.warn(`Element with ID "${fieldId}" not found.`);
-          return;
-        }
+        if (!element) return;
   
         const keys = prefKey.split('.');
         let target = preferences;
@@ -440,8 +689,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
       try {
         const result = await window.api.saveSettings(preferences);
-        console.log('Result from saveSettings IPC:', result);
-  
         if (result.success) {
           showToast('Settings saved successfully!');
         } else {
@@ -455,69 +702,56 @@ document.addEventListener('DOMContentLoaded', () => {
   }  
 
   if (restoreDefaultsButton) {
-    restoreDefaultsButton.addEventListener('click', () => {
+    restoreDefaultsButton.addEventListener('click', async () => {
       console.log('Restoring default preferences.');
   
-      // Default preferences
-      const defaultPreferences = {
-        theme: 'light',
-        tone: 'professional',
-        writing_style: 'brief',
-        engagement_focus: 'comments',
-        vocabulary_level: 'simplified',
-        content_type: 'linkedin-post',
-        content_perspective: 'first-person',
-        emphasis_tags: '',
-        notification_settings: {
-          suggestion_readiness: false,
-          engagement_tips: false,
-          system_updates: false,
-          frequency: 'realtime',
-        },
-      };
+      try {
+        const defaultPreferences = await window.api.getDefaultPreferences(); // Fetch from backend
+        const fieldMapping = {
+          'theme-select': 'theme',
+          'tone-select': 'tone',
+          'suggestion-readiness': 'notification_settings.suggestion_readiness',
+          'engagement-tips': 'notification_settings.engagement_tips',
+          'system-updates': 'notification_settings.system_updates',
+          'notification-frequency': 'notification_settings.frequency',
+          'language': 'language',
+          'data-sharing': 'data_sharing',
+          'auto-logout': 'auto_logout',
+          'save-session': 'save_session',
+          'font-size': 'font_size',
+          'text-to-speech': 'text_to_speech',
+          'writing-style': 'writing_style',
+          'engagement-focus': 'engagement_focus',
+          'vocabulary-level': 'vocabulary_level',
+          'content-type': 'content_type',
+          'content-perspective': 'content_perspective',
+          'emphasis-tags': 'emphasis_tags',
+        };
   
-      // Update the settings UI
-      const fieldMapping = {
-        'theme-select': 'theme',
-        'tone-select': 'tone',
-        'suggestion-readiness': 'notification_settings.suggestion_readiness',
-        'engagement-tips': 'notification_settings.engagement_tips',
-        'system-updates': 'notification_settings.system_updates',
-        'notification-frequency': 'notification_settings.frequency',
-        'language': 'language',
-        'data-sharing': 'data_sharing',
-        'auto-logout': 'auto_logout',
-        'save-session': 'save_session',
-        'font-size': 'font_size',
-        'text-to-speech': 'text_to_speech',
-        'writing-style': 'writing_style',
-        'engagement-focus': 'engagement_focus',
-        'vocabulary-level': 'vocabulary_level',
-        'content-type': 'content_type',
-        'content-perspective': 'content_perspective',
-        'emphasis-tags': 'emphasis_tags',
-      };
+        // Update UI elements
+        Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
+          const element = document.getElementById(fieldId);
+          if (!element) return;
   
-      Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
-        const element = document.getElementById(fieldId);
-        if (!element) return;
+          const keys = prefKey.split('.');
+          const value = keys.reduce((acc, key) => acc[key], defaultPreferences);
   
-        const keys = prefKey.split('.');
-        const value = keys.reduce((acc, key) => acc[key], defaultPreferences);
+          if (element.type === 'checkbox') {
+            element.checked = !!value;
+          } else {
+            element.value = value || '';
+          }
+        });
   
-        if (element.type === 'checkbox') {
-          element.checked = !!value;
-        } else {
-          element.value = value || '';
+        // Update AI prompt preview
+        const promptPreviewElement = document.getElementById('prompt-preview');
+        if (promptPreviewElement) {
+          const aiPrompt = generateAIPrompt(defaultPreferences);
+          promptPreviewElement.textContent = aiPrompt;
+          console.log('Defaults restored. AI Prompt generated:', aiPrompt);
         }
-      });
-  
-      // Regenerate the AI prompt
-      const promptPreviewElement = document.getElementById('prompt-preview');
-      if (promptPreviewElement) {
-        const aiPrompt = generateAIPrompt(defaultPreferences);
-        promptPreviewElement.textContent = aiPrompt;
-        console.log('Defaults restored. AI Prompt generated:', aiPrompt);
+      } catch (error) {
+        console.error('Error restoring defaults:', error.message);
       }
     });
   }

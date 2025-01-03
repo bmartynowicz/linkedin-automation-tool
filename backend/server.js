@@ -6,7 +6,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { router: linkedinAuth } = require('../automation/linkedin.js');
 const cron = require('node-cron');
-const { refreshAccessToken } = require('../services/usersService.js');
+const { loginUser, findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, getUserPreferences, updateUserPreferences } = require('../services/usersService.js');
 
 dotenv.config();
 
@@ -23,6 +23,22 @@ app.use(cors());
 app.use('/', linkedinAuth);
 
 // ======= API Endpoints =======
+
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await loginUser(username, password); // loginUser should validate the credentials
+    if (user.success) {
+      res.status(200).json({ success: true, user: user.user });
+    } else {
+      res.status(401).json({ success: false, message: user.message });
+    }
+  } catch (error) {
+    console.error('Error during login:', error.message);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
 
 /**
  * @route   POST /api/posts
