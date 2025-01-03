@@ -196,6 +196,10 @@ async function getPostById(postId) {
   });
 }
 
+async function getSavedPosts(userId) {
+  return getPostsByUserId(userId);
+}
+
 /**
  * Fetches posts for a specific local user ID.
  * @param {number} user_id - The local user ID.
@@ -289,6 +293,7 @@ module.exports = {
   deletePost,
   searchPosts,
   getPostById,
+  getSavedPosts,
   getPostsByUserId,
   getScheduledPosts,
   schedulePost,

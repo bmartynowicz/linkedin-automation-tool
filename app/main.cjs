@@ -5,11 +5,12 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fetch = require('node-fetch');
 const { fileURLToPath } = require('url');
-const { registerUser, loginUser, findOrCreateUser, getCurrentUser, getCurrentUserWithPreferences, refreshAccessToken, updateRememberMePreference, updateUserPreferences, findRememberedUser } = require('../services/usersService.js');
+const usersService = require('../services/usersService.js');
 const db = require('../database/database');
 const { formatLinkedInText } = require('../utils/formatLinkedInText.js');
-const { postToLinkedIn, scrapePostAnalytics, getCookiesFromDatabase, openLinkedInBrowser, openLinkedInBrowserAndSaveCookies, loadCookiesAndOpenBrowser} = require('../automation/linkedin');
-const { getPostsByLinkedInId, savePost, deletePost, searchPosts, getPostById, getScheduledPosts, schedulePost } = require('../services/postsService.js');
+const linkedin = require('../automation/linkedin');
+const postsService = require('../services/postsService.js');
+const notificationsService = require('../services/notificationsService.js');
 const schedule = require('node-schedule');
 const { getAISuggestions } = require('../ai/ai');
 const crypto = require('crypto');
@@ -150,21 +151,10 @@ ipcMain.handle('get-ai-suggestions', async (event, { prompt, userId }) => {
   }
 });
 
-// Handle Save Settings on Settings Page
-ipcMain.handle('saveSettings', async (event, settingsData) => {
-  try {
-    await Database.saveSettings(settingsData); // Save to your database
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to save settings:', error);
-    return { success: false, message: error.message };
-  }
-});
-
 // Handle fetching the current settings
 ipcMain.handle('fetchSettings', async () => {
   try {
-    const settings = await Database.getSettings(); // Retrieve from your database
+    const settings = await usersService.loadSettingsForUser(global.currentUser?.id);
     return { success: true, data: settings };
   } catch (error) {
     console.error('Failed to fetch settings:', error);
@@ -185,13 +175,13 @@ ipcMain.on('post-to-linkedin', async (event, content) => {
   
   try {
     // 1) Get current user from DB
-    const currentUser = await getCurrentUser();
+    const currentUser = await usersService.getCurrentUser();
     if (!currentUser || !currentUser.access_token || !currentUser.linkedin_id) {
       throw new Error('LinkedIn user is not authenticated.');
     }
 
     // 2) Post to LinkedIn
-    const result = await postToLinkedIn(
+    const result = await linkedin.postToLinkedIn(
       { title: content.title, body: content.body },
       currentUser.access_token,
       currentUser.linkedin_id
@@ -203,7 +193,7 @@ ipcMain.on('post-to-linkedin', async (event, content) => {
 
       // 4) Update the local DB record with the LinkedIn post ID, status='posted'
       if (content.postId) {
-        await savePost({
+        await postsService.savePost({
           id: content.postId,
           title: content.title,
           content: content.body,
@@ -237,7 +227,7 @@ ipcMain.on('post-status-update', (event, status) => {
 ipcMain.handle('scrape-post-analytics', async (event, userId, postId) => {
   try {
     console.log(`Scraping analytics for user ID: ${userId}, post ID: ${postId}`);
-    const result = await scrapePostAnalytics(userId, postId);
+    const result = await linkedin.scrapePostAnalytics(userId, postId);
     return result;
   } catch (error) {
     console.error('Error in scrape-post-analytics handler:', error.message);
@@ -257,20 +247,21 @@ ipcMain.handle('get-current-browser-page', async () => {
 
 ipcMain.handle('check-user-credentials', async () => {
   try {
-    const user = await findRememberedUser();
-    console.log('Query result for remembered user:', user);
-    return user
-      ? { success: true, user }
-      : { success: false, message: 'No remembered user found' };
+    const rememberedUser = await usersService.findRememberedUser();
+    if (rememberedUser) {
+      global.currentUser = rememberedUser;
+      return { success: true, user: rememberedUser };
+    }
+    return { success: false, user: null };
   } catch (error) {
-    console.error('Failed to check user credentials:', error.message);
-    return { success: false, error: error.message };
+    console.error('Error in check-user-credentials:', error.message);
+    return { success: false, user: null };
   }
 });
 
 ipcMain.handle('register-user', async (event, { email, username, password }) => {
   try {
-    const result = await registerUser(email, username, password);
+    const result = await usersService.registerUser(email, username, password);
     return result;
   } catch (error) {
     console.error('Error in register-user handler:', error.message);
@@ -280,7 +271,7 @@ ipcMain.handle('register-user', async (event, { email, username, password }) => 
 
 ipcMain.handle('create-account', async (event, { email, username, password }) => {
   try {
-    const result = await registerUser(email, username, password);
+    const result = await usersService.registerUser(email, username, password);
     return result;
   } catch (error) {
     console.error('Error in create-account handler:', error.message);
@@ -290,18 +281,36 @@ ipcMain.handle('create-account', async (event, { email, username, password }) =>
 
 ipcMain.handle('user-login', async (event, { username, password, rememberMe }) => {
   try {
-    const result = await loginUser(username, password);
+    const result = await usersService.loginUser(username, password);
     if (result.success) {
       if (rememberMe) {
-        await updateRememberMePreference(result.user.id, true);
+        await usersService.updateRememberMePreference(result.user.id, true);
       }
-      global.currentUser = result.user;
-      return { success: true, user: result.user };
-    } else {
-      return { success: false, message: result.message };
+      global.currentUser = await usersService.getCurrentUserWithPreferences(result.user.id); // Centralized fetch
+      return { success: true, user: global.currentUser };
     }
+    return { success: false, message: result.message };
   } catch (error) {
     console.error('Error in user-login handler:', error.message);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('load-settings', async (event, userId) => {
+  console.log(`Loading settings for user ID: ${userId}`);
+  try {
+    // Fetch user settings using the service function
+    const preferences = await usersService.loadSettingsForUser(userId);
+
+    if (!preferences) {
+      console.warn(`No preferences found for user ID: ${userId}`);
+      return { success: false, message: 'No preferences found.' };
+    }
+
+    console.log(`Preferences loaded for user ID: ${userId}:`, preferences);
+    return { success: true, preferences };
+  } catch (error) {
+    console.error(`Error loading settings for user ID ${userId}:`, error.message);
     return { success: false, message: error.message };
   }
 });
@@ -340,7 +349,7 @@ ipcMain.handle('change-password', async (event, { currentPassword, newPassword }
 
 ipcMain.handle('update-remember-me-preference', async (event, userId, remember) => {
   try {
-    const result = await updateRememberMePreference(userId, remember);
+    const result = await usersService.updateRememberMePreference(userId, remember);
     return result;
   } catch (error) {
     console.error('Failed to update Remember Me preference:', error.message);
@@ -362,30 +371,24 @@ ipcMain.handle('get-default-preferences', async () => {
 // Fetch user data
 ipcMain.handle('fetch-user-data', async () => {
   try {
-    const userData = await getCurrentUserWithPreferences();
-    if (!userData) {
-      console.warn('No user data fetched from the database.');
-      return { username: 'Guest', profilePicture: '../../assets/default-profile.png', linkedin_id: null };
-    }
+    const userId = global.currentUser?.id || null;
+    if (!userId) throw new Error('No user logged in.');
 
-    if (!userData.linkedin_id) {
-      console.error('LinkedIn ID is missing in the user data:', userData);
-      return { ...userData, linkedin_id: null };
-    }
+    const userData = await usersService.getCurrentUserWithPreferences(userId);
+    if (!userData) throw new Error('No user data fetched from the database.');
 
-    console.log('User data successfully fetched:', userData);
     global.currentUser = userData; // Update global state
     return userData;
   } catch (error) {
     console.error('Error fetching user data:', error.message);
-    return { username: 'Guest', profilePicture: '../../assets/default-profile.png', linkedin_id: null };
+    return null;
   }
 });
 
 // Fetch the current user
 ipcMain.handle('fetch-current-user', async () => {
   try {
-    const userData = await getCurrentUser();
+    const userData = await usersService.getCurrentUser();
     if (userData) {
       global.currentUser = userData; // Update the global user state
       console.log('Current user fetched and set globally:', global.currentUser);
@@ -400,7 +403,7 @@ ipcMain.handle('fetch-current-user', async () => {
 // Get the current user and their preferences
 ipcMain.handle('get-current-user-with-preferences', async () => {
   try {
-    const user = await getCurrentUserWithPreferences();
+    const user = await usersService.getCurrentUserWithPreferences();
     console.log('Fetched user with preferences:', user); // Debug log
     return user;
   } catch (error) {
@@ -409,45 +412,39 @@ ipcMain.handle('get-current-user-with-preferences', async () => {
   }
 });
 
-// Handler for saving user settings
-ipcMain.handle('save-settings', async (event, settingsData) => {
-  console.log('Received save-settings IPC with:', settingsData); // Log 6
-
+// Handle Save Settings on Settings Page
+ipcMain.handle('save-settings', async (event, userId, settingsData) => {
   try {
-    const user = await getCurrentUser();
-    if (!user) throw new Error('User not found.');
+    console.log(`Saving settings for user ID: ${userId}`, settingsData);
 
-    console.log('Saving settings for user:', user); // Log 7
+    // Use the usersService to update user preferences
+    await usersService.updateUserPreferences(userId, settingsData);
 
-    await updateUserPreferences(user.id, settingsData);
-
-    console.log('Settings saved successfully:', settingsData); // Log 8
     return { success: true };
   } catch (error) {
-    console.error('Error saving settings:', error);
-    return { success: false, error: error.message };
+    console.error('Failed to save settings:', error);
+    return { success: false, message: error.message };
   }
 });
 
-// Fetch notifications
-ipcMain.handle('fetch-notifications', async () => {
-  console.log('Fetching notifications from database...');
+// Fetch notifications for the logged-in user
+ipcMain.handle('fetch-notifications', async (event) => {
+  console.log('Fetching notifications for the logged-in user...');
   try {
-    const notifications = await new Promise((resolve, reject) => {
-      db.all('SELECT * FROM notifications', (err, rows) => {
-        if (err) {
-          console.error('Error fetching notifications:', err.message);
-          return reject(err);
-        }
-        resolve(rows);
-      });
-    });
+    // Get the current logged-in user
+    const user = global.currentUser; // Ensure global.currentUser is updated elsewhere in your code
+    if (!user || !user.id) {
+      throw new Error('No logged-in user found.');
+    }
 
+    // Fetch notifications for the user
+    const notifications = await notificationsService.getUserNotifications(user.id);
     console.log('Notifications fetched successfully:', notifications);
-    return notifications;
+
+    return { success: true, notifications };
   } catch (error) {
-    console.error('Error in fetch-notifications handler:', error);
-    throw error;
+    console.error('Error fetching notifications:', error.message);
+    return { success: false, message: error.message };
   }
 });
 
@@ -481,7 +478,7 @@ ipcMain.on('send-feedback', (event, type, suggestion) => {
 ipcMain.handle('savePost', async (event, post) => {
   console.log('Saving post:', post);
   try {
-    const result = await savePost(post);
+    const result = await postsService.savePost(post);
     return result;
   } catch (error) {
     console.error('Error in savePost IPC handler:', error.message);
@@ -492,13 +489,28 @@ ipcMain.handle('savePost', async (event, post) => {
 // Retrieve all posts
 ipcMain.handle('get-posts', async () => {
   try {
-    if (!global.currentUser || !global.currentUser.linkedin_id) {
-      throw new Error('No user is logged in. Current user data is missing.');
+    if (!global.currentUser) {
+      console.warn('global.currentUser is null. Reloading user data...');
+      const rememberedUser = await usersService.findRememberedUser();
+      if (!rememberedUser) {
+        throw new Error('No remembered user found. Current user data is missing.');
+      }
+      global.currentUser = rememberedUser;
     }
 
-    const linkedin_id = global.currentUser.linkedin_id;
-    console.log(`Fetching posts for LinkedIn ID: ${linkedin_id}`);
-    return await getPostsByLinkedInId(linkedin_id); // Ensure this function exists and works
+    const { id: userId, linkedin_id: linkedinId } = global.currentUser;
+
+    if (!userId) {
+      throw new Error('User ID is missing.');
+    }
+
+    console.log(`Fetching posts for User ID: ${userId}, LinkedIn ID: ${linkedinId}`);
+
+    if (linkedinId) {
+      return await postsService.getPostsByLinkedInId(linkedinId);
+    } else {
+      return await postsService.getPostsByUserId(userId);
+    }
   } catch (error) {
     console.error('Error fetching posts:', error.message);
     throw error;
@@ -509,7 +521,7 @@ ipcMain.handle('get-posts', async () => {
 ipcMain.handle('get-post-by-id', async (event, postId) => {
   console.log(`Fetching post by ID: ${postId}`);
   try {
-    const post = await getPostById(postId);
+    const post = await postsService.getPostById(postId);
     if (!post) {
       return { success: false, message: 'Post not found.' };
     }
@@ -531,7 +543,7 @@ ipcMain.handle('delete-post', async (event, { postId, userId }) => {
 
   try {
     // Use the centralized deletePost function
-    const result = await deletePost(postId, userId);
+    const result = await postsService.deletePost(postId, userId);
 
     if (!result.success) {
       console.error(`Failed to delete post: ${result.message}`);
@@ -549,7 +561,7 @@ ipcMain.handle('delete-post', async (event, { postId, userId }) => {
 
 ipcMain.handle('get-scheduled-posts', async (event, linkedin_id) => {
   console.log('IPC Handler: get-scheduled-posts for LinkedIn ID:', linkedin_id);
-  const scheduledPosts = await getScheduledPosts(linkedin_id);
+  const scheduledPosts = await postsService.getScheduledPosts(linkedin_id);
   console.log('Fetched Scheduled Posts:', scheduledPosts);
   return scheduledPosts;
 });
@@ -564,7 +576,7 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
       return { success: false, message: 'Missing required fields.' };
     }
 
-    const result = await schedulePost(postId, scheduledTime, recurrence);
+    const result = await postsService.schedulePost(postId, scheduledTime, recurrence);
     return result;
   } catch (error) {
     console.error('Error in schedule-post handler:', error.message);
@@ -576,7 +588,7 @@ ipcMain.handle('schedule-post', async (event, updatedPost) => {
 ipcMain.handle('search-posts', async (event, { query, linkedin_id }) => {
   console.log(`Searching posts for LinkedIn ID: ${linkedin_id} with query: ${query}`);
   try {
-    const results = await searchPosts(query, linkedin_id);
+    const results = await postsService.searchPosts(query, linkedin_id);
     return results;
   } catch (error) {
     console.error('Error in search-posts handler:', error.message);
@@ -589,7 +601,7 @@ ipcMain.handle('search-posts', async (event, { query, linkedin_id }) => {
 ipcMain.handle('open-linkedin-browser', async () => {
   try {
     console.log('IPC open-linkedin-browser invoked.');
-    const result = await openLinkedInBrowser();
+    const result = await linkedin.openLinkedInBrowser();
     return result;
   } catch (error) {
     console.error('Error in open-linkedin-browser IPC:', error.message);
@@ -598,12 +610,12 @@ ipcMain.handle('open-linkedin-browser', async () => {
 });
 
 ipcMain.handle('open-browser-and-save-cookies', async (event, userId) => {
-  return await openLinkedInBrowserAndSaveCookies(userId);
+  return await linkedin.openLinkedInBrowserAndSaveCookies(userId);
 });
 
 ipcMain.handle('load-browser-with-cookies', async (event, userId) => {
   try {
-    const result = await loadCookiesAndOpenBrowser(userId);
+    const result = await linkedin.loadCookiesAndOpenBrowser(userId);
     return result; // Return a plain object
   } catch (error) {
     console.error('Error in load-browser-with-cookies handler:', error.message);
@@ -614,7 +626,7 @@ ipcMain.handle('load-browser-with-cookies', async (event, userId) => {
 ipcMain.handle('get-cookies-for-user', async (event, userId) => {
   try {
     console.log(`Fetching cookies for user ID: ${userId}`);
-    const cookies = await getCookiesFromDatabase(userId); // Ensure this function exists
+    const cookies = await linkedin.getCookiesFromDatabase(userId); // Ensure this function exists
     return cookies;
   } catch (error) {
     console.error('Error fetching cookies:', error.message);
@@ -629,7 +641,7 @@ ipcMain.on('linkedin-auth-success', async (event, { userID, name, email, accessT
   console.log('LinkedIn Authentication Successful:', { userID, name, email });
 
   try {
-    const user = await findOrCreateUser(userID, name, email, accessToken, refreshToken, expiresIn);
+    const user = await usersService.findOrCreateUser(userID, name, email, accessToken, refreshToken, expiresIn);
     global.currentUser = {
       linkedinId: user.linkedin_id,
       name: user.name,
@@ -648,7 +660,7 @@ ipcMain.on('linkedin-auth-success', async (event, { userID, name, email, accessT
 ipcMain.handle('refresh-access-token', async (event, linkedin_id) => {
   console.log('Refreshing access token for LinkedIn ID:', linkedin_id);
   try {
-    const newAccessToken = await refreshAccessToken(linkedin_id);
+    const newAccessToken = await usersService.refreshAccessToken(linkedin_id);
     if (global.currentUser && global.currentUser.linkedin_id === linkedin_id) {
       global.currentUser.accessToken = newAccessToken; // Update global user state
     }
@@ -713,7 +725,7 @@ async function getCurrentBrowserPage() {
   const context = await browser.newContext();
 
   console.log("Fetching cookies from database...");
-  const cookies = await getCookiesFromDatabase(global.currentUser?.id || 0); // Adjust user ID as necessary
+  const cookies = await linkedin.getCookiesFromDatabase(global.currentUser?.id || 0); // Adjust user ID as necessary
   if (cookies.length > 0) {
     console.log("Setting cookies...");
     await context.addCookies(cookies);

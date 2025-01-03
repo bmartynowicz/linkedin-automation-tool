@@ -56,11 +56,56 @@ async function registerUser(email, username, password) {
       );
     });
 
+    // Inject default preferences for the new user
+    await injectDefaultPreferences(newUser.id);
+
     return { success: true, user: newUser };
   } catch (error) {
     console.error('Error registering user:', error.message);
     return { success: false, message: error.message };
   }
+}
+
+async function injectDefaultPreferences(userId) {
+  const notificationSettings = JSON.stringify(defaultPreferences.notification_settings);
+
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO user_preferences (
+        user_id, theme, tone, notification_settings, writing_style, 
+        engagement_focus, vocabulary_level, content_type, 
+        content_perspective, emphasis_tags, language, 
+        data_sharing, auto_logout, save_session, font_size, 
+        text_to_speech, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [
+        userId,
+        defaultPreferences.theme,
+        defaultPreferences.tone,
+        notificationSettings,
+        defaultPreferences.writing_style,
+        defaultPreferences.engagement_focus,
+        defaultPreferences.vocabulary_level,
+        defaultPreferences.content_type,
+        defaultPreferences.content_perspective,
+        defaultPreferences.emphasis_tags,
+        defaultPreferences.language,
+        defaultPreferences.data_sharing ? 1 : 0,
+        defaultPreferences.auto_logout ? 1 : 0,
+        defaultPreferences.save_session ? 1 : 0,
+        defaultPreferences.font_size,
+        defaultPreferences.text_to_speech ? 1 : 0,
+      ],
+      (err) => {
+        if (err) {
+          console.error('Error injecting default preferences:', err.message);
+          return reject(err);
+        }
+        console.log(`Default preferences injected for user ID: ${userId}`);
+        resolve();
+      }
+    );
+  });
 }
 
 // Centralized function to fetch user from database
@@ -95,7 +140,6 @@ async function findRememberedUser() {
     });
   });
 }
-
 
 /**
  * Finds or creates a user based on LinkedIn authentication data.
@@ -208,19 +252,34 @@ const defaultPreferences = {
   },
 };
 
-async function getCurrentUserWithPreferences() {
+/**
+ * Fetches user preferences from the database.
+ * @param {number} userId - The user's database ID.
+ * @returns {Promise<Object>} - The user's preferences.
+ */
+async function getCurrentUserWithPreferences(userId) {
   try {
-    // Fetch the current user
-    const user = await getCurrentUser();
+    if (!userId) {
+      throw new Error('No userId provided.');
+    }
+
+    // Fetch the user by ID
+    const user = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM users WHERE id = ?', [userId], (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+
     if (!user) {
-      console.warn('No user found in the database.');
+      console.warn('No user found in the database for the given userId:', userId);
       throw new Error('User not found.');
     }
-    console.log('User fetched from database:');
+    console.log('User fetched from database:', user);
 
-    // Fetch preferences
-    const preferences = await getUserPreferences(user.id);
-    console.log('User preferences fetched:');
+    // Fetch preferences for the user
+    const preferences = await getUserPreferences(userId);
+    console.log('User preferences fetched:', preferences);
 
     // Combine with defaults
     const combinedPreferences = {
@@ -236,6 +295,33 @@ async function getCurrentUserWithPreferences() {
     return { ...user, preferences: combinedPreferences };
   } catch (error) {
     console.error('Error in getCurrentUserWithPreferences:', error.message);
+    throw error;
+  }
+}
+
+async function loadSettingsForUser(userId) {
+  try {
+    console.log(`Loading settings for user ID: ${userId}`);
+    const userWithPreferences = await getCurrentUserWithPreferences(userId);
+
+    if (!userWithPreferences || !userWithPreferences.preferences) {
+      throw new Error('User preferences not found');
+    }
+
+    // Merge defaults and preferences
+    const mergedPreferences = {
+      ...defaultPreferences,
+      ...userWithPreferences.preferences,
+      notification_settings: {
+        ...defaultPreferences.notification_settings,
+        ...userWithPreferences.preferences.notification_settings,
+      },
+    };
+
+    console.log('Merged preferences:', mergedPreferences);
+    return mergedPreferences;
+  } catch (error) {
+    console.error('Error loading settings for user:', error.message);
     throw error;
   }
 }
@@ -265,11 +351,7 @@ async function updateUser(userID, name, email, accessToken, refreshToken, expire
 async function getUserPreferences(userId) {
   return new Promise((resolve, reject) => {
     db.get(
-      `SELECT 
-      theme, tone, notification_settings, writing_style, engagement_focus, vocabulary_level, 
-      content_type, content_perspective, emphasis_tags, language, data_sharing, auto_logout, save_session, 
-      font_size, text_to_speech
-       FROM user_preferences WHERE user_id = ?`,
+      `SELECT * FROM user_preferences WHERE user_id = ?`,
       [userId],
       (err, row) => {
         if (err) {
@@ -277,22 +359,26 @@ async function getUserPreferences(userId) {
           return reject(err);
         }
 
-        const preferences = row || {};
         try {
-          preferences.notification_settings = JSON.parse(preferences.notification_settings || '{}');
+          // Parse and sanitize notification_settings
+          const parsedSettings = JSON.parse(row.notification_settings || '{}');
+          row.notification_settings = {
+            suggestion_readiness: !!parsedSettings.suggestion_readiness,
+            engagement_tips: !!parsedSettings.engagement_tips,
+            system_updates: !!parsedSettings.system_updates,
+            frequency: parsedSettings.frequency || 'realtime',
+          };
         } catch (error) {
           console.warn('Failed to parse notification_settings JSON:', error.message);
-          preferences.notification_settings = {};
+          row.notification_settings = {
+            suggestion_readiness: false,
+            engagement_tips: false,
+            system_updates: false,
+            frequency: 'realtime',
+          };
         }
 
-        resolve({
-          ...defaultPreferences,
-          ...preferences,
-          notification_settings: {
-            ...defaultPreferences.notification_settings,
-            ...preferences.notification_settings,
-          },
-        });
+        resolve(row);
       }
     );
   });
@@ -305,43 +391,59 @@ async function getUserPreferences(userId) {
  * @returns {Promise<void>}
  */
 async function updateUserPreferences(userId, preferences) {
-  const mergedPreferences = { ...defaultPreferences, ...preferences };
-  const notificationSettings = JSON.stringify(mergedPreferences.notification_settings);
+  const { notification_settings, ...restPreferences } = preferences;
+
+  const sanitizedNotificationSettings = {
+    suggestion_readiness: !!notification_settings.suggestion_readiness,
+    engagement_tips: !!notification_settings.engagement_tips,
+    system_updates: !!notification_settings.system_updates,
+    frequency: notification_settings.frequency || 'realtime',
+  };
+
+  const mergedPreferences = {
+    ...defaultPreferences,
+    ...restPreferences,
+    notification_settings: sanitizedNotificationSettings,
+  };
+
+  const notificationSettingsJson = JSON.stringify(mergedPreferences.notification_settings);
 
   return new Promise((resolve, reject) => {
-      db.run(
-          `UPDATE user_preferences
-           SET theme = ?, tone = ?, notification_settings = ?, writing_style = ?, engagement_focus = ?, 
-               vocabulary_level = ?, content_type = ?, content_perspective = ?, emphasis_tags = ?, language = ?, 
-               data_sharing = ?, auto_logout = ?, save_session = ?, font_size = ?, text_to_speech = ?, updated_at = CURRENT_TIMESTAMP
-           WHERE user_id = ?`,
-          [
-              mergedPreferences.theme,
-              mergedPreferences.tone,
-              notificationSettings,
-              mergedPreferences.writing_style,
-              mergedPreferences.engagement_focus,
-              mergedPreferences.vocabulary_level,
-              mergedPreferences.content_type,
-              mergedPreferences.content_perspective,
-              mergedPreferences.emphasis_tags,
-              mergedPreferences.language,
-              mergedPreferences.data_sharing,
-              mergedPreferences.auto_logout,
-              mergedPreferences.save_session,
-              mergedPreferences.font_size,
-              mergedPreferences.text_to_speech,
-              userId,
-          ],
-          (err) => {
-              if (err) {
-                  console.error('Error updating user preferences:', err.message);
-                  return reject(err);
-              }
-              console.log('Preferences updated successfully for user ID:', userId);
-              resolve();
-          }
-      );
+    db.run(
+      `UPDATE user_preferences
+       SET theme = ?, tone = ?, notification_settings = ?, writing_style = ?, 
+           engagement_focus = ?, vocabulary_level = ?, content_type = ?, 
+           content_perspective = ?, emphasis_tags = ?, language = ?, data_sharing = ?, 
+           auto_logout = ?, save_session = ?, font_size = ?, text_to_speech = ?, 
+           updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = ?`,
+      [
+        mergedPreferences.theme,
+        mergedPreferences.tone,
+        notificationSettingsJson,
+        mergedPreferences.writing_style,
+        mergedPreferences.engagement_focus,
+        mergedPreferences.vocabulary_level,
+        mergedPreferences.content_type,
+        mergedPreferences.content_perspective,
+        mergedPreferences.emphasis_tags,
+        mergedPreferences.language,
+        mergedPreferences.data_sharing,
+        mergedPreferences.auto_logout,
+        mergedPreferences.save_session,
+        mergedPreferences.font_size,
+        mergedPreferences.text_to_speech,
+        userId,
+      ],
+      (err) => {
+        if (err) {
+          console.error('Error updating user preferences:', err.message);
+          return reject(err);
+        }
+        console.log('Preferences updated successfully for user ID:', userId);
+        resolve();
+      }
+    );
   });
 }
 
@@ -392,4 +494,5 @@ module.exports = {
   loginUser,
   updateRememberMePreference,
   findRememberedUser,
+  loadSettingsForUser,
 };

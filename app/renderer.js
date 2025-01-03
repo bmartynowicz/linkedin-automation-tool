@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded.');
 
+  let globalCurrentUser = null; // Stores the currently logged-in user
   let isModalOpen = false;
   let quill;
   let selectedPost = null;
@@ -11,11 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let editingPostId = null;
   let modalCalendarInstance = null;
   let isSchedulerCalendarInitialized = false;
-  let isLoggedIn = false;
   let isAppInitializing = false;
-
-  // ======= Content Editor =======
-  const contentEditor = document.getElementById('content-editor');
 
   // ======= Sidebar =======
   const toggleMenuButton = document.getElementById('toggle-menu');
@@ -184,14 +181,23 @@ document.addEventListener('DOMContentLoaded', () => {
   
       if (rememberedUser.success && rememberedUser.user) {
         console.log('Remembered user found:', rememberedUser.user);
-        isLoggedIn = true;
         globalCurrentUser = rememberedUser.user;
-        hideLoginModal();
-        await loadSettings();
-        await loadSchedulerData();
-        console.log('Application initialized successfully for remembered user.');
+  
+        // Validate and refresh session based on user type
+        await validateAndRefreshSession(globalCurrentUser);
+  
+        if (isLoggedIn) {
+          hideLoginModal();
+          await loadSettings();
+          await loadSchedulerData();
+          console.log('Application initialized successfully for remembered user.');
+        } else {
+          console.warn('Session validation failed. Showing login modal.');
+          showLoginModal();
+        }
       } else {
         console.warn('No remembered user found. Showing login modal.');
+        globalCurrentUser = null;
         showLoginModal();
       }
     } catch (error) {
@@ -201,28 +207,73 @@ document.addEventListener('DOMContentLoaded', () => {
       isAppInitializing = false;
       console.log('Application initialization completed.');
     }
-  }      
+  }  
+  
+  async function validateAndRefreshSession(user) {
+    if (!user || !user.id) {
+      console.warn('Invalid user session detected. Logging out...');
+      showLoginModal();
+      isLoggedIn = false;
+      globalCurrentUser = null;
+      return;
+    }
+  
+    console.log('Validating session for user:', user);
+  
+    // Skip session validation for local-only users
+    if (!user.linkedin_id) {
+      console.log('No LinkedIn ID. Skipping session validation for local-only user.');
+      isLoggedIn = true;
+      globalCurrentUser = user; // Retain user state
+      return;
+    }
+  
+    // Validate session for LinkedIn-authenticated users
+    try {
+      const userDetails = await window.api.fetchUserData();
+      if (!userDetails || !userDetails.linkedin_id) {
+        console.warn('Session validation failed. Logging out...');
+        showLoginModal();
+        isLoggedIn = false;
+        globalCurrentUser = null;
+      } else {
+        console.log('Session validation successful.');
+        globalCurrentUser = userDetails; // Update with refreshed data
+        isLoggedIn = true;
+      }
+    } catch (error) {
+      console.error('Error during session validation:', error.message);
+      showLoginModal();
+      isLoggedIn = false;
+      globalCurrentUser = null;
+    }
+  }   
 
   // Load settings into the UI
   const loadSettings = async () => {
-    try {
-      const user = await window.api.getCurrentUserWithPreferences();
-      console.log('Loaded user with preferences:', user);
+    if (!globalCurrentUser || !globalCurrentUser.id) {
+      console.warn('No user logged in. Skipping settings load.');
+      return;
+    }
   
-      if (!user || !user.preferences) {
+    try {
+      console.log(`Loading settings for user ID: ${globalCurrentUser.id}`);
+      const rawPreferences = await window.api.loadSettingsForUser(globalCurrentUser.id);
+      const preferences = rawPreferences.preferences; // Extract the nested preferences
+
+      console.log('Preferences structure:', preferences);
+
+      if (!preferences) {
         console.warn('No preferences found for the current user.');
         return;
       }
   
-      const { preferences } = user;
-  
-      // Map of field IDs to preference keys
       const fieldMapping = {
         'theme-select': 'theme',
         'tone-select': 'tone',
-        'suggestion-readiness': 'notification_settings.suggestion_readiness',
-        'engagement-tips': 'notification_settings.engagement_tips',
-        'system-updates': 'notification_settings.system_updates',
+        'suggestion-readiness': 'notification_settings.suggestion_readiness', // Nested structure
+        'engagement-tips': 'notification_settings.engagement_tips',         // Nested structure
+        'system-updates': 'notification_settings.system_updates',           // Nested structure
         'notification-frequency': 'notification_settings.frequency',
         'language': 'language',
         'data-sharing': 'data_sharing',
@@ -235,10 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'vocabulary-level': 'vocabulary_level',
         'content-type': 'content_type',
         'content-perspective': 'content_perspective',
-        'emphasis-tags': 'emphasis_tags',
-      };
+        'emphasis-tags': 'emphasis-tags',
+      };      
   
-      // Populate fields dynamically
       Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
         const element = document.getElementById(fieldId);
         if (!element) {
@@ -247,6 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
   
         const value = prefKey.split('.').reduce((acc, key) => acc?.[key], preferences);
+        
+        console.log(`Setting field "${fieldId}" with value:`, value);
+        
         if (element.type === 'checkbox') {
           element.checked = !!value;
         } else {
@@ -254,19 +307,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
   
-      // Generate and display the AI prompt in the preview section
+      // Update AI prompt preview
       const promptPreviewElement = document.getElementById('prompt-preview');
       if (promptPreviewElement) {
         const aiPrompt = generateAIPrompt(preferences);
-        promptPreviewElement.textContent = aiPrompt; // Display the prompt
+        promptPreviewElement.textContent = aiPrompt;
         console.log('AI Prompt displayed:', aiPrompt);
       } else {
         console.warn('Prompt preview element not found.');
       }
+  
+      console.log('Settings successfully loaded and reflected in the UI.');
     } catch (error) {
       console.error('Error loading settings into UI:', error.message);
     }
-  };
+  };   
 
   // Check if valid cookies exist for LinkedIn
   async function checkCookies() {
@@ -441,29 +496,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+  
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
     const rememberMe = document.getElementById('remember-me').checked;
   
     try {
       const result = await window.api.userLogin(username, password);
       console.log('Login result:', result);
+  
       if (result.success) {
-          alert('Login successful!');
-          isLoggedIn = true;
-          await window.api.updateRememberMePreference(result.user.id, rememberMe);
-          hideLoginModal(); // Explicitly hide the modal
-          await loadSettings();
-          await loadSchedulerData();
+        alert('Login successful!');
+        isLoggedIn = true;
+        globalCurrentUser = result.user; // Update globalCurrentUser immediately
+        console.log('Updated globalCurrentUser:', globalCurrentUser);
+  
+        await window.api.updateRememberMePreference(globalCurrentUser.id, rememberMe);
+  
+        hideLoginModal();
+        await loadSettings(); // Load settings for the logged-in user
+        await loadSchedulerData(); // Load scheduler data for the logged-in user
       } else {
-          alert('Login failed: ' + result.message);
+        alert('Login failed: ' + result.message);
       }
-  } catch (error) {
+    } catch (error) {
       console.error('Login error:', error);
-  }
+    }
   });
-    
-
+  
   // Apply Theme Dynamically
   function applyTheme(theme) {
     document.body.classList.toggle('dark-theme', theme === 'dark');
@@ -553,23 +613,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const fetchNotifications = async () => {
+  async function loadNotifications() {
     try {
-      const notifications = await window.api.fetchNotifications();
-      console.log('Fetched Notifications:', notifications);
-
-      notificationsList.innerHTML = notifications.length
-        ? notifications.map((n) => `<li>${n.message}</li>`).join('')
-        : '<li>No new notifications.</li>';
-
-      notificationCount.textContent = notifications.length || '';
-      notificationCount.style.display = notifications.length ? 'inline' : 'none';
+      const response = await window.api.fetchNotifications();
+      if (response.success) {
+        console.log('Notifications:', response.notifications);
+        // Update the UI with notifications
+      } else {
+        console.error('Error fetching notifications:', response.message);
+      }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
-      notificationsList.innerHTML = '<li>Failed to load notifications.</li>';
-      notificationCount.style.display = 'none';
+      console.error('Error loading notifications:', error);
     }
-  };
+  }  
 
   const notificationsButton = document.getElementById('notifications');
   if (notificationsButton) {
@@ -641,65 +697,75 @@ if (changePasswordForm) {
   });
 }
   
-  // Attach Event Listener for Form Submission
+ // Attach Event Listener for Form Submission
   if (saveSettingsButton) {
-    saveSettingsButton.addEventListener('click', async (e) => {
-      e.preventDefault();
-      console.log('Save Settings button clicked.');
-  
-      const fieldMapping = {
-        'theme-select': 'theme',
-        'tone-select': 'tone',
-        'suggestion-readiness': 'notification_settings.suggestion_readiness',
-        'engagement-tips': 'notification_settings.engagement_tips',
-        'system-updates': 'notification_settings.system_updates',
-        'notification-frequency': 'notification_settings.frequency',
-        'language': 'language',
-        'data-sharing': 'data_sharing',
-        'auto-logout': 'auto_logout',
-        'save-session': 'save_session',
-        'font-size': 'font_size',
-        'text-to-speech': 'text_to_speech',
-        'writing-style': 'writing_style',
-        'engagement-focus': 'engagement_focus',
-        'vocabulary-level': 'vocabulary_level',
-        'content-type': 'content_type',
-        'content-perspective': 'content_perspective',
-        'emphasis-tags': 'emphasis_tags',
-      };
-  
-      const preferences = {};
-      Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
-        const element = document.getElementById(fieldId);
-        if (!element) return;
-  
-        const keys = prefKey.split('.');
-        let target = preferences;
-        keys.forEach((key, index) => {
-          if (index === keys.length - 1) {
-            target[key] = element.type === 'checkbox' ? element.checked : element.value.trim();
-          } else {
-            target[key] = target[key] || {};
-            target = target[key];
-          }
-        });
-      });
-  
-      console.log('Preferences to save:', preferences);
-  
-      try {
-        const result = await window.api.saveSettings(preferences);
-        if (result.success) {
-          showToast('Settings saved successfully!');
-        } else {
-          showToast('Failed to save settings.');
-        }
-      } catch (error) {
-        console.error('Error saving settings:', error.message);
-        showToast('An error occurred while saving settings.');
+  saveSettingsButton.addEventListener('click', async (e) => {
+    e.preventDefault();
+    console.log('Save Settings button clicked.');
+
+    const fieldMapping = {
+      'theme-select': 'theme',
+      'tone-select': 'tone',
+      'suggestion-readiness': 'notification_settings.suggestion_readiness',
+      'engagement-tips': 'notification_settings.engagement_tips',
+      'system-updates': 'notification_settings.system_updates',
+      'notification-frequency': 'notification_settings.frequency',
+      'language': 'language',
+      'data-sharing': 'data_sharing',
+      'auto-logout': 'auto_logout',
+      'save-session': 'save_session',
+      'font-size': 'font_size',
+      'text-to-speech': 'text_to_speech',
+      'writing-style': 'writing_style',
+      'engagement-focus': 'engagement_focus',
+      'vocabulary-level': 'vocabulary_level',
+      'content-type': 'content_type',
+      'content-perspective': 'content_perspective',
+      'emphasis-tags': 'emphasis_tags',
+    };
+
+    const preferences = {};
+    const notificationSettings = {};
+
+    Object.entries(fieldMapping).forEach(([fieldId, prefKey]) => {
+      const element = document.getElementById(fieldId);
+      if (!element) return;
+
+      const keys = prefKey.split('.');
+      if (keys[0] === 'notification_settings') {
+        // Handle notification_settings separately
+        notificationSettings[keys[1]] =
+          element.type === 'checkbox' ? element.checked : element.value.trim();
+      } else {
+        // Handle general preferences
+        preferences[keys[0]] =
+          element.type === 'checkbox' ? element.checked : element.value.trim();
       }
     });
-  }  
+
+    // Add flattened notification settings to preferences
+    preferences.notification_settings = {
+      suggestion_readiness: !!notificationSettings.suggestion_readiness, // Convert to boolean
+      engagement_tips: !!notificationSettings.engagement_tips,
+      system_updates: !!notificationSettings.system_updates,
+      frequency: notificationSettings.frequency || 'realtime',
+    };    
+
+    console.log('Preferences to save:', preferences);
+
+    try {
+      const result = await window.api.saveSettingsForUser(globalCurrentUser.id, preferences);
+      if (result.success) {
+        showToast('Settings saved successfully!');
+      } else {
+        showToast('Failed to save settings.');
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error.message);
+      showToast('An error occurred while saving settings.');
+    }
+  });
+  } 
 
   if (restoreDefaultsButton) {
     restoreDefaultsButton.addEventListener('click', async () => {
@@ -870,26 +936,32 @@ if (changePasswordForm) {
   }
 
   // ===== Load Scheduler Data =====
-  async function loadSchedulerData() {
-  try {
-    console.log('Loading scheduler data...');
-    const user = await window.api.fetchUserData();
-    const linkedinId = user.linkedin_id;
+  // Load scheduler data into the UI
+// Load scheduler data into the UI
+const loadSchedulerData = async () => {
+  if (!globalCurrentUser || !globalCurrentUser.id) {
+    console.warn('No user logged in. Skipping scheduler data load.');
+    return;
+  }
 
-    if (!linkedinId) {
-      console.error('LinkedIn ID not found for current user.');
-      return;
+  console.log(`Loading scheduler data for user ID: ${globalCurrentUser.id}`);
+
+  try {
+    // Fetch all posts for the current user
+    const allPosts = await window.api.getPosts();
+    console.log('All Posts:', allPosts);
+
+    // Fetch scheduled posts if the user has a LinkedIn ID
+    let scheduledPosts = [];
+    if (globalCurrentUser.linkedin_id) {
+      scheduledPosts = await window.api.getScheduledPosts(globalCurrentUser.linkedin_id);
+      console.log('Scheduled Posts:', scheduledPosts);
+    } else {
+      console.warn('User does not have a LinkedIn ID. Scheduling disabled.');
     }
 
-    // Fetch all posts and schedules
-    const allPosts = await window.api.getPosts();
-    console.log('All Posts Fetched:', allPosts);
-
-    const schedules = await window.api.getScheduledPosts(linkedinId);
-    console.log('Schedules Fetched:', schedules);
-
     // Merge schedules with their corresponding posts
-    const scheduledPosts = schedules.map((schedule) => {
+    const mergedScheduledPosts = scheduledPosts.map((schedule) => {
       const post = allPosts.find((p) => p.id === schedule.post_id);
       return {
         ...post,
@@ -898,26 +970,59 @@ if (changePasswordForm) {
       };
     });
 
-    const unscheduledPosts = allPosts.filter((post) => post.status === 'draft' && !scheduledPosts.some((s) => s.id === post.id));
+    // Identify unscheduled posts
+    const unscheduledPosts = allPosts.filter(
+      (post) =>
+        post.status === 'draft' &&
+        !mergedScheduledPosts.some((s) => s.id === post.id)
+    );
 
     console.log('Unscheduled Posts:', unscheduledPosts);
-    console.log('Scheduled Posts:', scheduledPosts);
+    console.log('Merged Scheduled Posts:', mergedScheduledPosts);
 
     // Display posts in their respective sections
     displayPosts('#unscheduled-posts', unscheduledPosts);
-    displayPosts('#upcoming-posts', scheduledPosts);
+    displayPosts('#upcoming-posts', mergedScheduledPosts);
 
-    // Initialize or update the calendar
+    // Update or initialize the calendar
     if (!isSchedulerCalendarInitialized) {
-      initializeMainSchedulerCalendar(scheduledPosts);
+      initializeMainSchedulerCalendar(mergedScheduledPosts);
       isSchedulerCalendarInitialized = true;
     } else {
-      updateCalendarHighlights(scheduledPosts);
+      updateCalendarHighlights(mergedScheduledPosts);
+    }
+
+    // Disable scheduling actions if the user lacks a LinkedIn ID
+    if (!globalCurrentUser.linkedin_id) {
+      console.log('Disabling scheduling options for non-LinkedIn user.');
+      disableSchedulingActions();
     }
   } catch (error) {
-    console.error('Error loading scheduler data:', error);
+    console.error('Error loading scheduler data:', error.message);
   }
-  }
+};
+
+// Function to disable scheduling actions
+const disableSchedulingActions = () => {
+  const scheduleButtons = document.querySelectorAll('.schedule-action');
+  scheduleButtons.forEach((button) => (button.disabled = true));
+  showToast('Scheduling disabled. Connect your LinkedIn account to enable this feature.');
+};
+
+  const loadUserAnalytics = async () => {
+    if (!globalCurrentUser) {
+      console.warn('No user logged in. Skipping analytics load.');
+      return;
+    }
+  
+    try {
+      const analytics = await window.api.getUserAnalytics(globalCurrentUser.id);
+      displayAnalytics(analytics); // Assume this is a function to update the UI
+    } catch (error) {
+      console.error('Error loading analytics:', error.message);
+      showToast('An error occurred while loading analytics.');
+    }
+  };  
 
   // ===== Event Handlers =====
 
@@ -1104,17 +1209,22 @@ if (changePasswordForm) {
 
   // ======= Load Saved Posts Function =======
   const loadSavedPosts = async () => {
-    showLoader();
+    if (!globalCurrentUser) {
+      console.warn('No user logged in. Skipping post loading.');
+      return;
+    }
+  
     try {
+      showLoader();
       const posts = await window.api.getPosts();
       displaySavedPosts(posts);
     } catch (error) {
-      console.error('Error loading saved posts:', error);
+      console.error('Error loading saved posts:', error.message);
       showToast('An error occurred while loading saved posts.');
     } finally {
       hideLoader();
     }
-  };
+  };  
 
   // ======= Function to Display Saved Posts =======
   const displaySavedPosts = (posts) => {
@@ -1738,21 +1848,22 @@ if (editorElement) {
 
   if (savePostButton) {
     savePostButton.addEventListener('click', async () => {
-      const user = await window.api.fetchUserData();
-      if (!user || !user.linkedin_id) {
-        showToast('Unable to fetch user information. Please log in again.');
-        return;
-      }
-  
-      const post = {
-        id: editingPostId, // Include the editing post ID (null for new posts)
-        title: postTitleInput.value.trim(),
-        content: quill.root.innerHTML.trim(),
-        status: 'draft',
-        linkedin_id: user.linkedin_id, // Use linkedin_id to associate the post
-      };
-  
       try {
+        const user = await window.api.fetchUserData();
+        if (!user || (!user.linkedin_id && !user.id)) {
+          showToast('Unable to fetch user information. Please log in again.');
+          return;
+        }
+  
+        const post = {
+          id: editingPostId, // Include the editing post ID (null for new posts)
+          title: postTitleInput.value.trim(),
+          content: quill.root.innerHTML.trim(),
+          status: 'draft',
+          linkedin_id: user.linkedin_id || null, // Use linkedin_id if available
+          user_id: user.id || null, // Fallback to user_id for local-only users
+        };
+  
         const result = await window.api.savePost(post);
         if (result.success) {
           showToast('Post saved successfully!');
@@ -1760,13 +1871,15 @@ if (editorElement) {
           postTitleInput.value = '';
           quill.setContents([]);
           editingPostId = null; // Reset editing ID after save
+        } else {
+          showToast('Failed to save post.');
         }
       } catch (error) {
         console.error('Error saving post:', error.message);
         showToast('Failed to save post.');
       }
     });
-  }
+  }  
 
   postToLinkedInButton.addEventListener('click', async () => {
   // 1) Validate inputs

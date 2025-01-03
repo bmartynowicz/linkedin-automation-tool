@@ -12,10 +12,10 @@ const allowedChannels = [
   'linkedin-auth-closed',
   'update-user-data',
   'savePost',
-  'saveSettings',
+  'saveSettingsForUser',
   'getScheduledPosts',
   'fetchUserData',
-  'fetchNotifications',
+  'fetch-notifications',
   'getAISuggestions',
   'getEnv',
   'getPosts',
@@ -38,6 +38,7 @@ const allowedChannels = [
   'change-password',
   'registerUser',
   'createAccount',
+  'loadSettingsForUser',
   // Add any other event channels you intend to expose
 ];
 
@@ -102,10 +103,10 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Invoking "get-ai-suggestions" with prompt and userId:', prompt, userId);
     return ipcRenderer.invoke('get-ai-suggestions', { prompt, userId });
   },
-  fetchNotifications: () => {
-    console.log('Invoking "fetch-notifications"');
-    return ipcRenderer.invoke('fetch-notifications');
-  },
+  fetchNotifications: async () => {
+    console.log('Invoking "fetch-notifications" for the current user');
+    return await ipcRenderer.invoke('fetch-notifications');
+  },  
   fetchUserData: () => {
     console.log('Invoking "fetch-user-data"');
     return ipcRenderer.invoke('fetch-user-data');
@@ -165,9 +166,13 @@ contextBridge.exposeInMainWorld('api', {
     console.log('Sending "test-message" to main process');
     ipcRenderer.send('test-message');
   },
-  saveSettings: (settingsData) => {
-    console.log('Invoking saveSettings with data:', settingsData);
-    return ipcRenderer.invoke('save-settings', settingsData);
+  loadSettingsForUser: async (userId) => {
+    console.log('Invoking "load-settings-for-user" with userId:', userId);
+    return await ipcRenderer.invoke('load-settings', userId);
+  },
+  saveSettingsForUser: async (userId, settings) => {
+    console.log('Invoking "save-settings-for-user" with userId:', userId, 'and settings:', settings);
+    return await ipcRenderer.invoke('save-settings', userId, settings);
   },
   navigateToPage: (targetPageId, allPageIds) => {
     ipcRenderer.send('navigate', { targetPageId, allPageIds });
